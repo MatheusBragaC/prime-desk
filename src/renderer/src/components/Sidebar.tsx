@@ -3,7 +3,7 @@ import {
   Plus, Search, FolderOpen, MessageSquare, RefreshCw, ChevronRight, Folder,
   FolderPlus, MoreHorizontal, Trash2, Pencil, GitBranch
 } from 'lucide-react'
-import { useAgent, newSession, refreshSessions, rpc, mutateFolders } from '../store/agent'
+import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
 import { relTime, shortPath } from '../lib/format'
 import { groupSessions, type Group } from '../lib/grouping'
@@ -245,14 +245,7 @@ export function Sidebar({
 
   async function open(id: string) {
     setBusy(true)
-    await rpc('switch_session', { sessionId: id })
-    useAgent.getState().reset()
-    const data = await rpc<{ messages: unknown[] }>('get_messages')
-    if (data?.messages) {
-      for (const msg of data.messages) {
-        useAgent.getState().ingest({ type: 'message_end', message: msg } as never)
-      }
-    }
+    await openSession(id)
     setBusy(false)
   }
 

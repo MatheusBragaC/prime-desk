@@ -185,3 +185,60 @@ apresentação. A organização é só da GUI:
 - **Persistência:** `<userData>/folders.json`, contendo apenas `folders`,
   `assignments` (sessionId → folderId) e `collapsed`. Nenhum conteúdo de
   conversa é copiado.
+
+## 11. Transcript ao vivo via `observe`
+
+Validado com um subagente real em execução.
+
+### Protocolo
+
+```json
+{"id":"w1","type":"observe","activeSessionId":"<alvo>"}
+```
+
+Resposta: `{ "messages": [...] }` — o histórico completo do alvo.
+
+Eventos seguintes chegam embrulhados, para não se confundirem com os da própria
+sessão do cliente RPC:
+
+```json
+{"type":"observed_session_event","activeSessionId":"<alvo>","event":{ … }}
+{"type":"observed_session_closed","activeSessionId":"<alvo>","error":"…"}
+```
+
+Encerrar: `{"type":"unobserve","activeSessionId":"<alvo>"}`
+
+### Duas garantias confirmadas na implementação do agente
+
+1. **Não há janela de perda.** O agente bufferiza os eventos em
+   `observation.pendingEvents` até a resposta do `observe` ser entregue
+   (`observation.ready`). Só então libera. Ou seja, nada acontece "entre" o
+   histórico e o primeiro evento.
+2. **`observe` repetido é idempotente.** Se já existe observação para aquele id,
+   ele devolve as mensagens atuais sem criar uma segunda subscrição.
+
+### O evento interno tem o mesmo formato do próprio
+
+`event` é um `AgentSessionEvent` idêntico aos da sessão local. Consequência
+arquitetural: **o mesmo reducer serve para as duas coisas.** Foi por isso que o
+reducer virou uma função pura em `store/transcript.ts`, e o store passou a manter
+um `Transcript` para a sessão própria e um por sessão observada.
+
+Tipos internos observados no teste: `message_start/_update/_end`, `turn_start/_end`,
+`tool_execution_start/_end`, `agent_end`, `recap_update`.
+
+### Bug encontrado nesse caminho
+
+O histórico (tanto de `observe` quanto de `get_messages`) entrega resultados de
+ferramenta como mensagens `role: "toolResult"`:
+
+```json
+{"role":"toolResult","toolCallId":"toolu_…","toolName":"ipython",
+ "content":[{"type":"text","text":"passo 1\n"}],
+ "details":{"durationMs":6,"status":"ok","stdout":"…","stderr":"","kernelRestarted":false}}
+```
+
+Eventos `tool_execution_*` **não** são reemitidos. Sem tratar `toolResult`, todo
+card de ferramenta de sessão reaberta ficaria preso em "preparando" para sempre —
+o que também afetava o botão de abrir sessão da sidebar, não só o observe.
+Corrigido em `applyToolResultMessage`.

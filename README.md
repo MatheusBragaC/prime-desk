@@ -62,6 +62,20 @@ Os dados vêm de `prime-agent list --json`, a única superfície que expõe
 `parentActiveSessionId`. O poller roda a cada 3 s e **pausa** quando a janela não
 está visível.
 
+### Acompanhar um subagente ao vivo
+
+O ícone de olho em qualquer nó da árvore abre o **transcript ao vivo** daquela
+sessão: raciocínio, texto e execução de ferramentas em tempo real, com o mesmo
+tratamento visual da conversa principal.
+
+Usa `observe` / `unobserve` do RPC. O agente bufferiza os eventos até entregar o
+histórico, então não existe janela de perda entre o que já aconteceu e o que
+chega depois.
+
+O painel é **somente leitura** — por decisão de projeto. Injetar prompt ali
+exigiria `send_message` e transformaria "observar" em "interferir", o que merece
+uma interação explícita e não um efeito colateral de abrir um painel.
+
 ## Empacotamento
 
 | Alvo | Comando | Onde compila |
@@ -145,7 +159,8 @@ src/
 │  └─ folders.ts           persistência das pastas
 ├─ preload/index.ts        contextBridge (superfície mínima)
 └─ renderer/src/
-   ├─ store/agent.ts       redução de eventos → estado de UI
+   ├─ store/transcript.ts  reducer puro (própria sessão e observadas)
+   ├─ store/agent.ts       estado de UI, comandos RPC, observações
    ├─ styles/theme.css     paleta oficial como CSS custom properties
    └─ components/          Sidebar, StatusBar, Composer, Message, ToolCard, …
 ```

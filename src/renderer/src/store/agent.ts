@@ -1,29 +1,13 @@
 import { create } from 'zustand'
 import type {
-  AgentEvent, AgentState, ContentBlock, ModelInfo, SessionSummary,
-  ThinkingLevel, ToolResult, Usage, BridgeStatus, RpcResponse,
-  AgentTreeSnapshot, FolderState
+  AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
+  ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState
 } from '../../../shared/protocol'
+import {
+  applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
+} from './transcript'
 
-export interface UiMessage {
-  key: string
-  role: 'user' | 'assistant'
-  content: ContentBlock[]
-  usage?: Usage
-  timestamp: number
-  streaming: boolean
-}
-
-export interface ToolExec {
-  id: string
-  name: string
-  args: Record<string, unknown>
-  status: 'running' | 'ok' | 'error'
-  text: string
-  durationMs?: number
-  stderr?: string
-  kernelRestarted?: boolean
-}
+export type { UiMessage, ToolExec } from './transcript'
 
 export interface CommandInfo {
   name: string
@@ -31,7 +15,16 @@ export interface CommandInfo {
   source: string
 }
 
-interface Totals { tokens: number; cost: number }
+/** Uma sessão de outro agente acompanhada ao vivo via `observe`. */
+export interface Observed {
+  activeSessionId: string
+  name: string
+  transcript: Transcript
+  status: 'loading' | 'live' | 'closed' | 'error'
+  error?: string
+  /** Última atividade recebida, para dar sinal de vida na UI. */
+  lastEventAt: number
+}
 
 interface AgentStore {
   status: BridgeStatus
@@ -50,10 +43,12 @@ interface AgentStore {
   tree: AgentTreeSnapshot | null
   treeError: string | null
   folders: FolderState
+  observed: Record<string, Observed>
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
   ingest: (ev: AgentEvent) => void
+  loadHistory: (messages: AgentMessage[]) => void
   applyStderr: (chunk: string) => void
   setFatal: (m: string | null) => void
   setState: (s: AgentState) => void
@@ -63,21 +58,10 @@ interface AgentStore {
   setTree: (t: AgentTreeSnapshot) => void
   setTreeError: (e: string | null) => void
   setFolders: (f: FolderState) => void
+  upsertObserved: (id: string, patch: Partial<Observed>) => void
+  dropObserved: (id: string) => void
+  ingestObserved: (id: string, ev: AgentEvent) => void
   reset: () => void
-}
-
-function textOf(result?: ToolResult): string {
-  if (!result) return ''
-  const fromContent = (result.content ?? [])
-    .map((c) => c.text ?? '')
-    .join('')
-  if (fromContent) return fromContent
-  return result.details?.stdout ?? ''
-}
-
-/** Identidade estável de mensagem: role + timestamp emitido pelo agente. */
-function keyOf(role: string, timestamp?: number): string {
-  return `${role}:${timestamp ?? 0}`
 }
 
 export const useAgent = create<AgentStore>((set, get) => ({
@@ -97,6 +81,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   tree: null,
   treeError: null,
   folders: { folders: [], assignments: {}, collapsed: {} },
+  observed: {},
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -110,115 +95,26 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setFolders: (folders) => set({ folders }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
-  reset: () => set({ messages: [], tools: {}, totals: { tokens: 0, cost: 0 }, retry: null }),
+  reset: () => set({ ...emptyTranscript(), retry: null }),
+
+  loadHistory: (messages) => set(hydrate(messages)),
 
   ingest: (ev) => {
-    const type = ev.type
+    const st = get()
+    const before: Transcript = { messages: st.messages, tools: st.tools, totals: st.totals }
+    const after = applyEvent(before, ev)
+    if (after !== before) set(after)
 
-    // ---- streaming de mensagens -------------------------------------------
-    // message_update carrega o SNAPSHOT completo de message.content, então
-    // basta sobrescrever: renderização idempotente, sem remontar deltas.
-    if (type === 'message_start' || type === 'message_update' || type === 'message_end' || type === 'turn_end') {
-      const msg = (ev as { message?: { role?: string; content?: unknown; timestamp?: number; usage?: Usage } }).message
-      if (!msg?.role) return
-      if (msg.role !== 'user' && msg.role !== 'assistant') return
-
-      const content: ContentBlock[] = Array.isArray(msg.content)
-        ? (msg.content as ContentBlock[])
-        : typeof msg.content === 'string'
-          ? [{ type: 'text', text: msg.content }]
-          : []
-
-      const key = keyOf(msg.role, msg.timestamp)
-      const finished = type === 'message_end' || type === 'turn_end' || msg.role === 'user'
-
-      set((st) => {
-        const idx = st.messages.findIndex((m) => m.key === key)
-        const next: UiMessage = {
-          key,
-          role: msg.role as 'user' | 'assistant',
-          content,
-          usage: msg.usage ?? (idx >= 0 ? st.messages[idx].usage : undefined),
-          timestamp: msg.timestamp ?? Date.now(),
-          streaming: !finished
-        }
-        const messages = idx >= 0
-          ? st.messages.map((m, i) => (i === idx ? next : m))
-          : [...st.messages, next]
-
-        // Custo/tokens só consolidam em turn_end, para não contar duas vezes.
-        let totals = st.totals
-        if (type === 'turn_end' && msg.usage) {
-          totals = {
-            tokens: st.totals.tokens + (msg.usage.totalTokens ?? 0),
-            cost: st.totals.cost + (msg.usage.cost?.total ?? 0)
-          }
-        }
-        return { messages, totals }
-      })
-      return
-    }
-
-    // ---- execução de ferramentas ------------------------------------------
-    if (type === 'tool_execution_start') {
-      const e = ev as unknown as { toolCallId: string; toolName: string; args: Record<string, unknown> }
-      set((st) => ({
-        tools: {
-          ...st.tools,
-          [e.toolCallId]: { id: e.toolCallId, name: e.toolName, args: e.args ?? {}, status: 'running', text: '' }
-        }
-      }))
-      return
-    }
-
-    if (type === 'tool_execution_update') {
-      const e = ev as unknown as { toolCallId: string; partialResult?: ToolResult }
-      set((st) => {
-        const cur = st.tools[e.toolCallId]
-        if (!cur) return {}
-        return { tools: { ...st.tools, [e.toolCallId]: { ...cur, text: textOf(e.partialResult) || cur.text } } }
-      })
-      return
-    }
-
-    if (type === 'tool_execution_end') {
-      const e = ev as unknown as { toolCallId: string; toolName: string; result: ToolResult; isError?: boolean }
-      set((st) => {
-        const cur = st.tools[e.toolCallId]
-        const d = e.result?.details
-        return {
-          tools: {
-            ...st.tools,
-            [e.toolCallId]: {
-              id: e.toolCallId,
-              name: e.toolName ?? cur?.name ?? 'tool',
-              args: cur?.args ?? {},
-              status: e.isError || e.result?.isError ? 'error' : 'ok',
-              text: textOf(e.result),
-              durationMs: d?.durationMs,
-              stderr: d?.stderr,
-              kernelRestarted: d?.kernelRestarted
-            }
-          }
-        }
-      })
-      return
-    }
-
-    // ---- ciclo de vida e sinais -------------------------------------------
-    switch (type) {
+    switch (ev.type) {
       case 'agent_start':
-        set((st) => ({ state: st.state ? { ...st.state, isStreaming: true } : st.state }))
+        set((s) => ({ state: s.state ? { ...s.state, isStreaming: true } : s.state }))
         break
       case 'agent_end':
-        set((st) => ({
-          state: st.state ? { ...st.state, isStreaming: false } : st.state,
-          messages: st.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m))
-        }))
+        set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
         break
       case 'session_action_update': {
         const a = (ev as { actions?: AgentState['sessionActions'] }).actions
-        set((st) => ({ state: st.state && a ? { ...st.state, sessionActions: a } : st.state }))
+        set((s) => ({ state: s.state && a ? { ...s.state, sessionActions: a } : s.state }))
         break
       }
       case 'compaction_start':
@@ -238,7 +134,40 @@ export const useAgent = create<AgentStore>((set, get) => ({
       default:
         break
     }
-  }
+  },
+
+  upsertObserved: (id, patch) =>
+    set((st) => {
+      const prev: Observed =
+        st.observed[id] ?? {
+          activeSessionId: id,
+          name: '',
+          transcript: emptyTranscript(),
+          status: 'loading',
+          lastEventAt: 0
+        }
+      return { observed: { ...st.observed, [id]: { ...prev, ...patch } } }
+    }),
+
+  dropObserved: (id) =>
+    set((st) => {
+      const next = { ...st.observed }
+      delete next[id]
+      return { observed: next }
+    }),
+
+  ingestObserved: (id, ev) =>
+    set((st) => {
+      const cur = st.observed[id]
+      if (!cur) return {}
+      const transcript = applyEvent(cur.transcript, ev)
+      return {
+        observed: {
+          ...st.observed,
+          [id]: { ...cur, transcript, lastEventAt: Date.now() }
+        }
+      }
+    })
 }))
 
 // ------------------------------------------------------------------ comandos
@@ -281,9 +210,24 @@ export async function refreshSessions(): Promise<void> {
   if (r?.ok) useAgent.getState().setSessions(r.sessions as SessionSummary[])
 }
 
-export async function sendPrompt(message: string, images?: { data: string; mimeType: string }[]): Promise<void> {
-  const st = useAgent.getState()
-  const streaming = st.state?.isStreaming
+export async function refreshFolders(): Promise<void> {
+  const r = await bridge().loadFolders()
+  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+}
+
+/** Atualiza pastas de forma otimista; o main sanitiza e devolve a verdade final. */
+export async function mutateFolders(fn: (state: FolderState) => FolderState): Promise<void> {
+  const next = fn(useAgent.getState().folders)
+  useAgent.getState().setFolders(next)
+  const r = await bridge().saveFolders(next)
+  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+}
+
+export async function sendPrompt(
+  message: string,
+  images?: { data: string; mimeType: string }[]
+): Promise<void> {
+  const streaming = useAgent.getState().state?.isStreaming
   const payload: Record<string, unknown> = { message }
   if (images?.length) payload.images = images.map((i) => ({ type: 'image', ...i }))
   if (streaming) payload.streamingBehavior = 'steer'
@@ -310,27 +254,50 @@ export async function compactNow(): Promise<void> {
   await rpc('compact')
 }
 
-export async function refreshFolders(): Promise<void> {
-  const r = await bridge().loadFolders()
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
-}
-
-/**
- * Atualiza as pastas de forma otimista e persiste no disco.
- * O estado devolvido pelo main é a verdade final (ele sanitiza os campos).
- */
-export async function mutateFolders(
-  fn: (state: FolderState) => FolderState
-): Promise<void> {
-  const next = fn(useAgent.getState().folders)
-  useAgent.getState().setFolders(next)
-  const r = await bridge().saveFolders(next)
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
-}
-
 export async function newSession(): Promise<void> {
   await rpc('new_session')
   useAgent.getState().reset()
   void refreshState()
   void refreshSessions()
+}
+
+export async function openSession(sessionId: string): Promise<void> {
+  await rpc('switch_session', { sessionId })
+  useAgent.getState().reset()
+  const data = await rpc<{ messages: AgentMessage[] }>('get_messages')
+  if (data?.messages) useAgent.getState().loadHistory(data.messages)
+  void refreshState()
+}
+
+// ------------------------------------------------------------------ observe
+
+/**
+ * Assina os eventos de outra sessão (root ou subagente).
+ *
+ * A resposta de `observe` já traz o histórico; os eventos seguintes chegam
+ * embrulhados em `observed_session_event` e são bufferizados pelo agente até a
+ * resposta ser entregue, então não há janela de perda.
+ */
+export async function observeSession(activeSessionId: string, name: string): Promise<void> {
+  const store = useAgent.getState()
+  store.upsertObserved(activeSessionId, { name, status: 'loading' })
+
+  const data = await rpc<{ messages: AgentMessage[] }>('observe', { activeSessionId })
+  if (!data) {
+    store.upsertObserved(activeSessionId, {
+      status: 'error',
+      error: 'Não foi possível observar esta sessão. Ela pode já ter encerrado.'
+    })
+    return
+  }
+  store.upsertObserved(activeSessionId, {
+    transcript: hydrate(data.messages ?? []),
+    status: 'live',
+    lastEventAt: Date.now()
+  })
+}
+
+export async function unobserveSession(activeSessionId: string): Promise<void> {
+  await bridge().fire('unobserve', { activeSessionId })
+  useAgent.getState().dropObserved(activeSessionId)
 }

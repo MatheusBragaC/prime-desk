@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import {
   ChevronRight, GitBranch, Loader2, CheckCircle2, Circle, CornerDownRight,
-  MessageSquare, X, Code2, RefreshCw
+  MessageSquare, X, Code2, RefreshCw, Eye, Radio
 } from 'lucide-react'
 import type { AgentNode } from '../../../shared/protocol'
-import { useAgent } from '../store/agent'
+import { useAgent, observeSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
 import { relTime } from '../lib/format'
 
@@ -38,6 +38,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
   const [open, setOpen] = useState(level < 2)
   const [showCode, setShowCode] = useState(false)
   const hasChildren = node.children.length > 0
+  const watching = useAgent((s) => Boolean(s.observed[node.activeSessionId]))
 
   const label =
     node.name || (node.kind === 'root' ? 'Sessão principal' : node.rlmChildId || 'subagente')
@@ -70,6 +71,20 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             <StatusDot node={node} />
             <span className="truncate text-[12.3px] text-fg">{label}</span>
             <TaskBadge node={node} />
+            {watching ? (
+              <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-ok">
+                <Radio size={9} className="animate-pulse-soft" />
+                observando
+              </span>
+            ) : (
+              <button
+                onClick={() => void observeSession(node.activeSessionId, label)}
+                className="ml-auto shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
+                title="Acompanhar ao vivo"
+              >
+                <Eye size={12} />
+              </button>
+            )}
           </div>
 
           <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-dim">

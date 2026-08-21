@@ -56,7 +56,7 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 - [x] Paleta de comandos (⌘K) alimentada por `get_commands`
 - [x] Árvore de subagentes RLM (via `prime-agent list --json`)
 - [x] Organização de conversas em pastas + grupos automáticos por projeto
-- [ ] Transcript ao vivo de um subagente (usar `observe`/`unobserve` do RPC)
+- [x] Transcript ao vivo de um subagente (`observe`/`unobserve`)
 - [ ] Modo bash dedicado
 - [ ] Export HTML
 
@@ -83,6 +83,9 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 8 | Pastas só na GUI | O agente não tem conceito de pasta; metadado de apresentação não deve vazar para ele |
 | 9 | Poller pausado com janela oculta | `list --json` é processo separado; não deve girar à toa |
 | 10 | Ícone rasterizado pelo Electron | Evita depender de Inkscape/librsvg/ImageMagick na máquina de build |
+| 11 | Reducer puro compartilhado | Eventos observados têm o mesmo formato dos próprios; um reducer serve aos dois |
+| 12 | Hidratar `toolResult` do histórico | Histórico não reemite `tool_execution_*`; sem isso os cards ficam presos em "preparando" |
+| 13 | Painel observado é somente leitura | Injetar prompt exigiria `send_message` e mudaria "observar" para "interferir" |
 
 ## Segurança
 

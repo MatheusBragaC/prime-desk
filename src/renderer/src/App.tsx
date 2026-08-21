@@ -6,6 +6,7 @@ import { Message } from './components/Message'
 import { Welcome } from './components/Welcome'
 import { CommandPalette } from './components/CommandPalette'
 import { AgentTree } from './components/AgentTree'
+import { ObservedPanel } from './components/ObservedPanel'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
   refreshFolders, abortTurn
@@ -19,6 +20,8 @@ export function App() {
   const messages = useAgent((s) => s.messages)
   const tools = useAgent((s) => s.tools)
   const fatal = useAgent((s) => s.fatal)
+  const observed = useAgent((s) => s.observed)
+  const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
 
@@ -26,7 +29,25 @@ export function App() {
   useEffect(() => {
     const store = useAgent.getState()
 
-    const offEvent = window.prime.on('agent:event', (p) => store.ingest(p as AgentEvent))
+    const offEvent = window.prime.on('agent:event', (p) => {
+      const ev = p as AgentEvent & { activeSessionId?: string; event?: AgentEvent; error?: string }
+
+      // Eventos de sessões observadas vêm embrulhados para não se confundirem
+      // com os da sessão própria. Roteia para o namespace do observado.
+      if (ev.type === 'observed_session_event' && ev.activeSessionId && ev.event) {
+        store.ingestObserved(ev.activeSessionId, ev.event)
+        return
+      }
+      if (ev.type === 'observed_session_closed' && ev.activeSessionId) {
+        store.upsertObserved(ev.activeSessionId, {
+          status: ev.error ? 'error' : 'closed',
+          error: ev.error
+        })
+        return
+      }
+
+      store.ingest(ev)
+    })
     const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
     const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))
     const offTree = window.prime.on('agents:tree', (p) =>
@@ -187,6 +208,11 @@ export function App() {
         <div className="relative z-10 mx-auto w-full max-w-[860px]">
           <Composer onOpenPalette={() => setPalette(true)} />
         </div>
+
+        {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
+        {watchedIds.length > 0 && (
+          <ObservedPanel activeSessionId={watchedIds[watchedIds.length - 1]} />
+        )}
       </main>
 
       {treeOpen && <AgentTree onClose={() => setTreeOpen(false)} />}
