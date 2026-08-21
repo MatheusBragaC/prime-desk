@@ -54,14 +54,20 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 - [x] Steer / follow-up durante streaming
 - [x] Compactação manual + indicador
 - [x] Paleta de comandos (⌘K) alimentada por `get_commands`
-- [ ] Árvore de subagentes RLM (lê `_meta`/eventos de child)
+- [x] Árvore de subagentes RLM (via `prime-agent list --json`)
+- [x] Organização de conversas em pastas + grupos automáticos por projeto
+- [ ] Transcript ao vivo de um subagente (usar `observe`/`unobserve` do RPC)
 - [ ] Modo bash dedicado
 - [ ] Export HTML
 
 ### Fase 4 — Acabamento
-- [ ] Empacotamento AppImage/deb (`electron-builder`)
+- [x] Ícone do app rasterizado do SVG da marca (`scripts/make-icon.mjs`)
+- [x] Empacotamento Linux: `.deb` + AppImage
+- [x] Empacotamento macOS: `.zip` x64/arm64 (dmg exige host macOS)
+- [x] CI de release (`.github/workflows/release.yml`)
+- [ ] Assinatura e notarização Apple (precisa de certificado)
 - [ ] Atalhos globais e tray
-- [ ] Persistência de preferências
+- [ ] Auto-update
 
 ## Decisões registradas
 
@@ -73,6 +79,10 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 4 | Parser LF próprio | `readline` do Node é incompatível com o framing (quebra em U+2028/9) |
 | 5 | Sidebar lê JSONL direto | Listar sessões sem custo de subir worker |
 | 6 | Tema como CSS vars | Espelha `prime.json`; permite hot-swap e temas custom depois |
+| 7 | Árvore via CLI, não RPC | `parentActiveSessionId` só existe em `list --json`; o RPC não expõe o vínculo |
+| 8 | Pastas só na GUI | O agente não tem conceito de pasta; metadado de apresentação não deve vazar para ele |
+| 9 | Poller pausado com janela oculta | `list --json` é processo separado; não deve girar à toa |
+| 10 | Ícone rasterizado pelo Electron | Evita depender de Inkscape/librsvg/ImageMagick na máquina de build |
 
 ## Segurança
 

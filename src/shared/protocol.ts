@@ -138,3 +138,52 @@ export interface SessionSummary {
 }
 
 export type BridgeStatus = 'idle' | 'starting' | 'ready' | 'error' | 'stopped'
+
+// ------------------------------------------------------------------ árvore RLM
+
+export interface AgentNode {
+  activeSessionId: string
+  sessionId: string
+  sessionFile: string
+  /** Nome dado no spawn (`rlm(..., name=...)`). Vazio para o root. */
+  name: string
+  kind: 'root' | 'subagent'
+  depth: number
+  parentActiveSessionId?: string
+  rlmChildId?: string
+  /** Código Python que originou o subagente, reportado pelo daemon. */
+  spawnCode?: string
+  status: 'working' | 'idle' | 'done'
+  taskState: string
+  replied: boolean
+  hasRunningChildren: boolean
+  messageCount: number
+  firstMessage: string
+  cwd: string
+  modelName: string
+  lastActivityAt: string
+  children: AgentNode[]
+}
+
+export interface AgentTreeSnapshot {
+  roots: AgentNode[]
+  total: number
+  subagents: number
+  at: number
+}
+
+// ----------------------------------------------------------------- pastas
+
+export interface Folder {
+  id: string
+  name: string
+  order: number
+}
+
+export interface FolderState {
+  folders: Folder[]
+  /** sessionId -> folderId */
+  assignments: Record<string, string>
+  /** chave de grupo -> colapsado */
+  collapsed: Record<string, boolean>
+}

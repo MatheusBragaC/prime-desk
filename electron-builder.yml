@@ -1,0 +1,76 @@
+appId: br.com.primedesk.app
+productName: Prime Desk
+copyright: MIT
+
+directories:
+  output: release
+  buildResources: build
+
+# Só o build compilado entra no pacote. src/, docs/ e scripts/ ficam fora.
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+# O prime-agent NÃO é embutido: o app usa o binário já instalado do usuário,
+# para não congelar uma versão do agente dentro do pacote.
+asar: true
+compression: normal
+
+linux:
+  target:
+    - target: deb
+      arch: [x64]
+    - target: AppImage
+      arch: [x64]
+  icon: build/icons
+  category: Development
+  synopsis: Interface gráfica para o prime-agent
+  description: >
+    Cliente desktop para o prime-agent. Streaming de respostas, execução de
+    ferramentas, árvore de subagentes RLM e organização de conversas em pastas.
+  maintainer: Prime Desk <prime-desk@localhost>
+  desktop:
+    entry:
+      Name: Prime Desk
+      Comment: Interface gráfica para o prime-agent
+      Keywords: ai;agent;llm;prime;
+      StartupWMClass: prime-desk
+
+deb:
+  # `prime-agent` vem do npm, não do apt: fica como recomendação, não dependência.
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libsecret-1-0
+  recommends:
+    - nodejs
+
+appImage:
+  artifactName: ${productName}-${version}-${arch}.AppImage
+
+mac:
+  # zip compila em qualquer host (validado no Linux, x64 e arm64).
+  # dmg exige macOS: o dmg-license é dependência darwin-only e o hdiutil não
+  # existe fora do macOS. Use `npm run dist:mac:dmg` numa máquina Apple ou o
+  # workflow de CI em .github/workflows/release.yml.
+  target:
+    - target: zip
+      arch: [x64, arm64]
+  icon: build/icon.png
+  category: public.app-category.developer-tools
+  darkModeSupport: true
+  # Sem certificado Apple: build não assinado. Ver README para o aviso do Gatekeeper.
+  identity: null
+  hardenedRuntime: false
+  extendInfo:
+    NSHighResolutionCapable: true
+
+dmg:
+  title: ${productName} ${version}
+  artifactName: ${productName}-${version}-${arch}.dmg

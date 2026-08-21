@@ -13,13 +13,23 @@ const api = {
     ipcRenderer.invoke('bridge:fire', { type, payload }),
 
   listSessions: () => ipcRenderer.invoke('sessions:list'),
+  transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),
+
+  agentTree: () => ipcRenderer.invoke('agents:tree'),
+  refreshAgentTree: () => ipcRenderer.invoke('agents:refresh'),
+
+  loadFolders: () => ipcRenderer.invoke('folders:load'),
+  saveFolders: (state: unknown) => ipcRenderer.invoke('folders:save', state),
   pickDirectory: () => ipcRenderer.invoke('dialog:pickDirectory'),
   pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   appInfo: () => ipcRenderer.invoke('app:info'),
 
   on: (channel: string, listener: (payload: unknown) => void) => {
-    const allowed = ['agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit']
+    const allowed = [
+      'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
+      'agents:tree', 'agents:tree-error'
+    ]
     if (!allowed.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
     const wrapped = (_e: IpcRendererEvent, payload: unknown) => listener(payload)
     ipcRenderer.on(channel, wrapped)

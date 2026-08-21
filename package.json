@@ -3,6 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "description": "Interface gráfica desktop para o prime-agent",
+  "author": {
+    "name": "Matheus Carvalho",
+    "email": "prime-desk@localhost"
+  },
+  "homepage": "https://github.com/PrimeIntellect-ai/prime-agent",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/matheus/prime-desk.git"
+  },
   "main": "./out/main/index.js",
   "type": "module",
   "license": "MIT",
@@ -11,10 +20,15 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "dist": "electron-vite build && electron-builder --linux AppImage deb",
+    "dist": "electron-vite build && electron-builder --linux deb AppImage",
     "dev:nosandbox": "PRIME_DESK_NO_SANDBOX=1 electron-vite dev",
     "start:nosandbox": "PRIME_DESK_NO_SANDBOX=1 electron-vite preview",
-    "fix-sandbox": "sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox"
+    "fix-sandbox": "sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox",
+    "icon": "electron scripts/make-icon.mjs",
+    "dist:linux": "electron-vite build && electron-builder --linux deb AppImage",
+    "dist:mac": "electron-vite build && electron-builder --mac zip --x64 --arm64",
+    "dist:mac:dmg": "electron-vite build && electron-builder --mac dmg zip --x64 --arm64",
+    "dist:all": "npm run dist:linux && npm run dist:mac"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

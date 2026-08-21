@@ -5,13 +5,16 @@ import { Composer } from './components/Composer'
 import { Message } from './components/Message'
 import { Welcome } from './components/Welcome'
 import { CommandPalette } from './components/CommandPalette'
+import { AgentTree } from './components/AgentTree'
 import {
-  useAgent, refreshState, refreshModels, refreshCommands, refreshSessions, abortTurn
+  useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
+  refreshFolders, abortTurn
 } from './store/agent'
-import type { AgentEvent } from '../../shared/protocol'
+import type { AgentEvent, AgentTreeSnapshot } from '../../shared/protocol'
 
 export function App() {
   const [palette, setPalette] = useState(false)
+  const [treeOpen, setTreeOpen] = useState(false)
   const [home, setHome] = useState('')
   const messages = useAgent((s) => s.messages)
   const tools = useAgent((s) => s.tools)
@@ -26,6 +29,12 @@ export function App() {
     const offEvent = window.prime.on('agent:event', (p) => store.ingest(p as AgentEvent))
     const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
     const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))
+    const offTree = window.prime.on('agents:tree', (p) =>
+      store.setTree(p as AgentTreeSnapshot)
+    )
+    const offTreeErr = window.prime.on('agents:tree-error', (p) =>
+      store.setTreeError(String(p))
+    )
     const offExit = window.prime.on('agent:exit', (p) => {
       const info = p as { expected?: boolean; code?: number; stderr?: string }
       if (info?.expected) {
@@ -65,6 +74,7 @@ export function App() {
       void refreshModels()
       void refreshCommands()
       void refreshSessions()
+      void refreshFolders()
     }
 
     void boot()
@@ -74,6 +84,8 @@ export function App() {
       offErr()
       offFatal()
       offExit()
+      offTree()
+      offTreeErr()
       void window.prime.stopBridge()
     }
   }, [])
@@ -84,6 +96,10 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setPalette((v) => !v)
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        setTreeOpen((v) => !v)
       }
       if (e.key === 'Escape' && useAgent.getState().state?.isStreaming) {
         void abortTurn()
@@ -125,7 +141,12 @@ export function App() {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
-      <Sidebar home={home} onPickCwd={() => void pickCwd()} />
+      <Sidebar
+        home={home}
+        onPickCwd={() => void pickCwd()}
+        onToggleTree={() => setTreeOpen((v) => !v)}
+        treeOpen={treeOpen}
+      />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
         <div className="aurora pointer-events-none absolute inset-0" />
@@ -167,6 +188,8 @@ export function App() {
           <Composer onOpenPalette={() => setPalette(true)} />
         </div>
       </main>
+
+      {treeOpen && <AgentTree onClose={() => setTreeOpen(false)} />}
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>

@@ -140,6 +140,7 @@ export function Composer({ onOpenPalette }: { onOpenPalette: () => void }) {
         <span><kbd className="font-mono">Enter</kbd> enviar</span>
         <span><kbd className="font-mono">Shift+Enter</kbd> nova linha</span>
         <span><kbd className="font-mono">Ctrl+K</kbd> comandos</span>
+        <span><kbd className="font-mono">Ctrl+B</kbd> agentes</span>
       </div>
     </div>
   )

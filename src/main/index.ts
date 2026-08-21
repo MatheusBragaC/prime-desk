@@ -5,6 +5,9 @@ import { homedir } from 'node:os'
 import { readFile } from 'node:fs/promises'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
+import { getAgentTree } from './agent-tree.js'
+import { loadFolders, saveFolders } from './folders.js'
+import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -65,7 +68,15 @@ function createWindow(): void {
     }
   })
 
-  win.once('ready-to-show', () => win?.show())
+  win.once('ready-to-show', () => {
+    win?.show()
+    startTreePolling()
+  })
+
+  win.on('hide', stopTreePolling)
+  win.on('show', startTreePolling)
+  win.on('minimize', stopTreePolling)
+  win.on('restore', startTreePolling)
 
   // Nada de navegação dentro do app: links vão para o navegador do sistema.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -87,6 +98,7 @@ function createWindow(): void {
   }
 
   win.on('closed', () => {
+    stopTreePolling()
     win = null
   })
 }
@@ -120,6 +132,66 @@ ipcMain.handle('bridge:fire', (_e, args: { type: string; payload?: Record<string
   if (!rpc?.running) return { ok: false }
   rpc.fire(args.type, args.payload ?? {})
   return { ok: true }
+})
+
+// Poller da árvore de agentes. Só roda com janela visível: `prime-agent list`
+// é um processo separado e não deve girar à toa em background.
+let treeTimer: NodeJS.Timeout | null = null
+const TREE_INTERVAL_MS = 3000
+
+async function tickTree(): Promise<void> {
+  if (!win || win.isDestroyed() || !win.isVisible()) return
+  try {
+    pushToRenderer('agents:tree', await getAgentTree())
+  } catch (err) {
+    pushToRenderer('agents:tree-error', err instanceof Error ? err.message : String(err))
+  }
+}
+
+function startTreePolling(): void {
+  if (treeTimer) return
+  void tickTree()
+  treeTimer = setInterval(() => void tickTree(), TREE_INTERVAL_MS)
+}
+
+function stopTreePolling(): void {
+  if (treeTimer) clearInterval(treeTimer)
+  treeTimer = null
+}
+
+ipcMain.handle('agents:tree', async () => {
+  try {
+    return { ok: true, tree: await getAgentTree() }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+})
+
+ipcMain.handle('agents:refresh', () => {
+  void tickTree()
+  return { ok: true }
+})
+
+ipcMain.handle('folders:load', async () => ({ ok: true, state: await loadFolders() }))
+
+ipcMain.handle('folders:save', async (_e, state: FolderState) => ({
+  ok: true,
+  state: await saveFolders(state)
+}))
+
+ipcMain.handle('sessions:transcript', async (_e, path: string) => {
+  // Leitura restrita ao diretório do agente: evita virar um leitor de arquivos genérico.
+  const agentDir = join(homedir(), '.prime', 'agent')
+  if (!path.startsWith(agentDir) || !path.endsWith('.jsonl')) {
+    return { ok: false, error: 'Caminho fora do diretório do agente.' }
+  }
+  try {
+    const raw = await readFile(path, 'utf-8')
+    const lines = raw.split('\n').filter((l) => l.trim().length > 0)
+    return { ok: true, entries: lines.slice(-400).map((l) => JSON.parse(l)) }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
 })
 
 ipcMain.handle('sessions:list', async () => {
@@ -176,6 +248,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  stopTreePolling()
   rpc?.stop()
   if (process.platform !== 'darwin') app.quit()
 })

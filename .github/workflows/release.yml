@@ -1,0 +1,53 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --linux deb AppImage --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            release/*.deb
+            release/*.AppImage
+
+  macos:
+    # O dmg só pode ser gerado em macOS: dmg-license é darwin-only e o
+    # empacotamento usa hdiutil. Runner arm64 cobre Apple Silicon e Intel.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --mac dmg zip --x64 --arm64 --publish never
+        env:
+          # Preencha estes segredos para assinar e notarizar. Sem eles o build
+          # sai não assinado e o Gatekeeper exige liberação manual.
+          CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            release/*.dmg
+            release/*.zip

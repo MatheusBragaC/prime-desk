@@ -133,3 +133,55 @@ Ubuntu 24.04.3 · Node v22.22.2 · npm 10.9.7 · pnpm disponível · **sem Rust/
 Por isso **Electron** e não Tauri: Tauri exigiria instalar toolchain Rust +
 `webkit2gtk-4.1`, e o *sidecar* de subprocesso ficaria mais complicado que o
 `child_process.spawn` nativo do Electron main.
+
+## 9. Árvore de subagentes RLM
+
+O RPC **não** expõe o vínculo pai→filho. A única superfície que expõe é a CLI:
+
+```bash
+prime-agent list --json
+```
+
+Schema confirmado empiricamente gerando um subagente real (`await rlm(..., name=...)`)
+e inspecionando o registro devolvido:
+
+| Campo | Uso na GUI |
+|---|---|
+| `runtimeKind` | `"top-level"` ou `"subagent"` |
+| `rlmDepth` | profundidade (0 = root) |
+| `parentActiveSessionId` | **a aresta da árvore** |
+| `sessionName` | nome dado no spawn (`name=`) |
+| `rlmChildId` | id do filho, ex. `sub-372c6f11` |
+| `spawnCode` | código Python que originou o subagente |
+| `activity` / `taskState` | `working`/`idle`, `needs_input` |
+| `repliedSinceTask` | se o filho já respondeu ao pai |
+| `hasRunningRlmChildren` | se há descendentes ativos |
+| `messageCount`, `firstMessage`, `model`, `lastActivityAt` | metadados de exibição |
+
+O header do JSONL do filho também carrega o vínculo:
+
+```json
+{"type":"session","version":3,"id":"…","parentSession":"…/<pai>.jsonl","rlmDepth":1}
+```
+
+Sessões de subagente ficam fora de `sessions/`:
+`~/.prime/agent/session-artifacts/<sessão-pai>/<rlmChildId>/<id>.jsonl`
+
+**Implementação:** `src/main/agent-tree.ts` roda `list --json` a cada 3 s (só com
+janela visível) e monta a floresta. Nós órfãos — pai já encerrado — sobem para a
+raiz em vez de desaparecer.
+
+**Não usado ainda:** o RPC tem `observe` / `unobserve` para assinar os eventos de
+outra sessão, entregues como `observed_session_event`. É o caminho para, no
+futuro, abrir o transcript ao vivo de um filho dentro da GUI.
+
+## 10. Pastas de conversas
+
+O `prime-agent` não tem conceito de pasta e não deve receber metadado de
+apresentação. A organização é só da GUI:
+
+- **Grupos automáticos:** derivados do `cwd` da sessão — na prática, o projeto.
+- **Pastas manuais:** criadas pelo usuário; atribuição manual tem precedência.
+- **Persistência:** `<userData>/folders.json`, contendo apenas `folders`,
+  `assignments` (sessionId → folderId) e `collapsed`. Nenhum conteúdo de
+  conversa é copiado.

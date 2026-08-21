@@ -36,6 +36,51 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Controle** | abort (`Esc`), steer durante streaming, compactação manual |
 | **Paleta** | `Ctrl+K` com skills descobertas via `get_commands` |
 | **Imagens** | anexo para modelos multimodais |
+| **Árvore de agentes** | hierarquia RLM pai→filho em tempo real, com status, profundidade e o código que originou cada subagente (`Ctrl+B`) |
+| **Pastas** | conversas organizadas em pastas manuais e em grupos automáticos por projeto |
+
+## Organização de conversas
+
+A sidebar agrupa em dois níveis:
+
+- **Grupos automáticos** — derivados do diretório de trabalho da sessão, o que na
+  prática equivale ao projeto. Zero configuração.
+- **Pastas manuais** — criadas com o botão de pasta, renomeáveis, com `+` para já
+  criar a conversa dentro dela. O menu `⋯` de cada conversa move entre pastas.
+
+A atribuição manual tem precedência sobre o agrupamento automático. Tudo isso vive
+em `<userData>/folders.json` e guarda **apenas** ids de sessão e nomes de pasta —
+nenhum conteúdo de conversa é duplicado.
+
+## Árvore de subagentes
+
+`Ctrl+B` abre o painel de agentes: a hierarquia completa de descendentes RLM, com
+status (ativo / aguarda / respondeu), profundidade, contagem de mensagens, modelo
+e o `spawnCode` — o código Python exato que criou cada subagente.
+
+Os dados vêm de `prime-agent list --json`, a única superfície que expõe
+`parentActiveSessionId`. O poller roda a cada 3 s e **pausa** quando a janela não
+está visível.
+
+## Empacotamento
+
+| Alvo | Comando | Onde compila |
+|---|---|---|
+| `.deb` + AppImage | `npm run dist:linux` | qualquer host Linux |
+| macOS `.zip` (x64 + arm64) | `npm run dist:mac` | **qualquer host**, inclusive Linux |
+| macOS `.dmg` | `npm run dist:mac:dmg` | **só em macOS** |
+
+O `.dmg` não compila fora do macOS: o `dmg-license` é dependência darwin-only e o
+empacotamento usa `hdiutil`. Para gerar dmg assinado e notarizado use o workflow
+`.github/workflows/release.yml`, que roda num runner `macos-14`.
+
+> Builds macOS sem certificado Apple saem **não assinados**. O Gatekeeper vai
+> bloquear na primeira execução; o usuário precisa liberar manualmente em
+> Ajustes → Privacidade e Segurança. Para distribuir de verdade, preencha os
+> segredos de assinatura no CI.
+
+Ícones: `npm run icon` rasteriza `resources/brand/prime-butterfly.svg` em todos os
+tamanhos usando o próprio Electron — sem depender de Inkscape ou ImageMagick.
 
 ## Requisitos
 
@@ -84,6 +129,7 @@ npm run typecheck
 | `Enter` | enviar |
 | `Shift+Enter` | nova linha |
 | `Ctrl+K` | paleta de comandos |
+| `Ctrl+B` | árvore de agentes |
 | `Esc` | interromper o turno |
 
 ## Arquitetura
@@ -94,7 +140,9 @@ src/
 ├─ main/
 │  ├─ index.ts             janela, IPC, ciclo de vida
 │  ├─ rpc-client.ts        spawn + framing JSONL + correlação de requisições
-│  └─ session-catalog.ts   leitura das sessões em disco
+│  ├─ session-catalog.ts   leitura das sessões em disco
+│  ├─ agent-tree.ts        árvore RLM via `prime-agent list --json`
+│  └─ folders.ts           persistência das pastas
 ├─ preload/index.ts        contextBridge (superfície mínima)
 └─ renderer/src/
    ├─ store/agent.ts       redução de eventos → estado de UI

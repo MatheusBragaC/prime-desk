@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type {
   AgentEvent, AgentState, ContentBlock, ModelInfo, SessionSummary,
-  ThinkingLevel, ToolResult, Usage, BridgeStatus, RpcResponse
+  ThinkingLevel, ToolResult, Usage, BridgeStatus, RpcResponse,
+  AgentTreeSnapshot, FolderState
 } from '../../../shared/protocol'
 
 export interface UiMessage {
@@ -46,6 +47,9 @@ interface AgentStore {
   cwd: string
   compacting: boolean
   retry: { attempt: number; max: number; message: string } | null
+  tree: AgentTreeSnapshot | null
+  treeError: string | null
+  folders: FolderState
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -56,6 +60,9 @@ interface AgentStore {
   setModels: (m: ModelInfo[]) => void
   setCommands: (c: CommandInfo[]) => void
   setSessions: (s: SessionSummary[]) => void
+  setTree: (t: AgentTreeSnapshot) => void
+  setTreeError: (e: string | null) => void
+  setFolders: (f: FolderState) => void
   reset: () => void
 }
 
@@ -87,6 +94,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
   cwd: '',
   compacting: false,
   retry: null,
+  tree: null,
+  treeError: null,
+  folders: { folders: [], assignments: {}, collapsed: {} },
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -95,6 +105,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
+  setTree: (tree) => set({ tree, treeError: null }),
+  setTreeError: (treeError) => set({ treeError }),
+  setFolders: (folders) => set({ folders }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
   reset: () => set({ messages: [], tools: {}, totals: { tokens: 0, cost: 0 }, retry: null }),
@@ -295,6 +308,24 @@ export async function setThinking(level: ThinkingLevel): Promise<void> {
 
 export async function compactNow(): Promise<void> {
   await rpc('compact')
+}
+
+export async function refreshFolders(): Promise<void> {
+  const r = await bridge().loadFolders()
+  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+}
+
+/**
+ * Atualiza as pastas de forma otimista e persiste no disco.
+ * O estado devolvido pelo main é a verdade final (ele sanitiza os campos).
+ */
+export async function mutateFolders(
+  fn: (state: FolderState) => FolderState
+): Promise<void> {
+  const next = fn(useAgent.getState().folders)
+  useAgent.getState().setFolders(next)
+  const r = await bridge().saveFolders(next)
+  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
 }
 
 export async function newSession(): Promise<void> {
