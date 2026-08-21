@@ -1,0 +1,44 @@
+{
+  "name": "prime-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interface gráfica desktop para o prime-agent",
+  "main": "./out/main/index.js",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dist": "electron-vite build && electron-builder --linux AppImage deb",
+    "dev:nosandbox": "PRIME_DESK_NO_SANDBOX=1 electron-vite dev",
+    "start:nosandbox": "PRIME_DESK_NO_SANDBOX=1 electron-vite preview",
+    "fix-sandbox": "sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11"
+  },
+  "dependencies": {
+    "framer-motion": "^11.15.0",
+    "highlight.js": "^11.10.0",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "rehype-highlight": "^7.0.1",
+    "zustand": "^5.0.2"
+  }
+}

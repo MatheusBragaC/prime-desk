@@ -1,0 +1,20 @@
+{
+  "name": "prime",
+  "source": "prime-agent dist/modes/interactive/theme/prime.json",
+  "colors": {
+    "bg": "#050506",
+    "surface": "#0d0d10",
+    "panel": "#151518",
+    "fg": "#f4f4f5",
+    "muted": "#a1a1aa",
+    "dim": "#71717a",
+    "grid": "#52525b",
+    "primary": "#7c6faf",
+    "primarySoft": "#8d7fc0",
+    "success": "#7da876",
+    "warning": "#f59e0b",
+    "error": "#d06f82",
+    "info": "#38bdf8",
+    "mint": "#8ba888"
+  }
+}

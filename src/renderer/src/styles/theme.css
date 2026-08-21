@@ -1,0 +1,162 @@
+/*
+ * Paleta oficial do prime-agent.
+ * Fonte: dist/modes/interactive/theme/prime.json (tema default `prime`).
+ * Ver docs/MAPEAMENTO.md §6. Não inventar cores aqui.
+ */
+:root {
+  --p-bg: #050506;
+  --p-surface: #0d0d10;
+  --p-panel: #151518;
+  --p-fg: #f4f4f5;
+  --p-muted: #a1a1aa;
+  --p-dim: #71717a;
+  --p-grid: #52525b;
+  --p-primary: #7c6faf;
+  --p-primary-soft: #8d7fc0;
+  --p-success: #7da876;
+  --p-warning: #f59e0b;
+  --p-error: #d06f82;
+  --p-info: #38bdf8;
+  --p-mint: #8ba888;
+  --p-selected: #222226;
+  --p-user-bg: #1a1a1f;
+  --p-tool-pending: #101015;
+  --p-tool-success: #0e1510;
+  --p-tool-error: #1a0d12;
+  --p-diff-added: #3fb950;
+  --p-diff-removed: #f85149;
+
+  --p-radius: 14px;
+  --p-titlebar: 44px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--p-bg);
+  color: var(--p-fg);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+::selection { background: rgba(124, 111, 175, 0.35); }
+
+/* ---------- scrollbar ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #2a2a30;
+  border-radius: 8px;
+  border: 2px solid var(--p-bg);
+}
+::-webkit-scrollbar-thumb:hover { background: #3a3a44; }
+
+/* ---------- brilho ambiente ---------- */
+.aurora::before {
+  content: '';
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 60%;
+  background: radial-gradient(60% 60% at 50% 0%, rgba(124, 111, 175, 0.16), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hairline { border-color: rgba(255, 255, 255, 0.06); }
+
+.drag-region { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
+
+/* ---------- markdown ---------- */
+.md { font-size: 14.5px; line-height: 1.72; overflow-wrap: anywhere; }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+.md p { margin: 0 0 0.85em; }
+.md h1, .md h2, .md h3, .md h4 {
+  color: var(--p-primary-soft);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.5em 0 0.6em;
+}
+.md h1 { font-size: 1.4em; }
+.md h2 { font-size: 1.22em; }
+.md h3 { font-size: 1.08em; }
+.md h4 { font-size: 1em; }
+.md a { color: var(--p-info); text-decoration: none; border-bottom: 1px solid rgba(56, 189, 248, 0.3); }
+.md a:hover { border-bottom-color: var(--p-info); }
+.md ul, .md ol { margin: 0 0 0.9em; padding-left: 1.35em; }
+.md li { margin: 0.25em 0; }
+.md ul li::marker { color: var(--p-muted); }
+.md ol li::marker { color: var(--p-muted); }
+.md strong { color: #fff; font-weight: 600; }
+.md em { color: var(--p-fg); }
+.md hr { border: none; border-top: 1px solid var(--p-grid); margin: 1.5em 0; opacity: 0.5; }
+.md blockquote {
+  margin: 0 0 1em;
+  padding: 0.1em 0 0.1em 1em;
+  border-left: 2px solid var(--p-grid);
+  color: var(--p-muted);
+}
+.md code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.87em;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+  padding: 0.12em 0.4em;
+  color: #d4d4d8;
+}
+.md pre {
+  background: #08080a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 13px 15px;
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+.md pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.6px;
+  line-height: 1.65;
+  color: var(--p-mint);
+}
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1em;
+  font-size: 13.3px;
+  display: block;
+  overflow-x: auto;
+}
+.md th, .md td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 7px 11px;
+  text-align: left;
+}
+.md th { background: rgba(255, 255, 255, 0.035); color: var(--p-primary-soft); font-weight: 600; }
+
+/* ---------- highlight.js mapeado no tema prime ---------- */
+.hljs-comment, .hljs-quote { color: var(--p-muted); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name { color: var(--p-info); }
+.hljs-title, .hljs-title.function_, .hljs-section { color: var(--p-info); }
+.hljs-string, .hljs-regexp, .hljs-template-string { color: var(--p-mint); }
+.hljs-number, .hljs-literal, .hljs-type, .hljs-class .hljs-title { color: var(--p-warning); }
+.hljs-variable, .hljs-attr, .hljs-attribute, .hljs-property { color: #d4d4d8; }
+.hljs-symbol, .hljs-bullet, .hljs-meta { color: var(--p-primary-soft); }
+.hljs-deletion { color: var(--p-diff-removed); }
+.hljs-addition { color: var(--p-diff-added); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 600; }
+
+textarea { font-family: inherit; }
+button { font-family: inherit; }
