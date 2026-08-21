@@ -44,6 +44,7 @@ interface AgentStore {
   treeError: string | null
   folders: FolderState
   observed: Record<string, Observed>
+  notice: { kind: 'error' | 'info'; text: string; at: number } | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -58,6 +59,8 @@ interface AgentStore {
   setTree: (t: AgentTreeSnapshot) => void
   setTreeError: (e: string | null) => void
   setFolders: (f: FolderState) => void
+  notify: (kind: 'error' | 'info', text: string) => void
+  clearNotice: () => void
   upsertObserved: (id: string, patch: Partial<Observed>) => void
   dropObserved: (id: string) => void
   ingestObserved: (id: string, ev: AgentEvent) => void
@@ -82,6 +85,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   treeError: null,
   folders: { folders: [], assignments: {}, collapsed: {} },
   observed: {},
+  notice: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -93,6 +97,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setTree: (tree) => set({ tree, treeError: null }),
   setTreeError: (treeError) => set({ treeError }),
   setFolders: (folders) => set({ folders }),
+  notify: (kind, text) => set({ notice: { kind, text, at: Date.now() } }),
+  clearNotice: () => set({ notice: null }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
   reset: () => set({ ...emptyTranscript(), retry: null }),
@@ -174,18 +180,28 @@ export const useAgent = create<AgentStore>((set, get) => ({
 
 const bridge = () => window.prime
 
-export async function rpc<T = unknown>(type: string, payload?: Record<string, unknown>): Promise<T | null> {
+export interface RpcOutcome<T> {
+  ok: boolean
+  data: T | null
+  error?: string
+}
+
+/** Chamada crua: devolve o erro em vez de engolir. */
+export async function rpcCall<T = unknown>(
+  type: string,
+  payload?: Record<string, unknown>
+): Promise<RpcOutcome<T>> {
   const r = await bridge().send(type, payload)
-  if (!r?.ok) {
-    console.warn('[rpc]', type, r?.error)
-    return null
-  }
+  if (!r?.ok) return { ok: false, data: null, error: r?.error ?? 'Falha de transporte.' }
   const res = r.res as RpcResponse<T>
-  if (!res.success) {
-    console.warn('[rpc]', type, res.error)
-    return null
-  }
-  return (res.data ?? null) as T | null
+  if (!res.success) return { ok: false, data: null, error: res.error ?? `Comando "${type}" falhou.` }
+  return { ok: true, data: (res.data ?? null) as T | null }
+}
+
+export async function rpc<T = unknown>(type: string, payload?: Record<string, unknown>): Promise<T | null> {
+  const out = await rpcCall<T>(type, payload)
+  if (!out.ok) console.warn('[rpc]', type, out.error)
+  return out.data
 }
 
 export async function refreshState(): Promise<void> {
@@ -261,12 +277,36 @@ export async function newSession(): Promise<void> {
   void refreshSessions()
 }
 
-export async function openSession(sessionId: string): Promise<void> {
-  await rpc('switch_session', { sessionId })
-  useAgent.getState().reset()
+/**
+ * Abre uma sessão salva.
+ *
+ * `switch_session` recebe **sessionPath**, não sessionId — mandar o campo errado
+ * faz o comando falhar em silêncio e a seleção nunca sai do lugar.
+ */
+export async function openSession(sessionPath: string): Promise<void> {
+  const store = useAgent.getState()
+  const out = await rpcCall<{ cancelled?: boolean }>('switch_session', { sessionPath })
+
+  if (!out.ok) {
+    const already = /already active/i.test(out.error ?? '')
+    store.notify(
+      'error',
+      already
+        ? 'Esta conversa já está aberta em outro agente ativo. Encerre-o antes de abri-la aqui.'
+        : out.error ?? 'Não foi possível abrir esta conversa.'
+    )
+    return
+  }
+  if (out.data?.cancelled) {
+    store.notify('info', 'A troca de sessão foi cancelada por uma extensão.')
+    return
+  }
+
+  store.reset()
   const data = await rpc<{ messages: AgentMessage[] }>('get_messages')
-  if (data?.messages) useAgent.getState().loadHistory(data.messages)
-  void refreshState()
+  if (data?.messages) store.loadHistory(data.messages)
+  await refreshState()
+  void refreshSessions()
 }
 
 // ------------------------------------------------------------------ observe

@@ -7,6 +7,8 @@ import type { AgentNode } from '../../../shared/protocol'
 import { useAgent, observeSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
 import { relTime } from '../lib/format'
+import { useResizable } from '../lib/useResizable'
+import { ResizeHandle } from './ResizeHandle'
 
 function StatusDot({ node }: { node: AgentNode }) {
   if (node.status === 'working') {
@@ -136,9 +138,19 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
 export function AgentTree({ onClose }: { onClose: () => void }) {
   const tree = useAgent((s) => s.tree)
   const error = useAgent((s) => s.treeError)
+  const size = useResizable('agent-tree', 310, 240, 680, 'left')
 
   return (
-    <aside className="flex w-[310px] shrink-0 flex-col border-l border-white/[0.06] bg-[var(--p-surface)]">
+    <aside
+      style={{ width: size.width }}
+      className="relative flex shrink-0 flex-col border-l border-white/[0.06] bg-[var(--p-surface)]"
+    >
+      <ResizeHandle
+        side="left"
+        dragging={size.dragging}
+        onMouseDown={size.onMouseDown}
+        onReset={size.reset}
+      />
       <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-white/[0.06] px-4">
         <GitBranch size={14} className="text-primarySoft" />
         <span className="flex-1 text-[12.5px] font-semibold">Agentes</span>

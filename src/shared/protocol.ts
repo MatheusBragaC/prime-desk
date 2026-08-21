@@ -186,4 +186,20 @@ export interface FolderState {
   assignments: Record<string, string>
   /** chave de grupo -> colapsado */
   collapsed: Record<string, boolean>
+  /** sessionId -> fixada no topo */
+  pinned?: Record<string, boolean>
+  /** sessionId -> arquivada (some da lista até habilitar exibição) */
+  archived?: Record<string, boolean>
+  /** sessionId -> título dado pelo usuário na GUI */
+  titles?: Record<string, string>
+}
+
+// ----------------------------------------------------------------- arquivos
+
+export interface DirEntry {
+  name: string
+  /** Caminho relativo à raiz do workspace. */
+  path: string
+  isDir: boolean
+  size: number
 }

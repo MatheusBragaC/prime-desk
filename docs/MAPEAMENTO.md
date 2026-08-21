@@ -242,3 +242,35 @@ Eventos `tool_execution_*` **não** são reemitidos. Sem tratar `toolResult`, to
 card de ferramenta de sessão reaberta ficaria preso em "preparando" para sempre —
 o que também afetava o botão de abrir sessão da sidebar, não só o observe.
 Corrigido em `applyToolResultMessage`.
+
+## 12. `switch_session` recebe `sessionPath`, não `sessionId`
+
+Bug encontrado por inspeção da doc depois de a seleção da sidebar não sair do
+lugar. Comprovado por teste direto:
+
+```
+{"type":"switch_session","sessionId":"01a01a62-…"}
+  -> success:false, "The \"paths[0]\" argument must be of type string"
+
+{"type":"switch_session","sessionPath":"/home/…/01a01a62-….jsonl"}
+  -> success:true, {"cancelled":false}   e get_state passa a devolver o novo sessionId
+```
+
+Dois efeitos colaterais que também precisaram de tratamento:
+
+1. **Sessão já ativa em outro worker é recusada**
+   (`Session is already active in <id>: <path>`). Sem tratar, a GUI ficava muda.
+   Hoje vira aviso explícito para o usuário.
+2. **`--no-session` zera o histórico.** Num probe com `--no-session`,
+   `get_messages` devolveu 0 mensagens após o switch; sem a flag, devolveu as 10
+   esperadas. A GUI não usa `--no-session` — mas vale saber ao depurar por CLI.
+
+## 13. Deriva entre o cwd do agente e a raiz do explorador
+
+`bridge:start` sobrescrevia a raiz do explorador mesmo quando a ponte já estava
+rodando. Resultado possível: explorador apontando para uma pasta onde o agente
+**não** está executando — e o renderer podia recarregar sem reiniciar a ponte.
+
+Correção: o main é a fonte da verdade. Com a ponte de pé, `bridge:start` devolve
+o `cwd` real e ignora o pedido; o renderer passa a exibir o que o main devolveu,
+em vez do que pediu.

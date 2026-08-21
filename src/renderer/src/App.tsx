@@ -7,6 +7,9 @@ import { Welcome } from './components/Welcome'
 import { CommandPalette } from './components/CommandPalette'
 import { AgentTree } from './components/AgentTree'
 import { ObservedPanel } from './components/ObservedPanel'
+import { Notice } from './components/Notice'
+import { FilesPanel } from './components/FilesPanel'
+import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
   refreshFolders, abortTurn
@@ -16,6 +19,9 @@ import type { AgentEvent, AgentTreeSnapshot } from '../../shared/protocol'
 export function App() {
   const [palette, setPalette] = useState(false)
   const [treeOpen, setTreeOpen] = useState(false)
+  const [filesOpen, setFilesOpen] = useState(false)
+  const [fileDraft, setFileDraft] = useState<string | undefined>()
+  const [openFile, setOpenFile] = useState<string | null>(null)
   const [home, setHome] = useState('')
   const messages = useAgent((s) => s.messages)
   const tools = useAgent((s) => s.tools)
@@ -72,13 +78,15 @@ export function App() {
       store.setStatus('starting')
       const info = await window.prime.appInfo()
       setHome(info.home)
-      store.setCwd(info.home)
 
       const r = await window.prime.startBridge({ cwd: info.home })
       if (!r?.ok) {
         store.setFatal('Não foi possível iniciar o prime-agent.')
         return
       }
+      // O cwd efetivo vem do main, não do que pedimos: se a ponte já estava de
+      // pé (recarga do renderer), o diretório real é o dela.
+      store.setCwd(r.cwd ?? info.home)
 
       // O worker do daemon leva alguns segundos para aceitar comandos.
       for (let i = 0; i < 30; i++) {
@@ -122,6 +130,10 @@ export function App() {
         e.preventDefault()
         setTreeOpen((v) => !v)
       }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        setFilesOpen((v) => !v)
+      }
       if (e.key === 'Escape' && useAgent.getState().state?.isStreaming) {
         void abortTurn()
       }
@@ -149,8 +161,8 @@ export function App() {
     store.setStatus('starting')
     store.reset()
     await window.prime.stopBridge()
-    store.setCwd(r.path)
-    await window.prime.startBridge({ cwd: r.path })
+    const started = await window.prime.startBridge({ cwd: r.path })
+    store.setCwd(started?.cwd ?? r.path)
     for (let i = 0; i < 30; i++) {
       await new Promise((res) => setTimeout(res, 700))
       await refreshState()
@@ -172,6 +184,7 @@ export function App() {
       <main className="relative flex min-w-0 flex-1 flex-col">
         <div className="aurora pointer-events-none absolute inset-0" />
         <StatusBar />
+        <Notice />
 
         {fatal ? (
           <div className="flex flex-1 items-center justify-center p-10">
@@ -206,14 +219,31 @@ export function App() {
         )}
 
         <div className="relative z-10 mx-auto w-full max-w-[860px]">
-          <Composer onOpenPalette={() => setPalette(true)} />
+          <Composer
+            onOpenPalette={() => setPalette(true)}
+            onPickCwd={() => void pickCwd()}
+            onToggleFiles={() => setFilesOpen((v) => !v)}
+            home={home}
+            draft={fileDraft}
+            onDraftConsumed={() => setFileDraft(undefined)}
+          />
         </div>
 
         {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
         {watchedIds.length > 0 && (
           <ObservedPanel activeSessionId={watchedIds[watchedIds.length - 1]} />
         )}
+
+        {openFile && <FileViewer path={openFile} onClose={() => setOpenFile(null)} />}
       </main>
+
+      {filesOpen && (
+        <FilesPanel
+          onClose={() => setFilesOpen(false)}
+          onOpenFile={(p) => setOpenFile(p)}
+          onQuote={(p) => setFileDraft(p)}
+        />
+      )}
 
       {treeOpen && <AgentTree onClose={() => setTreeOpen(false)} />}
 

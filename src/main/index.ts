@@ -1,12 +1,14 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electron'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
 import { loadFolders, saveFolders } from './folders.js'
+import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
@@ -48,7 +50,18 @@ function createRpc(cwd: string, model?: string): RpcClient {
   return client
 }
 
+function resolveIcon(): string | undefined {
+  // Empacotado, o ícone vem do bundle do electron-builder; em dev, de build/.
+  const candidates = [
+    join(__dirname, '../../build/icon.png'),
+    join(process.resourcesPath ?? '', 'icon.png')
+  ]
+  return candidates.find((p) => existsSync(p))
+}
+
 function createWindow(): void {
+  const icon = resolveIcon()
+
   win = new BrowserWindow({
     width: 1360,
     height: 900,
@@ -56,6 +69,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     backgroundColor: '#050506',
+    ...(icon ? { icon } : {}),
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 },
     trafficLightPosition: { x: 14, y: 14 },
@@ -69,6 +83,11 @@ function createWindow(): void {
   })
 
   win.once('ready-to-show', () => {
+    // No Linux a opção `icon` do construtor nem sempre pega; setIcon é confiável.
+    if (icon) {
+      const image = nativeImage.createFromPath(icon)
+      if (!image.isEmpty()) win?.setIcon(image)
+    }
     win?.show()
     startTreePolling()
   })
@@ -105,9 +124,16 @@ function createWindow(): void {
 
 // ---------------------------------------------------------------- IPC
 
+/** Raiz do explorador de arquivos = cwd onde o agente está executando. */
+let workspaceRoot = homedir()
+
 ipcMain.handle('bridge:start', (_e, args: { cwd?: string; model?: string }) => {
+  // Se a ponte já roda, o diretório dela é a verdade. Aceitar um cwd novo aqui
+  // faria o explorador apontar para uma pasta onde o agente NÃO está executando.
+  if (rpc?.running) return { ok: true, alreadyRunning: true, cwd: workspaceRoot }
+
   const cwd = args?.cwd || homedir()
-  if (rpc?.running) return { ok: true, alreadyRunning: true }
+  workspaceRoot = cwd
   rpc = createRpc(cwd, args?.model)
   return { ok: true, cwd }
 })
@@ -225,6 +251,31 @@ ipcMain.handle('dialog:pickImage', async () => {
   const ext = path.split('.').pop()!.toLowerCase()
   const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
   return { ok: true, path, data: buf.toString('base64'), mimeType }
+})
+
+ipcMain.handle('files:list', async (_e, relPath: string) => listDir(workspaceRoot, relPath ?? ''))
+
+ipcMain.handle('files:root', () => ({ ok: true, root: workspaceRoot }))
+
+ipcMain.handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspaceRoot) }))
+
+ipcMain.handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
+
+ipcMain.handle('files:write', async (_e, args: { path: string; content: string }) =>
+  writeFileSafe(workspaceRoot, args.path, args.content)
+)
+
+ipcMain.handle('sessions:delete', async (_e, path: string) =>
+  deleteSessionFile(join(homedir(), '.prime', 'agent'), path)
+)
+
+ipcMain.handle('files:reveal', async (_e, relPath: string) => {
+  const target = join(workspaceRoot, relPath)
+  if (!insideRoot(workspaceRoot, target)) {
+    return { ok: false, error: 'Caminho fora do diretório de trabalho.' }
+  }
+  const err = await shell.openPath(target)
+  return err ? { ok: false, error: err } : { ok: true }
 })
 
 ipcMain.handle('shell:openExternal', (_e, url: string) => {

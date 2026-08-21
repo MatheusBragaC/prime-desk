@@ -57,6 +57,10 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 - [x] Árvore de subagentes RLM (via `prime-agent list --json`)
 - [x] Organização de conversas em pastas + grupos automáticos por projeto
 - [x] Transcript ao vivo de um subagente (`observe`/`unobserve`)
+- [x] Explorador de arquivos com escopo na raiz do workspace
+- [x] Editor embutido com highlight, edição e gravação
+- [x] Menu de ações da conversa (fixar, renomear, arquivar, excluir)
+- [x] Painéis redimensionáveis com largura persistida
 - [ ] Modo bash dedicado
 - [ ] Export HTML
 

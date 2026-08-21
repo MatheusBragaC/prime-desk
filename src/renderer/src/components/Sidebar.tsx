@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import {
-  Plus, Search, FolderOpen, MessageSquare, RefreshCw, ChevronRight, Folder,
-  FolderPlus, MoreHorizontal, Trash2, Pencil, GitBranch
+  Plus, Search, FolderOpen, RefreshCw, ChevronRight, Folder,
+  FolderPlus, MoreHorizontal, Trash2, Pencil, GitBranch, Pin, Eye, EyeOff
 } from 'lucide-react'
 import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
-import { relTime, shortPath } from '../lib/format'
-import { groupSessions, type Group } from '../lib/grouping'
+import { shortPath } from '../lib/format'
+import { groupSessions, withTitles, type Group } from '../lib/grouping'
+import { SessionMenu } from './SessionMenu'
+import { useResizable } from '../lib/useResizable'
+import { ResizeHandle } from './ResizeHandle'
 import type { SessionSummary } from '../../../shared/protocol'
 
 function SessionRow({
@@ -23,38 +26,55 @@ function SessionRow({
   groups: Group[]
 }) {
   const [menu, setMenu] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const folders = useAgent((st) => st.folders)
+  const pinned = Boolean(folders.pinned?.[s.id])
+  const [draft, setDraft] = useState(s.title)
 
-  async function moveTo(folderId: string | null) {
-    setMenu(false)
-    await mutateFolders((state) => {
-      const assignments = { ...state.assignments }
-      if (folderId) assignments[s.id] = folderId
-      else delete assignments[s.id]
-      return { ...state, assignments }
+  async function commitRename() {
+    const name = draft.trim()
+    setRenaming(false)
+    await mutateFolders((st) => {
+      const titles = { ...(st.titles ?? {}) }
+      if (!name) delete titles[s.id]
+      else titles[s.id] = name
+      return { ...st, titles }
     })
   }
 
+  if (renaming) {
+    return (
+      <div className="mb-px px-3 py-[5px]">
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => void commitRename()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void commitRename()
+            if (e.key === 'Escape') setRenaming(false)
+          }}
+          className="w-full rounded border border-primary/45 bg-black/40 px-1.5 py-0.5 text-[12.6px] text-fg outline-none"
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="relative">
+    <div className="group relative">
       <button
         disabled={busy}
         onClick={onOpen}
         className={
-          'group mb-0.5 flex w-full items-start gap-2 rounded-[9px] py-1.5 pl-6 pr-7 text-left transition-colors disabled:opacity-50 ' +
-          (active ? 'bg-[var(--p-selected)]' : 'hover:bg-white/[0.04]')
+          'mb-px flex w-full items-center gap-1.5 rounded-[9px] py-[7px] pl-3 pr-7 text-left transition-colors disabled:opacity-50 ' +
+          (active
+            ? 'bg-[var(--p-selected)] text-fg'
+            : 'text-muted hover:bg-white/[0.04] hover:text-fg')
         }
+        title={s.title}
       >
-        <MessageSquare
-          size={11}
-          className={'mt-[4px] shrink-0 ' + (active ? 'text-primarySoft' : 'text-dim')}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] leading-snug text-fg">{s.title}</span>
-          <span className="mt-0.5 block text-[10.5px] text-dim">
-            {relTime(s.updatedAt)}
-            {s.messageCount > 0 && ` · ${s.messageCount} msgs`}
-          </span>
-        </span>
+        {pinned && <Pin size={9.5} className="shrink-0 text-primarySoft" />}
+        <span className="min-w-0 flex-1 truncate text-[12.8px] leading-snug">{s.title}</span>
       </button>
 
       <button
@@ -62,44 +82,31 @@ function SessionRow({
           e.stopPropagation()
           setMenu((v) => !v)
         }}
-        className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
-        title="Mover para pasta"
+        className={
+          'absolute right-1 top-1.5 rounded p-0.5 transition-opacity hover:text-fg ' +
+          (menu ? 'text-fg opacity-100' : 'text-dim opacity-0 group-hover:opacity-100')
+        }
+        title="Ações"
       >
         <MoreHorizontal size={13} />
       </button>
 
       {menu && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setMenu(false)} />
-          <div className="absolute right-1 top-7 z-40 w-[190px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/60">
-            <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-dim">
-              Mover para
-            </div>
-            {groups.filter((g) => g.kind === 'folder').length === 0 && (
-              <div className="px-2 py-1.5 text-[11.5px] text-dim">Nenhuma pasta criada.</div>
-            )}
-            {groups
-              .filter((g) => g.kind === 'folder')
-              .map((g) => (
-                <button
-                  key={g.key}
-                  onClick={() => void moveTo(g.folderId!)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
-                >
-                  <Folder size={11} />
-                  <span className="truncate">{g.label}</span>
-                </button>
-              ))}
-            <div className="my-1 border-t border-white/[0.07]" />
-            <button
-              onClick={() => void moveTo(null)}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
-            >
-              <Trash2 size={11} />
-              Remover da pasta
-            </button>
-          </div>
-        </>
+        <SessionMenu
+          session={s}
+          groups={groups}
+          isActive={active}
+          onClose={() => setMenu(false)}
+          onOpen={() => {
+            setMenu(false)
+            onOpen()
+          }}
+          onRename={() => {
+            setMenu(false)
+            setDraft(s.title)
+            setRenaming(true)
+          }}
+        />
       )}
     </div>
   )
@@ -229,23 +236,34 @@ export function Sidebar({
   const tree = useAgent((s) => s.tree)
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
+  const size = useResizable('sidebar', 272, 200, 560, 'right')
+
+  const archivedCount = useMemo(
+    () => sessions.filter((s) => folders.archived?.[s.id]).length,
+    [sessions, folders.archived]
+  )
 
   const filtered = useMemo(() => {
+    const named = withTitles(sessions, folders)
+    const visible = showArchived
+      ? named
+      : named.filter((s) => !folders.archived?.[s.id])
     const q = query.trim().toLowerCase()
-    if (!q) return sessions
-    return sessions.filter(
+    if (!q) return visible
+    return visible.filter(
       (s) => s.title.toLowerCase().includes(q) || s.cwd.toLowerCase().includes(q)
     )
-  }, [sessions, query])
+  }, [sessions, query, folders, showArchived])
 
   const groups = useMemo(
     () => groupSessions(filtered, folders, home).filter((g) => g.sessions.length > 0 || g.kind === 'folder'),
     [filtered, folders, home]
   )
 
-  async function open(id: string) {
+  async function open(path: string) {
     setBusy(true)
-    await openSession(id)
+    await openSession(path)
     setBusy(false)
   }
 
@@ -265,7 +283,16 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-[272px] shrink-0 flex-col border-r border-white/[0.06] bg-[var(--p-surface)]">
+    <aside
+      style={{ width: size.width }}
+      className="relative flex shrink-0 flex-col border-r border-white/[0.06] bg-[var(--p-surface)]"
+    >
+      <ResizeHandle
+        side="right"
+        dragging={size.dragging}
+        onMouseDown={size.onMouseDown}
+        onReset={size.reset}
+      />
       <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 px-4">
         <Butterfly size={19} />
         <span className="flex-1 text-[13.5px] font-semibold tracking-tight">Prime Desk</span>
@@ -319,6 +346,15 @@ export function Sidebar({
         <span className="text-[10.5px] font-semibold uppercase tracking-wider text-dim">
           {filtered.length} sessões · {groups.length} grupos
         </span>
+        {archivedCount > 0 && (
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className="text-dim transition-colors hover:text-muted"
+            title={showArchived ? 'Ocultar arquivadas' : `Mostrar ${archivedCount} arquivada(s)`}
+          >
+            {showArchived ? <EyeOff size={12} /> : <Eye size={12} />}
+          </button>
+        )}
         <button
           onClick={() => void refreshSessions()}
           className="text-dim transition-colors hover:text-muted"
@@ -349,7 +385,7 @@ export function Sidebar({
                       s={s}
                       active={state?.sessionId === s.id}
                       busy={busy}
-                      onOpen={() => void open(s.id)}
+                      onOpen={() => void open(s.path)}
                       groups={groups}
                     />
                   ))

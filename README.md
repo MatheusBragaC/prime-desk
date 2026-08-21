@@ -38,6 +38,11 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Imagens** | anexo para modelos multimodais |
 | **Árvore de agentes** | hierarquia RLM pai→filho em tempo real, com status, profundidade e o código que originou cada subagente (`Ctrl+B`) |
 | **Pastas** | conversas organizadas em pastas manuais e em grupos automáticos por projeto |
+| **Ações da conversa** | menu `⋯` com abrir, fixar, renomear, duplicar, mover, arquivar e excluir |
+| **Explorador** | árvore de arquivos do diretório de trabalho, com filtro (`Ctrl+Shift+F`) |
+| **Editor** | abre arquivos com syntax highlight, edita e salva (`Ctrl+S`) |
+| **Barra de contexto** | chips com Local, diretório, branch do git e atalho para os arquivos |
+| **Painéis redimensionáveis** | arraste os divisores; duplo clique restaura |
 
 ## Organização de conversas
 
@@ -93,6 +98,14 @@ empacotamento usa `hdiutil`. Para gerar dmg assinado e notarizado use o workflow
 > Ajustes → Privacidade e Segurança. Para distribuir de verdade, preencha os
 > segredos de assinatura no CI.
 
+### Ícone na barra de tarefas
+
+A janela recebe o ícone via `setIcon`, mas no Linux **a barra de tarefas não usa
+o ícone da janela** — ela casa o `WM_CLASS` com um `.desktop` instalado. Rodando
+em desenvolvimento (`npm run dev`) não existe `.desktop`, então o shell mostra um
+ícone genérico. Instalando o `.deb`, que traz `prime-desk.desktop` com
+`StartupWMClass=prime-desk` e os ícones em `hicolor`, a borboleta aparece.
+
 Ícones: `npm run icon` rasteriza `resources/brand/prime-butterfly.svg` em todos os
 tamanhos usando o próprio Electron — sem depender de Inkscape ou ImageMagick.
 
@@ -136,6 +149,38 @@ npm start        # roda o build
 npm run typecheck
 ```
 
+## Explorador e editor de arquivos
+
+A barra acima do composer mostra onde o agente está executando: **Local**, o
+**diretório de trabalho** (clique para trocar), a **branch** do git e o botão de
+arquivos.
+
+O painel de arquivos (`Ctrl+Shift+F`) lista a árvore do diretório de trabalho.
+Clicar num arquivo abre o editor embutido — syntax highlight para ~30 linguagens,
+edição e gravação com `Ctrl+S`. O `@` ao lado de cada arquivo cita o caminho no
+prompt em vez de abrir.
+
+**Limites deliberados:**
+
+- Tudo é resolvido contra a raiz do workspace. `..`, caminho absoluto e symlink
+  que aponte para fora são recusados — é um explorador do projeto, não um leitor
+  de disco.
+- Arquivos acima de 1 MB são exibidos truncados e com edição desabilitada, para
+  não gravar um arquivo cortado por cima do original.
+- Binários não são renderizados; abrem no aplicativo padrão do sistema.
+- O editor não tem histórico de desfazer entre sessões. Versione antes de mexer
+  em arquivo importante.
+
+## Ações da conversa
+
+O menu `⋯` de cada conversa: **Abrir**, **Fixar no topo**, **Renomear**,
+**Duplicar** (só na conversa aberta — usa `clone` do RPC, que age sobre a sessão
+ativa), **Mover para pasta**, **Arquivar** e **Excluir**.
+
+Fixar, arquivar e renomear são estado **da GUI** (`folders.json`): não alteram a
+sessão do agente. Excluir é real e apaga o `.jsonl` do disco, com confirmação e
+bloqueado para a conversa aberta.
+
 ## Atalhos
 
 | Tecla | Ação |
@@ -144,6 +189,8 @@ npm run typecheck
 | `Shift+Enter` | nova linha |
 | `Ctrl+K` | paleta de comandos |
 | `Ctrl+B` | árvore de agentes |
+| `Ctrl+Shift+F` | explorador de arquivos |
+| `Ctrl+S` | salvar arquivo no editor |
 | `Esc` | interromper o turno |
 
 ## Arquitetura
@@ -156,6 +203,7 @@ src/
 │  ├─ rpc-client.ts        spawn + framing JSONL + correlação de requisições
 │  ├─ session-catalog.ts   leitura das sessões em disco
 │  ├─ agent-tree.ts        árvore RLM via `prime-agent list --json`
+│  ├─ files.ts             explorador/leitura/escrita com escopo na raiz
 │  └─ folders.ts           persistência das pastas
 ├─ preload/index.ts        contextBridge (superfície mínima)
 └─ renderer/src/

@@ -1,0 +1,207 @@
+import { useEffect, useRef, useState } from 'react'
+import {
+  FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
+  Trash2, ChevronRight, ExternalLink
+} from 'lucide-react'
+import type { SessionSummary } from '../../../shared/protocol'
+import { useAgent, mutateFolders, refreshSessions, rpc } from '../store/agent'
+import type { Group } from '../lib/grouping'
+
+interface Props {
+  session: SessionSummary
+  groups: Group[]
+  isActive: boolean
+  onClose: () => void
+  onOpen: () => void
+  onRename: () => void
+}
+
+const item =
+  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.3px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+
+export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename }: Props) {
+  const folders = useAgent((s) => s.folders)
+  const notify = useAgent((s) => s.notify)
+  const [submenu, setSubmenu] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const pinned = Boolean(folders.pinned?.[session.id])
+  const archived = Boolean(folders.archived?.[session.id])
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
+  async function moveTo(folderId: string | null) {
+    await mutateFolders((s) => {
+      const assignments = { ...s.assignments }
+      if (folderId) assignments[session.id] = folderId
+      else delete assignments[session.id]
+      return { ...s, assignments }
+    })
+    onClose()
+  }
+
+  async function togglePin() {
+    await mutateFolders((s) => {
+      const next = { ...(s.pinned ?? {}) }
+      if (pinned) delete next[session.id]
+      else next[session.id] = true
+      return { ...s, pinned: next }
+    })
+    onClose()
+  }
+
+  async function toggleArchive() {
+    await mutateFolders((s) => {
+      const next = { ...(s.archived ?? {}) }
+      if (archived) delete next[session.id]
+      else next[session.id] = true
+      return { ...s, archived: next }
+    })
+    onClose()
+  }
+
+  async function duplicate() {
+    // `clone` age sobre a sessão ativa: só faz sentido para ela.
+    const out = await rpc('clone')
+    if (out === null) notify('error', 'Não foi possível duplicar esta conversa.')
+    else {
+      notify('info', 'Conversa duplicada.')
+      void refreshSessions()
+    }
+    onClose()
+  }
+
+  async function remove() {
+    const r = await window.prime.deleteSession(session.path)
+    if (!r?.ok) notify('error', r?.error ?? 'Não foi possível excluir.')
+    else {
+      notify('info', 'Conversa excluída do disco.')
+      await mutateFolders((s) => {
+        const assignments = { ...s.assignments }
+        const pin = { ...(s.pinned ?? {}) }
+        const arc = { ...(s.archived ?? {}) }
+        const titles = { ...(s.titles ?? {}) }
+        delete assignments[session.id]
+        delete pin[session.id]
+        delete arc[session.id]
+        delete titles[session.id]
+        return { ...s, assignments, pinned: pin, archived: arc, titles }
+      })
+      void refreshSessions()
+    }
+    onClose()
+  }
+
+  const folderGroups = groups.filter((g) => g.kind === 'folder')
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-1 top-7 z-50 w-[218px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+    >
+      <button className={item} onClick={onOpen}>
+        <ExternalLink size={12} />
+        Abrir
+      </button>
+
+      <button className={item} onClick={() => void togglePin()}>
+        {pinned ? <PinOff size={12} /> : <Pin size={12} />}
+        {pinned ? 'Desfixar' : 'Fixar no topo'}
+      </button>
+
+      <button className={item} onClick={onRename}>
+        <Pencil size={12} />
+        Renomear
+      </button>
+
+      <button
+        className={item + (isActive ? '' : ' pointer-events-none opacity-40')}
+        onClick={() => void duplicate()}
+        title={isActive ? 'Duplica o ramo atual' : 'Disponível só para a conversa aberta'}
+      >
+        <Copy size={12} />
+        Duplicar
+      </button>
+
+      <div className="my-1 border-t border-white/[0.07]" />
+
+      <div className="relative">
+        <button className={item} onClick={() => setSubmenu((v) => !v)}>
+          <FolderInput size={12} />
+          <span className="flex-1">Mover para pasta</span>
+          <ChevronRight size={11} className={submenu ? 'rotate-90' : ''} />
+        </button>
+        {submenu && (
+          <div className="mt-0.5 pl-2">
+            {folderGroups.length === 0 && (
+              <div className="px-2 py-1 text-[11.5px] italic text-dim">Nenhuma pasta criada.</div>
+            )}
+            {folderGroups.map((g) => (
+              <button key={g.key} className={item} onClick={() => void moveTo(g.folderId!)}>
+                <FolderOpen size={11} />
+                <span className="truncate">{g.label}</span>
+              </button>
+            ))}
+            <button className={item} onClick={() => void moveTo(null)}>
+              <Trash2 size={11} />
+              Remover da pasta
+            </button>
+          </div>
+        )}
+      </div>
+
+      <button className={item} onClick={() => void toggleArchive()}>
+        {archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
+        {archived ? 'Desarquivar' : 'Arquivar'}
+      </button>
+
+      <div className="my-1 border-t border-white/[0.07]" />
+
+      {confirmDelete ? (
+        <div className="px-2 py-1.5">
+          <div className="mb-1.5 text-[11.5px] leading-snug text-err">
+            Excluir o arquivo da conversa? Não há como desfazer.
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => void remove()}
+              className="flex-1 rounded border border-err/40 bg-err/15 px-2 py-1 text-[11.5px] text-err hover:bg-err/25"
+            >
+              Excluir
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="flex-1 rounded border border-white/[0.1] px-2 py-1 text-[11.5px] text-muted hover:text-fg"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          className={item + ' text-err hover:text-err'}
+          onClick={() => setConfirmDelete(true)}
+          disabled={isActive}
+          title={isActive ? 'Feche a conversa antes de excluir' : undefined}
+        >
+          <Trash2 size={12} />
+          Excluir
+        </button>
+      )}
+    </div>
+  )
+}

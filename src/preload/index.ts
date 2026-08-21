@@ -18,6 +18,14 @@ const api = {
   agentTree: () => ipcRenderer.invoke('agents:tree'),
   refreshAgentTree: () => ipcRenderer.invoke('agents:refresh'),
 
+  listFiles: (relPath: string) => ipcRenderer.invoke('files:list', relPath),
+  filesRoot: () => ipcRenderer.invoke('files:root'),
+  gitBranch: () => ipcRenderer.invoke('files:branch'),
+  revealFile: (relPath: string) => ipcRenderer.invoke('files:reveal', relPath),
+  readFile: (relPath: string) => ipcRenderer.invoke('files:read', relPath),
+  writeFile: (path: string, content: string) => ipcRenderer.invoke('files:write', { path, content }),
+  deleteSession: (path: string) => ipcRenderer.invoke('sessions:delete', path),
+
   loadFolders: () => ipcRenderer.invoke('folders:load'),
   saveFolders: (state: unknown) => ipcRenderer.invoke('folders:save', state),
   pickDirectory: () => ipcRenderer.invoke('dialog:pickDirectory'),

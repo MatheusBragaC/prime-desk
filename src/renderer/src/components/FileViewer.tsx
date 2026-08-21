@@ -1,0 +1,223 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import hljs from 'highlight.js'
+import {
+  X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
+} from 'lucide-react'
+
+const LANG_BY_EXT: Record<string, string> = {
+  ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
+  mjs: 'javascript', cjs: 'javascript', py: 'python', rb: 'ruby', go: 'go',
+  rs: 'rust', java: 'java', kt: 'kotlin', c: 'c', h: 'c', cpp: 'cpp', cs: 'csharp',
+  php: 'php', sh: 'bash', bash: 'bash', zsh: 'bash', sql: 'sql', css: 'css',
+  scss: 'scss', html: 'xml', xml: 'xml', svg: 'xml', vue: 'xml', json: 'json',
+  yml: 'yaml', yaml: 'yaml', toml: 'ini', ini: 'ini', md: 'markdown',
+  dockerfile: 'dockerfile', diff: 'diff', patch: 'diff'
+}
+
+function langOf(path: string): string | null {
+  const base = path.split('/').pop() ?? ''
+  if (/^dockerfile/i.test(base)) return 'dockerfile'
+  const ext = base.split('.').pop()?.toLowerCase() ?? ''
+  return LANG_BY_EXT[ext] ?? null
+}
+
+function fmtSize(n: number): string {
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / 1024 / 1024).toFixed(2)} MB`
+}
+
+export function FileViewer({ path, onClose }: { path: string; onClose: () => void }) {
+  const [content, setContent] = useState('')
+  const [original, setOriginal] = useState('')
+  const [meta, setMeta] = useState<{ size: number; truncated?: boolean; binary?: boolean }>({ size: 0 })
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const dirty = editing && content !== original
+
+  const load = useCallback(async () => {
+    setState('loading')
+    setEditing(false)
+    const r = await window.prime.readFile(path)
+    if (!r?.ok) {
+      setError(r?.error ?? 'Não foi possível ler o arquivo.')
+      setState('error')
+      return
+    }
+    setMeta({ size: r.size ?? 0, truncated: r.truncated, binary: r.binary })
+    setContent(r.content ?? '')
+    setOriginal(r.content ?? '')
+    setState('ready')
+  }, [path])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const save = useCallback(async () => {
+    if (!dirty || meta.truncated) return
+    setSaving(true)
+    const r = await window.prime.writeFile(path, content)
+    setSaving(false)
+    if (!r?.ok) {
+      setError(r?.error ?? 'Falha ao salvar.')
+      return
+    }
+    setOriginal(content)
+    setError(null)
+  }, [content, dirty, meta.truncated, path])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        void save()
+      }
+      if (e.key === 'Escape' && !dirty) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [save, dirty, onClose])
+
+  const highlighted = useMemo(() => {
+    if (editing || state !== 'ready' || meta.binary) return null
+    const lang = langOf(path)
+    try {
+      return lang && hljs.getLanguage(lang)
+        ? hljs.highlight(content, { language: lang }).value
+        : hljs.highlightAuto(content).value
+    } catch {
+      return null
+    }
+  }, [content, editing, meta.binary, path, state])
+
+  const lineCount = content ? content.split('\n').length : 0
+  const name = path.split('/').pop() ?? path
+
+  return (
+    <div className="absolute inset-0 z-40 flex flex-col bg-[var(--p-bg)]">
+      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-[13.5px] font-semibold">{name}</span>
+            {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title="Alterado" />}
+          </div>
+          <div className="truncate font-mono text-[10.5px] text-dim" title={path}>
+            {path} · {fmtSize(meta.size)}
+            {lineCount > 0 && ` · ${lineCount} linhas`}
+          </div>
+        </div>
+
+        {!meta.binary && state === 'ready' && (
+          <>
+            <button
+              onClick={() => void navigator.clipboard.writeText(content)}
+              className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+              title="Copiar conteúdo"
+            >
+              <Copy size={14} />
+            </button>
+            <button
+              onClick={() => setEditing((v) => !v)}
+              disabled={meta.truncated}
+              className={
+                'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] transition-colors disabled:opacity-40 ' +
+                (editing ? 'bg-primary/15 text-primarySoft' : 'text-muted hover:bg-white/[0.06] hover:text-fg')
+              }
+              title={meta.truncated ? 'Arquivo truncado: edição desabilitada' : 'Alternar edição'}
+            >
+              {editing ? <Eye size={13} /> : <Pencil size={13} />}
+              {editing ? 'Visualizar' : 'Editar'}
+            </button>
+            <button
+              onClick={() => void save()}
+              disabled={!dirty || saving}
+              className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/15 px-2.5 py-1.5 text-[12px] text-fg transition-colors hover:bg-primary/25 disabled:border-white/[0.07] disabled:bg-transparent disabled:text-dim"
+              title="Salvar (Ctrl+S)"
+            >
+              {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              Salvar
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => void window.prime.revealFile(path)}
+          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+          title="Abrir no aplicativo padrão"
+        >
+          <ExternalLink size={14} />
+        </button>
+        <button
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+        >
+          <X size={15} />
+        </button>
+      </div>
+
+      {error && (
+        <div className="mx-5 mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-[12.5px] text-err">
+          <AlertTriangle size={14} className="mt-[2px] shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {meta.truncated && (
+        <div className="mx-5 mt-3 rounded-xl border border-warn/25 bg-warn/[0.06] p-2.5 text-[12px] text-warn">
+          Arquivo maior que 1 MB: exibindo apenas o início. Edição desabilitada para
+          não truncar o conteúdo no disco.
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-auto">
+        {state === 'loading' && (
+          <div className="flex h-full items-center justify-center text-[13px] text-dim">
+            <Loader2 size={15} className="mr-2 animate-spin" />
+            Carregando…
+          </div>
+        )}
+
+        {state === 'ready' && meta.binary && (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-dim">
+            <FileWarning size={26} />
+            <span className="text-[13px]">Arquivo binário — não exibido.</span>
+            <button
+              onClick={() => void window.prime.revealFile(path)}
+              className="mt-1 rounded-lg border border-white/[0.1] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-primary/40 hover:text-fg"
+            >
+              Abrir no aplicativo padrão
+            </button>
+          </div>
+        )}
+
+        {state === 'ready' && !meta.binary && editing && (
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            spellCheck={false}
+            className="h-full w-full resize-none bg-[#08080a] px-5 py-4 font-mono text-[12.6px] leading-[1.65] text-[#c9c9d1] outline-none"
+          />
+        )}
+
+        {state === 'ready' && !meta.binary && !editing && (
+          <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-[12.6px] leading-[1.65]">
+            <code
+              className="hljs bg-transparent"
+              dangerouslySetInnerHTML={{ __html: highlighted ?? '' }}
+            />
+          </pre>
+        )}
+      </div>
+
+      <div className="shrink-0 border-t border-white/[0.07] px-5 py-2 text-[11px] text-dim">
+        {editing
+          ? 'Ctrl+S salva. Sem histórico de desfazer entre sessões — versione antes de mexer em arquivo importante.'
+          : 'Somente leitura. Use Editar para alterar o arquivo no disco.'}
+      </div>
+    </div>
+  )
+}

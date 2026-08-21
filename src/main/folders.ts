@@ -11,7 +11,14 @@ import type { FolderState } from '../shared/protocol.js'
  * e nomes de pasta — nenhum conteúdo de conversa é copiado para cá.
  */
 
-const EMPTY: FolderState = { folders: [], assignments: {}, collapsed: {} }
+const EMPTY: FolderState = {
+  folders: [],
+  assignments: {},
+  collapsed: {},
+  pinned: {},
+  archived: {},
+  titles: {}
+}
 
 function filePath(): string {
   return join(app.getPath('userData'), 'folders.json')
@@ -24,7 +31,10 @@ export async function loadFolders(): Promise<FolderState> {
     return {
       folders: Array.isArray(parsed.folders) ? parsed.folders : [],
       assignments: parsed.assignments && typeof parsed.assignments === 'object' ? parsed.assignments : {},
-      collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {}
+      collapsed: parsed.collapsed && typeof parsed.collapsed === 'object' ? parsed.collapsed : {},
+      pinned: parsed.pinned ?? {},
+      archived: parsed.archived ?? {},
+      titles: parsed.titles ?? {}
     }
   } catch {
     return { ...EMPTY }
@@ -39,7 +49,12 @@ export async function saveFolders(state: FolderState): Promise<FolderState> {
       .filter((f) => f && typeof f.id === 'string' && typeof f.name === 'string')
       .map((f) => ({ id: f.id, name: f.name.slice(0, 60), order: f.order ?? 0 })),
     assignments: state.assignments ?? {},
-    collapsed: state.collapsed ?? {}
+    collapsed: state.collapsed ?? {},
+    pinned: state.pinned ?? {},
+    archived: state.archived ?? {},
+    titles: Object.fromEntries(
+      Object.entries(state.titles ?? {}).map(([k, v]) => [k, String(v).slice(0, 120)])
+    )
   }
   await writeFile(path, JSON.stringify(clean, null, 2), 'utf-8')
   return clean
