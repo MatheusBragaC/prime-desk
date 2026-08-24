@@ -887,3 +887,28 @@ o horário de pico sai como `5 PM` em inglês e `17h` nos demais.
 
 A linha de comparação usa uma base declarada (~89 mil tokens para um livro
 inteiro) e é apresentada com `~`, para não passar por medição exata.
+
+## 40. Abrir conversa caía no topo
+
+Ao abrir uma conversa com histórico, a tela mostrava o começo em vez da última
+mensagem.
+
+Duas causas somadas:
+
+1. **O container do scroll é remontado.** Enquanto a conversa carrega, ele é
+   substituído pelo indicador de carregamento; ao voltar, monta zerado. Isso foi
+   introduzido junto com o próprio indicador.
+2. **A altura final não existe no primeiro quadro.** Markdown e realce de
+   sintaxe mudam a altura depois da montagem, então um único `scrollTop =
+   scrollHeight` acerta um alvo que ainda vai crescer.
+
+Correção: ao terminar de carregar, o scroll é levado ao fim e o ajuste é
+repetido por alguns quadros, acompanhando o crescimento da altura.
+
+**Guarda contra regressão:** o ajuste roda **uma vez por conversa**, controlado
+por um `ref` com a chave da sessão. Sem isso, cada mensagem nova durante o
+streaming puxaria a tela de volta para baixo e tiraria do usuário a chance de
+subir para reler — o oposto do que o `pinned` existente já protege.
+
+Medido ao abrir a sessão de 14 MB: `scrollTop` 9437 de `scrollHeight` 10068,
+distância do fim **0 px**.
