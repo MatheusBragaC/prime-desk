@@ -868,3 +868,22 @@ sem animação.
 
 Verificado abrindo a sessão pesada: 69 blocos renderizados, **0 spinners** e as
 2 chamadas órfãs exibidas como "sem resultado".
+
+## 39. Painel de uso no formato do Claude Desktop
+
+O painel passou a espelhar o layout da referência: 4 colunas por 2 linhas, com
+**Sessões, Mensagens, Total de tokens, Dias ativos** na primeira e **Sequência
+atual, Maior sequência, Horário de pico, Modelo preferido** na segunda, heatmap
+abaixo e uma linha de comparação.
+
+Decisão que mudou em relação à versão anterior: **um único "Total de tokens"**,
+em vez da quebra entrada/saída/cache. A quebra era tecnicamente mais precisa,
+mas o pedido é comparabilidade com a referência — e ali o número é agregado.
+O custo, que continua sendo o dado com consequência prática, ficou no rodapé do
+cartão.
+
+Formatação por idioma: `8.3B` em inglês vira `8,3bi` em português e espanhol, e
+o horário de pico sai como `5 PM` em inglês e `17h` nos demais.
+
+A linha de comparação usa uma base declarada (~89 mil tokens para um livro
+inteiro) e é apresentada com `~`, para não passar por medição exata.

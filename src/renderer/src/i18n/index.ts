@@ -270,6 +270,14 @@ const pt: Record<string, string> = {
   "chat.opening": "Abrindo conversa…",
   "tool.noResult": "Sem resultado — execução interrompida",
   "tool.noResultHint": "A chamada ficou registrada, mas o turno terminou antes de a ferramenta responder.",
+  "usage.totalTokens": "Total de tokens",
+  "usage.peakHour": "Horário de pico",
+  "usage.currentStreak": "Sequência atual",
+  "usage.longestStreak": "Maior sequência",
+  "usage.favorite": "Modelo preferido",
+  "usage.compare": "Você usou ~{n}× mais tokens que Dom Casmurro inteiro.",
+  "usage.compareBasis": "Estimativa: ~89 mil tokens para o livro inteiro.",
+  "usage.costFooter": "Custo acumulado",
 }
 
 const en: Record<string, string> = {
@@ -526,6 +534,14 @@ const en: Record<string, string> = {
   "chat.opening": "Opening chat…",
   "tool.noResult": "No result — run was interrupted",
   "tool.noResultHint": "The call was recorded, but the turn ended before the tool answered.",
+  "usage.totalTokens": "Total tokens",
+  "usage.peakHour": "Peak hour",
+  "usage.currentStreak": "Current streak",
+  "usage.longestStreak": "Longest streak",
+  "usage.favorite": "Favorite model",
+  "usage.compare": "You've used ~{n}× more tokens than the whole of Animal Farm.",
+  "usage.compareBasis": "Estimate: ~40k tokens for the whole book.",
+  "usage.costFooter": "Accumulated cost",
 }
 
 const es: Record<string, string> = {
@@ -782,6 +798,14 @@ const es: Record<string, string> = {
   "chat.opening": "Abriendo conversación…",
   "tool.noResult": "Sin resultado — ejecución interrumpida",
   "tool.noResultHint": "La llamada quedó registrada, pero el turno terminó antes de que la herramienta respondiera.",
+  "usage.totalTokens": "Total de tokens",
+  "usage.peakHour": "Hora pico",
+  "usage.currentStreak": "Racha actual",
+  "usage.longestStreak": "Racha más larga",
+  "usage.favorite": "Modelo preferido",
+  "usage.compare": "Usaste ~{n}× más tokens que Rebelión en la granja completo.",
+  "usage.compareBasis": "Estimación: ~40 mil tokens para el libro completo.",
+  "usage.costFooter": "Costo acumulado",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
