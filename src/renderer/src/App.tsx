@@ -18,8 +18,11 @@ import type { AgentEvent, AgentTreeSnapshot } from '../../shared/protocol'
 
 export function App() {
   const [palette, setPalette] = useState(false)
-  const [treeOpen, setTreeOpen] = useState(false)
-  const [filesOpen, setFilesOpen] = useState(false)
+  // Dock único à direita: dois painéis simultâneos espremiam a conversa a ponto
+  // de o composer ficar inutilizável em janela normal.
+  const [dock, setDock] = useState<'files' | 'agents' | null>(null)
+  const treeOpen = dock === 'agents'
+  const filesOpen = dock === 'files'
   const [fileDraft, setFileDraft] = useState<string | undefined>()
   const [openFile, setOpenFile] = useState<string | null>(null)
   const [home, setHome] = useState('')
@@ -128,11 +131,11 @@ export function App() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault()
-        setTreeOpen((v) => !v)
+        setDock((d) => (d === 'agents' ? null : 'agents'))
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
-        setFilesOpen((v) => !v)
+        setDock((d) => (d === 'files' ? null : 'files'))
       }
       if (e.key === 'Escape' && useAgent.getState().state?.isStreaming) {
         void abortTurn()
@@ -177,11 +180,11 @@ export function App() {
       <Sidebar
         home={home}
         onPickCwd={() => void pickCwd()}
-        onToggleTree={() => setTreeOpen((v) => !v)}
+        onToggleTree={() => setDock((d) => (d === 'agents' ? null : 'agents'))}
         treeOpen={treeOpen}
       />
 
-      <main className="relative flex min-w-0 flex-1 flex-col">
+      <main className="relative flex min-w-[420px] flex-1 flex-col">
         <div className="aurora pointer-events-none absolute inset-0" />
         <StatusBar />
         <Notice />
@@ -222,7 +225,7 @@ export function App() {
           <Composer
             onOpenPalette={() => setPalette(true)}
             onPickCwd={() => void pickCwd()}
-            onToggleFiles={() => setFilesOpen((v) => !v)}
+            onToggleFiles={() => setDock((d) => (d === 'files' ? null : 'files'))}
             home={home}
             draft={fileDraft}
             onDraftConsumed={() => setFileDraft(undefined)}
@@ -239,13 +242,13 @@ export function App() {
 
       {filesOpen && (
         <FilesPanel
-          onClose={() => setFilesOpen(false)}
+          onClose={() => setDock(null)}
           onOpenFile={(p) => setOpenFile(p)}
           onQuote={(p) => setFileDraft(p)}
         />
       )}
 
-      {treeOpen && <AgentTree onClose={() => setTreeOpen(false)} />}
+      {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
     </div>

@@ -43,6 +43,7 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Editor** | abre arquivos com syntax highlight, edita e salva (`Ctrl+S`) |
 | **Barra de contexto** | chips com Local, diretório, branch do git e atalho para os arquivos |
 | **Painéis redimensionáveis** | arraste os divisores; duplo clique restaura |
+| **Dock à direita** | arquivos e agentes se alternam, para o chat nunca ficar espremido |
 
 ## Organização de conversas
 
