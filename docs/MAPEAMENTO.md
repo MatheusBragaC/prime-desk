@@ -718,3 +718,37 @@ Duas correções:
    `prime-agent stop <id>`, com confirmação que diz o que será interrompido e
    que o histórico em disco é preservado. Após parar, esperamos ~1,2 s — o
    worker leva um instante para soltar o arquivo — e repetimos a abertura.
+
+## 32. Diferenças de janela entre macOS e Windows/Linux
+
+A janela usa `titleBarStyle: 'hidden'`, então a interface desenha o próprio
+cabeçalho. O que muda por plataforma:
+
+| | macOS | Windows/Linux |
+|---|---|---|
+| Controles | semáforos nativos, canto superior **esquerdo** | botões desenhados no conteúdo, à **direita** |
+| Opção correta | `trafficLightPosition` | `titleBarOverlay` |
+
+Os dois problemas que isso causava:
+
+1. O cabeçalho da sidebar (borboleta e título) fica exatamente onde os semáforos
+   aparecem no macOS — ficaria por baixo deles. Agora recua 78px nessa
+   plataforma.
+2. A StatusBar reservava 150px à direita para os botões de janela. No macOS eles
+   não estão lá, então era só espaço morto. A reserva passou a ser condicional.
+
+`titleBarOverlay` também deixou de ser passado no macOS, onde não tem efeito.
+
+## 33. Recolhimento por largura
+
+Um MacBook de 13" com a janela em meia tela fica perto de 700px. Com sidebar de
+272px mais um painel lateral, a conversa não sobrevive.
+
+| Largura | Comportamento |
+|---|---|
+| < 1040px | painel lateral (arquivos/agentes) fecha sozinho |
+| < 820px | sidebar deixa de ser coluna e vira sobreposição, com botão na StatusBar |
+
+Medido por emulação de viewport: em 694px o botão de alternância aparece; em
+900px o painel lateral fecha sozinho; a sobreposição entra com `translate-x-0` e
+fundo escurecido, e some ao abrir uma conversa.

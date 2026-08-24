@@ -13,6 +13,7 @@ import { SshModal, type SshForm } from './components/SshModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Onboarding } from './components/Onboarding'
 import { PendingBubble } from './components/PendingBubble'
+import { useWindowWidth, DOCK_MIN_WIDTH, SIDEBAR_MIN_WIDTH } from './lib/useWindowWidth'
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
@@ -29,8 +30,25 @@ export function App() {
   // Dock único à direita: dois painéis simultâneos espremiam a conversa a ponto
   // de o composer ficar inutilizável em janela normal.
   const [dock, setDock] = useState<'files' | 'agents' | null>(null)
+  const width = useWindowWidth()
+  const narrowDock = width < DOCK_MIN_WIDTH
+  const narrowSidebar = width < SIDEBAR_MIN_WIDTH
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const treeOpen = dock === 'agents'
   const filesOpen = dock === 'files'
+
+  /*
+    Em janela estreita a sidebar deixa de ocupar coluna própria e passa a
+    sobrepor a conversa, como fazem os apps de chat em tela dividida.
+  */
+  useEffect(() => {
+    setSidebarOpen(!narrowSidebar)
+  }, [narrowSidebar])
+
+  // Painel lateral e conversa não cabem juntos abaixo do limite.
+  useEffect(() => {
+    if (narrowDock) setDock(null)
+  }, [narrowDock])
   const [fileDraft, setFileDraft] = useState<string | undefined>()
   const [openFile, setOpenFile] = useState<string | null>(null)
   // Modais vivem aqui, no nível mais estável da árvore: um diálogo não deve
@@ -115,6 +133,7 @@ export function App() {
       store.setStatus('starting')
       const info = await window.prime.appInfo()
       setHome(info.home)
+      store.setPlatform(info.platform)
 
       // Ambiente incompleto: onboarding assume a tela antes de tentar a ponte.
       const env = await window.prime.checkEnvironment()
@@ -312,17 +331,36 @@ export function App() {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
+      {narrowSidebar && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 animate-fade-up"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div
+        className={
+          narrowSidebar
+            ? 'fixed inset-y-0 left-0 z-40 transition-transform duration-200 ' +
+              (sidebarOpen ? 'translate-x-0 shadow-2xl shadow-black/60' : '-translate-x-full')
+            : 'contents'
+        }
+      >
       <Sidebar
         onSignedOut={() => setNeedsSetup(true)}
         home={home}
         onPickCwd={() => void pickCwd()}
         onToggleTree={() => setDock((d) => (d === 'agents' ? null : 'agents'))}
         treeOpen={treeOpen}
+        onNavigate={() => narrowSidebar && setSidebarOpen(false)}
       />
+      </div>
 
       <main className="relative flex min-w-[420px] flex-1 flex-col">
         <div className="aurora pointer-events-none absolute inset-0" />
-        <StatusBar />
+        <StatusBar
+          onToggleSidebar={narrowSidebar ? () => setSidebarOpen((v) => !v) : undefined}
+        />
         <Notice />
 
         {fatal ? (

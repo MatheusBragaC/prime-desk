@@ -49,6 +49,7 @@ interface AgentStore {
   tools: Record<string, ToolExec>
   totals: Totals
   cwd: string
+  platform: string
   compacting: boolean
   retry: { attempt: number; max: number; message: string } | null
   tree: AgentTreeSnapshot | null
@@ -60,6 +61,7 @@ interface AgentStore {
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
+  setPlatform: (p: string) => void
   ingest: (ev: AgentEvent) => void
   loadHistory: (messages: AgentMessage[]) => void
   applyStderr: (chunk: string) => void
@@ -93,6 +95,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   tools: {},
   totals: { tokens: 0, cost: 0 },
   cwd: '',
+  platform: '',
   compacting: false,
   retry: null,
   tree: null,
@@ -104,6 +107,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
+  setPlatform: (platform) => set({ platform }),
   setFatal: (m) => set({ fatal: m, status: m ? 'error' : get().status }),
   setState: (s) => set({ state: s }),
   setModels: (models) => set({ models }),

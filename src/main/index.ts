@@ -177,8 +177,14 @@ function createWindow(): void {
     backgroundColor: '#050506',
     ...(icon ? { icon } : {}),
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 },
-    trafficLightPosition: { x: 14, y: 14 },
+    /*
+      `titleBarOverlay` desenha os botões de janela dentro do conteúdo e existe
+      só em Windows e Linux. No macOS os controles são os semáforos nativos, à
+      esquerda — passar o overlay lá não faz nada e confunde a leitura do código.
+    */
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 14, y: 16 } }
+      : { titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 } }),
     webPreferences: {
       // Preload em CommonJS (.cjs): renderer sandboxed não carrega preload ESM.
       preload: join(__dirname, '../preload/index.cjs'),

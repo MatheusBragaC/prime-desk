@@ -6,6 +6,7 @@ import {
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
+import { useMod } from '../lib/platform'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -266,6 +267,7 @@ export function Composer({
   const [slashCursor, setSlashCursor] = useState(0)
   const ta = useRef<HTMLTextAreaElement>(null)
   const commands = useAgent((s) => s.commands)
+  const mod = useMod()
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const queued = useAgent((s) => s.state?.sessionActions?.queuedCount ?? 0)
   const ready = useAgent((s) => s.status === 'ready')
@@ -500,7 +502,7 @@ export function Composer({
         <button
           onClick={onOpenPalette}
           className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
-          title={t('composer.commands')}
+          title={t('composer.commands').replace('Ctrl', mod)}
         >
           <Command size={14} />
         </button>

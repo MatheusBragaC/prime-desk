@@ -258,6 +258,7 @@ const pt: Record<string, string> = {
   "session.busyWarn": "Se houver trabalho em andamento nele, será interrompido. O histórico no disco é preservado.",
   "session.stopFailed": "Não foi possível encerrar o outro agente.",
   "session.inUse": "Em uso por outro agente",
+  "sidebar.toggle": "Mostrar ou ocultar conversas",
 }
 
 const en: Record<string, string> = {
@@ -502,6 +503,7 @@ const en: Record<string, string> = {
   "session.busyWarn": "If it has work in progress, it will be interrupted. The history on disk is preserved.",
   "session.stopFailed": "Could not stop the other agent.",
   "session.inUse": "In use by another agent",
+  "sidebar.toggle": "Show or hide chats",
 }
 
 const es: Record<string, string> = {
@@ -746,6 +748,7 @@ const es: Record<string, string> = {
   "session.busyWarn": "Si tiene trabajo en curso, se interrumpirá. El historial en disco se conserva.",
   "session.stopFailed": "No se pudo detener el otro agente.",
   "session.inUse": "En uso por otro agente",
+  "sidebar.toggle": "Mostrar u ocultar conversaciones",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
