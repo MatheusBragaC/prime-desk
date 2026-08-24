@@ -633,3 +633,56 @@ quando não há AppArmor. O `afterRemove` desfaz.
 Consequência para a documentação: no Linux o `.deb` é o canal recomendado; o
 AppImage funciona, mas precisa de `--no-sandbox` nessas distros — e o instalador
 avisa em vez de entregar um atalho que não abre.
+
+## 30. App aberto pelo menu não herda o PATH do shell
+
+Sintoma: instalado pelo `.deb` e aberto pelo menu, o app dizia "prime-agent não
+encontrado no PATH" — com o binário instalado e funcionando no terminal.
+
+Medido nesta máquina:
+
+```
+prime-agent            -> /home/…/.npm-global/bin/prime-agent
+.bashrc:139            -> export PATH="$HOME/.npm-global/bin:$PATH"
+PATH do gnome-shell    -> …/.local/bin:…/bin:/usr/local/sbin:…  (sem npm-global)
+```
+
+O diretório entra no PATH pelo **rc da shell**, lido só por shell interativa. A
+sessão gráfica exporta um PATH mínimo, então `which prime-agent` falha no app
+instalado e funciona quando ele é aberto de um terminal.
+
+### Resolução em quatro etapas
+
+1. `which` no PATH atual — acerta quando o app veio de um terminal;
+2. **PATH da shell do usuário**, obtido perguntando à própria shell;
+3. `npm prefix -g` + `/bin`;
+4. diretórios conhecidos (`~/.npm-global/bin`, `~/.local/bin`, `/usr/local/bin`,
+   `/opt/homebrew/bin`…).
+
+### Por que perguntar o PATH, e não `command -v`
+
+`command -v` muda de sintaxe entre famílias de shell. Pedir o `PATH` e procurar
+o binário do lado do app funciona para todas, bastando saber imprimir uma
+variável. Marcadores delimitam o valor, então MOTD e prompt de shell interativa
+não atrapalham, e `TERM=dumb` evita cor e prompt.
+
+Tabela de invocação por shell:
+
+| Shell | Argumentos |
+|---|---|
+| bash, zsh, ksh, dash, sh | `-l -i -c 'echo …$PATH…'` (cai para `-l -c`, depois `-c`) |
+| fish | `-l -i -c 'echo …(string join : $PATH)…'` |
+| nu | `-l -i -c 'print $"…($env.PATH \| str join \":\")…"'` |
+| pwsh | `-Login -Command '"…" + $env:PATH + "…"'` |
+| csh, tcsh | `-l -c` (não combina bem `-i` com `-c`) |
+| elvish | `-c 'echo …$E:PATH…'` |
+
+Medição com PATH mínimo da sessão gráfica: **zsh e bash** encontram o binário;
+`dash` e `sh` não, como esperado — eles não leem `.zshrc`/`.bashrc`.
+
+### O PATH também vai para o agente
+
+`agentEnv` repassa o PATH da shell aos processos filhos. Sem isso o agente
+herdaria o PATH mínimo e não acharia `git`, `python`, `docker` e afins ao usar a
+ferramenta `bash`. Verificado no processo do agente: 30 diretórios, incluindo
+pnpm, Homebrew, JDK, Android SDK e Go.

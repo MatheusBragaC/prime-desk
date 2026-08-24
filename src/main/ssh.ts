@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
+import { resolveAgentPath } from './agent-path.js'
 
 /**
  * Execução remota via SSH.
@@ -16,17 +17,9 @@ import { app } from 'electron'
  * Requer autenticação por chave — o prompt de senha travaria o agente.
  */
 
-function which(bin: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    execFile('which', [bin], { timeout: 4000 }, (err, stdout) => {
-      resolve(err ? null : stdout.trim() || null)
-    })
-  })
-}
-
 /** Acha o `ssh.ts` a partir do binário do prime-agent resolvido no PATH. */
 export async function resolveSshExtension(): Promise<string | null> {
-  const bin = await which('prime-agent')
+  const bin = await resolveAgentPath()
   if (!bin) return null
 
   let real: string
@@ -79,7 +72,6 @@ export function isValidIdentityPath(p: unknown): p is string {
     /^[A-Za-z0-9_@+./~ -]+$/.test(p)
   )
 }
-
 
 // ---------------------------------------------------------------- conexões
 
