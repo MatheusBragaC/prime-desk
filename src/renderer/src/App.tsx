@@ -10,6 +10,7 @@ import { ObservedPanel } from './components/ObservedPanel'
 import { Notice } from './components/Notice'
 import type { SshConnection } from './components/Composer'
 import { SshModal, type SshForm } from './components/SshModal'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
 import {
@@ -352,6 +353,8 @@ export function App() {
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
 
       <SshModal open={sshModal} onClose={() => setSshModal(false)} onSubmit={addConnection} />
+
+      <ConfirmDialog />
     </div>
   )
 }

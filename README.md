@@ -104,13 +104,22 @@ empacotamento usa `hdiutil`. Para gerar dmg assinado e notarizado use o workflow
 > Ajustes → Privacidade e Segurança. Para distribuir de verdade, preencha os
 > segredos de assinatura no CI.
 
-### Ícone na barra de tarefas
+### Ícone no desktop
 
-A janela recebe o ícone via `setIcon`, mas no Linux **a barra de tarefas não usa
-o ícone da janela** — ela casa o `WM_CLASS` com um `.desktop` instalado. Rodando
-em desenvolvimento (`npm run dev`) não existe `.desktop`, então o shell mostra um
-ícone genérico. Instalando o `.deb`, que traz `prime-desk.desktop` com
-`StartupWMClass=prime-desk` e os ícones em `hicolor`, a borboleta aparece.
+No Linux a barra de tarefas **não** usa o ícone da janela: ela casa o `WM_CLASS`
+com um arquivo `.desktop` instalado. Por isso, sem esse arquivo, o shell mostra
+uma engrenagem genérica mesmo com o ícone correto na janela.
+
+| Situação | O que fazer |
+|---|---|
+| Instalou o `.deb` | Nada. O pacote já instala `.desktop` e os ícones em `/usr/share` |
+| Desenvolvimento ou AppImage | `npm run desktop:install` (grava em `~/.local/share`, sem sudo) |
+| Desfazer | `npm run desktop:remove` |
+| macOS | O `.app` empacotado já carrega o `.icns`; em desenvolvimento aparece o ícone do Electron |
+
+O script instala oito tamanhos em `hicolor` e um `.desktop` com
+`StartupWMClass=prime-desk`, que é exatamente o `WM_CLASS` que a janela publica.
+Se a barra não atualizar na hora, faça logout/login da sessão gráfica.
 
 Ícones: `npm run icon` rasteriza `resources/brand/prime-butterfly.svg` em todos os
 tamanhos usando o próprio Electron — sem depender de Inkscape ou ImageMagick.
@@ -118,8 +127,36 @@ tamanhos usando o próprio Electron — sem depender de Inkscape ou ImageMagick.
 ## Requisitos
 
 - Node.js 20+ (validado em v22.22.2)
-- `prime-agent` instalado, no `PATH` e **autenticado** (rode `prime-agent` uma vez no terminal)
+- `prime-agent` instalado, no `PATH` e **autenticado**
 - Linux (validado em Ubuntu 24.04). macOS e Windows devem funcionar, sem teste.
+
+### Autenticação: o que é preciso na primeira vez
+
+O Prime Desk **não** tem login próprio e não pede conta em lugar nenhum. Ele usa
+as credenciais que o `prime-agent` já guarda. Quem instala do zero precisa
+autenticar o agente uma vez, no terminal:
+
+```bash
+prime-agent
+# dentro da sessão:
+/login
+```
+
+Há dois caminhos, e **nenhum deles exige conta na Prime Intellect**:
+
+| Caminho | O que serve |
+|---|---|
+| **Assinatura** (`/login`) | Claude Pro/Max, ChatGPT Plus/Pro (Codex), GitHub Copilot |
+| **Chave de API** | variável de ambiente (ex.: `ANTHROPIC_API_KEY`) ou `/login` gravando em `~/.prime/agent/auth.json` |
+
+> **Atenção ao custo com assinatura.** A documentação do prime-agent é explícita:
+> uso do Claude Pro/Max em ferramenta de terceiro é cobrado **por token, como
+> "extra usage"**, e não abate do limite do plano. Ou seja, a assinatura
+> autentica, mas o consumo é faturado à parte. O painel de uso do Prime Desk
+> mostra esse custo acumulado.
+
+A GUI nunca lê nem replica o `auth.json` — as credenciais ficam sob
+responsabilidade exclusiva do `prime-agent`.
 
 ## Instalação
 

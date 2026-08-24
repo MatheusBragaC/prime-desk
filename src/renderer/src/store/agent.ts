@@ -9,6 +9,16 @@ import {
 
 export type { UiMessage, ToolExec } from './transcript'
 
+/** Pedido de confirmação exibido pelo diálogo único do app. */
+export interface ConfirmRequest {
+  title: string
+  message: string
+  detail?: string
+  confirmLabel?: string
+  danger?: boolean
+  onConfirm: () => void | Promise<void>
+}
+
 export interface CommandInfo {
   name: string
   description: string
@@ -45,6 +55,7 @@ interface AgentStore {
   folders: FolderState
   observed: Record<string, Observed>
   notice: { kind: 'error' | 'info'; text: string; at: number } | null
+  confirm: ConfirmRequest | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -61,6 +72,8 @@ interface AgentStore {
   setFolders: (f: FolderState) => void
   notify: (kind: 'error' | 'info', text: string) => void
   clearNotice: () => void
+  requestConfirm: (req: ConfirmRequest) => void
+  closeConfirm: () => void
   upsertObserved: (id: string, patch: Partial<Observed>) => void
   dropObserved: (id: string) => void
   ingestObserved: (id: string, ev: AgentEvent) => void
@@ -86,6 +99,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   folders: { folders: [], assignments: {}, collapsed: {} },
   observed: {},
   notice: null,
+  confirm: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -99,6 +113,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setFolders: (folders) => set({ folders }),
   notify: (kind, text) => set({ notice: { kind, text, at: Date.now() } }),
   clearNotice: () => set({ notice: null }),
+  requestConfirm: (confirm) => set({ confirm }),
+  closeConfirm: () => set({ confirm: null }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
   reset: () => set({ ...emptyTranscript(), retry: null }),
@@ -307,6 +323,34 @@ export async function openSession(sessionPath: string): Promise<void> {
   if (data?.messages) store.loadHistory(data.messages)
   await refreshState()
   void refreshSessions()
+}
+
+/**
+ * Exclui o arquivo de uma conversa.
+ *
+ * Se ela for a que está aberta, o worker ainda a mantém carregada — por isso
+ * trocamos para uma sessão nova antes de apagar. Sem isso, excluir a conversa
+ * atual não funcionava.
+ */
+export async function deleteSession(sessionId: string, path: string): Promise<boolean> {
+  const store = useAgent.getState()
+  const isActive = store.state?.sessionId === sessionId
+
+  if (isActive) {
+    await rpc('new_session')
+    store.reset()
+    await refreshState()
+  }
+
+  const r = await bridge().deleteSession(path)
+  if (!r?.ok) {
+    store.notify('error', r?.error ?? 'Não foi possível excluir a conversa.')
+    return false
+  }
+
+  store.notify('info', 'Conversa excluída.')
+  void refreshSessions()
+  return true
 }
 
 // ------------------------------------------------------------------ título

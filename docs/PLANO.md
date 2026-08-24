@@ -101,6 +101,9 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 22 | Highlight só ao terminar o bloco | Destacar a cada quadro do streaming é trabalho descartado |
 | 23 | Botão de copiar sempre visível | Depender de hover esconde a ação de trackpad, toque e de quem não sabe que existe |
 | 24 | Sem "Cloud"/"Remote Control" | Não existem no prime-agent; só Local e SSH são reais |
+| 25 | Confirmação em diálogo único | Todo aviso destrutivo com a mesma cara e o mesmo comportamento de teclado |
+| 26 | Excluir a conversa aberta troca de sessão antes | O worker mantém o arquivo carregado; sem trocar, a exclusão não tinha efeito |
+| 27 | `.desktop` em `~/.local/share` | Corrige o ícone da barra sem exigir sudo nem instalar o pacote |
 
 ## Segurança
 

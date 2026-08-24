@@ -4,7 +4,7 @@ import {
   Trash2, ChevronRight, ExternalLink
 } from 'lucide-react'
 import type { SessionSummary } from '../../../shared/protocol'
-import { useAgent, mutateFolders, refreshSessions, rpc } from '../store/agent'
+import { useAgent, mutateFolders, refreshSessions, rpc, deleteSession } from '../store/agent'
 import type { Group } from '../lib/grouping'
 
 interface Props {
@@ -23,7 +23,7 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
   const folders = useAgent((s) => s.folders)
   const notify = useAgent((s) => s.notify)
   const [submenu, setSubmenu] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const requestConfirm = useAgent((s) => s.requestConfirm)
   const ref = useRef<HTMLDivElement>(null)
 
   const pinned = Boolean(folders.pinned?.[session.id])
@@ -85,25 +85,36 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
     onClose()
   }
 
-  async function remove() {
-    const r = await window.prime.deleteSession(session.path)
-    if (!r?.ok) notify('error', r?.error ?? 'Não foi possível excluir.')
-    else {
-      notify('info', 'Conversa excluída do disco.')
-      await mutateFolders((s) => {
-        const assignments = { ...s.assignments }
-        const pin = { ...(s.pinned ?? {}) }
-        const arc = { ...(s.archived ?? {}) }
-        const titles = { ...(s.titles ?? {}) }
-        delete assignments[session.id]
-        delete pin[session.id]
-        delete arc[session.id]
-        delete titles[session.id]
-        return { ...s, assignments, pinned: pin, archived: arc, titles }
-      })
-      void refreshSessions()
-    }
+  /** Limpa o estado de apresentação que a GUI guardava para esta conversa. */
+  async function forgetLocalState() {
+    await mutateFolders((s) => {
+      const assignments = { ...s.assignments }
+      const pin = { ...(s.pinned ?? {}) }
+      const arc = { ...(s.archived ?? {}) }
+      const titles = { ...(s.titles ?? {}) }
+      delete assignments[session.id]
+      delete pin[session.id]
+      delete arc[session.id]
+      delete titles[session.id]
+      return { ...s, assignments, pinned: pin, archived: arc, titles }
+    })
+  }
+
+  function askRemove() {
     onClose()
+    requestConfirm({
+      title: 'Excluir conversa',
+      message: isActive
+        ? 'Esta é a conversa aberta. Ela será fechada e o arquivo apagado do disco. Não há como desfazer.'
+        : 'O arquivo desta conversa será apagado do disco. Não há como desfazer.',
+      detail: session.title,
+      confirmLabel: 'Excluir',
+      danger: true,
+      onConfirm: async () => {
+        const ok = await deleteSession(session.id, session.path)
+        if (ok) await forgetLocalState()
+      }
+    })
   }
 
   const folderGroups = groups.filter((g) => g.kind === 'folder')
@@ -171,37 +182,10 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
 
       <div className="my-1 border-t border-white/[0.07]" />
 
-      {confirmDelete ? (
-        <div className="px-2 py-1.5">
-          <div className="mb-1.5 text-[11.5px] leading-snug text-err">
-            Excluir o arquivo da conversa? Não há como desfazer.
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => void remove()}
-              className="flex-1 rounded border border-err/40 bg-err/15 px-2 py-1 text-[11.5px] text-err hover:bg-err/25"
-            >
-              Excluir
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="flex-1 rounded border border-white/[0.1] px-2 py-1 text-[11.5px] text-muted hover:text-fg"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          className={item + ' text-err hover:text-err'}
-          onClick={() => setConfirmDelete(true)}
-          disabled={isActive}
-          title={isActive ? 'Feche a conversa antes de excluir' : undefined}
-        >
-          <Trash2 size={12} />
-          Excluir
-        </button>
-      )}
+      <button className={item + ' text-err hover:text-err'} onClick={askRemove}>
+        <Trash2 size={12} />
+        Excluir
+      </button>
     </div>
   )
 }

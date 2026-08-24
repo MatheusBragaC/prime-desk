@@ -422,3 +422,50 @@ Use `fromSurface: false` para capturar a partir do renderer em vez da superfíci
 do compositor. Vale para qualquer diagnóstico visual com a janela em segundo
 plano — sem isso, dá para concluir que um elemento "não existe" quando ele está
 lá.
+
+## 21. Autenticação exigida do usuário final
+
+O `prime-agent` não exige conta na Prime Intellect. Ele exige credencial de um
+**provedor de modelo**, por um destes caminhos (`docs/quickstart.md` e
+`docs/providers.md`):
+
+- `/login` com provedor de assinatura: Claude Pro/Max, ChatGPT Plus/Pro (Codex),
+  GitHub Copilot;
+- chave de API por variável de ambiente ou gravada em `~/.prime/agent/auth.json`.
+
+Detalhe com impacto financeiro, citado na doc oficial: uso de assinatura
+Claude Pro/Max em ferramenta de terceiro **é cobrado por token como "extra
+usage"** e não abate do limite do plano.
+
+Formato de `auth.json` neste ambiente (apenas o formato, sem valores):
+
+```json
+{ "anthropic": { "type": "...", "refresh": "...", "access": "...", "expires": 0 } }
+```
+
+Ou seja, OAuth de assinatura. A GUI não lê nem replica esse arquivo.
+
+## 22. Ícone da barra de tarefas depende do `.desktop`, não da janela
+
+`BrowserWindow({ icon })` e `win.setIcon()` afetam a janela, mas o shell do Linux
+resolve o ícone da barra/dock casando o `WM_CLASS` da janela com um arquivo
+`.desktop` instalado.
+
+Verificado no app empacotado:
+
+```
+WM_CLASS(STRING) = "prime-desk", "prime-desk"
+```
+
+que casa com `StartupWMClass=prime-desk` no `.desktop`. Instalando em
+`~/.local/share/applications` mais os ícones em `~/.local/share/icons/hicolor`,
+o ícone correto aparece sem sudo (`npm run desktop:install`).
+
+## 23. Excluir a conversa aberta exige trocar de sessão antes
+
+O worker do daemon mantém o arquivo da sessão ativa carregado. Apagar o `.jsonl`
+da conversa aberta não surtia efeito visível.
+
+Correção: quando o alvo é a sessão ativa, o app chama `new_session` primeiro —
+o worker passa a apontar para uma sessão nova — e só então remove o arquivo.
+Validado: o `.jsonl` sumiu do disco, a sidebar atualizou e o `sessionId` mudou.
