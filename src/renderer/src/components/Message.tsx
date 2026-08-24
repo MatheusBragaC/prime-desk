@@ -115,7 +115,14 @@ export const Message = memo(function Message({
               return <StreamingText key={i} text={block.text} live={live} />
             }
             if (block.type === 'toolCall') {
-              return <ToolCard key={block.id || i} exec={tools[block.id]} pendingName={block.name} />
+              return (
+                <ToolCard
+                  key={block.id || i}
+                  exec={tools[block.id]}
+                  pendingName={block.name}
+                  live={msg.streaming}
+                />
+              )
             }
             return null
           })}

@@ -833,3 +833,38 @@ Três mudanças:
    cortada.
 
 Resultado medido em duas rodadas: **1.931 ms** e **1.324 ms**.
+
+## 38. "Preparando ipython…" que nunca termina
+
+Relatado com captura: um card de ferramenta girando indefinidamente, em mensagem
+de turno já encerrado.
+
+Não era laço nem formatação. Análise dos dados reais, na cauda de 400 entradas da
+sessão:
+
+```
+toolCalls: 114 | toolResults: 112 | chamadas sem resultado: 2
+```
+
+Buscando as duas no arquivo inteiro:
+
+| Chamada | Posição na cauda | Resultado no arquivo |
+|---|---|---|
+| `toolu_01Keg…` | 399 (última) | existe — foi gravado depois da leitura |
+| `toolu_01K8g…` | 325 | **não existe em lugar nenhum** |
+
+Ou seja: uma chamada em voo no instante da leitura, e outra que **nunca teve
+resposta** — o turno foi interrompido entre a chamada e a execução, e o arquivo
+guarda esse estado.
+
+O defeito era tratar os dois casos como um só. Sem entrada de execução, o card
+sempre mostrava "preparando" com spinner, o que para uma chamada órfã significa
+girar para sempre.
+
+**Correção:** o card passa a receber se a mensagem ainda está transmitindo.
+Transmitindo e sem execução → "preparando", com spinner. Turno encerrado e sem
+execução → estado estático "sem resultado — execução interrompida", em âmbar,
+sem animação.
+
+Verificado abrindo a sessão pesada: 69 blocos renderizados, **0 spinners** e as
+2 chamadas órfãs exibidas como "sem resultado".

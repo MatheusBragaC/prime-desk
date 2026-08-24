@@ -268,6 +268,8 @@ const pt: Record<string, string> = {
   "chat.loadOlder": "Carregar mensagens anteriores",
   "chat.hiddenCount": "{n} mensagens antes desta",
   "chat.opening": "Abrindo conversa…",
+  "tool.noResult": "Sem resultado — execução interrompida",
+  "tool.noResultHint": "A chamada ficou registrada, mas o turno terminou antes de a ferramenta responder.",
 }
 
 const en: Record<string, string> = {
@@ -522,6 +524,8 @@ const en: Record<string, string> = {
   "chat.loadOlder": "Load older messages",
   "chat.hiddenCount": "{n} messages before this one",
   "chat.opening": "Opening chat…",
+  "tool.noResult": "No result — run was interrupted",
+  "tool.noResultHint": "The call was recorded, but the turn ended before the tool answered.",
 }
 
 const es: Record<string, string> = {
@@ -776,6 +780,8 @@ const es: Record<string, string> = {
   "chat.loadOlder": "Cargar mensajes anteriores",
   "chat.hiddenCount": "{n} mensajes antes de este",
   "chat.opening": "Abriendo conversación…",
+  "tool.noResult": "Sin resultado — ejecución interrumpida",
+  "tool.noResultHint": "La llamada quedó registrada, pero el turno terminó antes de que la herramienta respondiera.",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
