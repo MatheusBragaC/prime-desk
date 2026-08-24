@@ -570,3 +570,27 @@ assinatura do estado muda de fato, e o evento só é emitido nessa transição.
 
 Medido num `HOME` isolado: da gravação do arquivo até a tela avançar,
 **1,0 s**.
+
+## 28. Markdown parcial e ausência de sinal no início do turno
+
+Dois incômodos observados em uso real.
+
+**1. Marcadores vazando na tela.** O snapshot chega no meio de um par, então o
+texto renderizado mostrava `**Dados e sc` com os asteriscos à mostra até o modelo
+fechar o negrito. `balanceMarkdown` fecha provisoriamente o que está aberto
+(`**`, `*`, `~~`, crase, cerca de código) apenas para a renderização enquanto o
+turno corre — o texto guardado não muda.
+
+Detalhes que importam: a ordem é `**` antes de `*`, senão o par de negrito é
+contado como itálico; dentro de bloco de código só a cerca é fechada, porque ali
+não existe ênfase; e link começado sem fechar é ocultado até completar, em vez de
+aparecer como texto solto.
+
+**2. Nenhum sinal onde o usuário está olhando.** Entre enviar a mensagem e o
+primeiro token, o único indício era o "Executando" no topo da janela. Agora um
+bloco com a borboleta e três pontos ocupa exatamente o lugar onde a resposta vai
+nascer.
+
+A condição não é só "está transmitindo": o bloco também aparece quando a
+mensagem do assistente já existe mas ainda está sem conteúdo visível — sem isso,
+haveria uma janela de silêncio entre `message_start` e o primeiro delta.

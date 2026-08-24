@@ -12,6 +12,7 @@ import type { SshConnection } from './components/Composer'
 import { SshModal, type SshForm } from './components/SshModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Onboarding } from './components/Onboarding'
+import { PendingBubble } from './components/PendingBubble'
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
@@ -40,6 +41,7 @@ export function App() {
   const messages = useAgent((s) => s.messages)
   const tools = useAgent((s) => s.tools)
   const fatal = useAgent((s) => s.fatal)
+  const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const observed = useAgent((s) => s.observed)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
@@ -200,6 +202,24 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [applyZoom])
 
+  /**
+   * A resposta ainda não apareceu: ou o assistente nem começou, ou já começou
+   * mas só tem blocos vazios. Nos dois casos o usuário precisa de um sinal no
+   * lugar onde a resposta vai surgir.
+   */
+  const last = messages[messages.length - 1]
+  const showPending =
+    streaming &&
+    (!last ||
+      last.role === 'user' ||
+      (last.role === 'assistant' &&
+        !last.content.some(
+          (b) =>
+            (b.type === 'text' && b.text.trim().length > 0) ||
+            (b.type === 'thinking' && b.thinking.trim().length > 0) ||
+            b.type === 'toolCall'
+        )))
+
   // ---- autoscroll aderente ----------------------------------------------
   useEffect(() => {
     const el = scroller.current
@@ -328,6 +348,7 @@ export function App() {
                 {messages.map((m) => (
                   <Message key={m.key} msg={m} tools={tools} />
                 ))}
+                {showPending && <PendingBubble />}
                 <div className="h-4" />
               </div>
             )}

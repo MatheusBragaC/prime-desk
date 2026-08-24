@@ -250,6 +250,8 @@ const pt: Record<string, string> = {
   "onb.portBusyCmd": "Para liberar, rode:",
   "onb.detected": "Login detectado automaticamente",
   "onb.waiting": "Aguardando você concluir o login…",
+  "chat.thinking": "Pensando",
+  "chat.working": "Trabalhando",
 }
 
 const en: Record<string, string> = {
@@ -486,6 +488,8 @@ const en: Record<string, string> = {
   "onb.portBusyCmd": "To free it, run:",
   "onb.detected": "Login detected automatically",
   "onb.waiting": "Waiting for you to finish signing in…",
+  "chat.thinking": "Thinking",
+  "chat.working": "Working",
 }
 
 const es: Record<string, string> = {
@@ -722,6 +726,8 @@ const es: Record<string, string> = {
   "onb.portBusyCmd": "Para liberarlo, ejecuta:",
   "onb.detected": "Inicio de sesión detectado automáticamente",
   "onb.waiting": "Esperando a que completes el inicio de sesión…",
+  "chat.thinking": "Pensando",
+  "chat.working": "Trabajando",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }

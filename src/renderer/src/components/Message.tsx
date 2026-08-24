@@ -7,14 +7,16 @@ import { ToolCard } from './ToolCard'
 import { Butterfly } from './Butterfly'
 import { fmtTokens } from '../lib/format'
 import { useSmoothText } from '../lib/useSmoothText'
+import { balanceMarkdown } from '../lib/markdownStream'
 
 /** Bloco de texto do assistente, com revelação suave enquanto transmite. */
 function StreamingText({ text, live }: { text: string; live: boolean }) {
   const shown = useSmoothText(text, live)
   const catchingUp = live && shown.length < text.length
+  const body = live ? balanceMarkdown(shown) : shown
   return (
     <div className="mb-1">
-      <Markdown text={shown} highlight={!live} />
+      <Markdown text={body} highlight={!live} />
       {(live || catchingUp) && <Caret />}
     </div>
   )
