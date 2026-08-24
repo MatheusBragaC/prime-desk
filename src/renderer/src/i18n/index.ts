@@ -239,6 +239,9 @@ const pt: Record<string, string> = {
   "acct.signOutFailed": "Não foi possível sair.",
   "acct.envHint": "Definida por variável de ambiente",
   "acct.envCantLogout": "Credencial vinda de variável de ambiente: remova a variável do seu shell.",
+  "onb.termFailed": "Não foi possível abrir um terminal automaticamente. Abra um você mesmo e rode:",
+  "onb.termThenLogin": "Depois digite /login e escolha o provedor.",
+  "onb.opening": "Abrindo terminal…",
 }
 
 const en: Record<string, string> = {
@@ -464,6 +467,9 @@ const en: Record<string, string> = {
   "acct.signOutFailed": "Could not sign out.",
   "acct.envHint": "Set by environment variable",
   "acct.envCantLogout": "Credential comes from an environment variable: remove it from your shell.",
+  "onb.termFailed": "Could not open a terminal automatically. Open one yourself and run:",
+  "onb.termThenLogin": "Then type /login and pick your provider.",
+  "onb.opening": "Opening terminal…",
 }
 
 const es: Record<string, string> = {
@@ -689,6 +695,9 @@ const es: Record<string, string> = {
   "acct.signOutFailed": "No se pudo salir.",
   "acct.envHint": "Definida por variable de entorno",
   "acct.envCantLogout": "La credencial viene de una variable de entorno: quítala de tu shell.",
+  "onb.termFailed": "No se pudo abrir una terminal automáticamente. Abre una y ejecuta:",
+  "onb.termThenLogin": "Luego escribe /login y elige tu proveedor.",
+  "onb.opening": "Abriendo terminal…",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }

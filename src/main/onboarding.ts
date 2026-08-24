@@ -95,32 +95,95 @@ export function installAgent(onData: (chunk: string) => void): Promise<{ ok: boo
  * cabe dentro da GUI. Em vez de imitá-lo pela metade, entregamos o terminal
  * pronto no lugar certo.
  */
-export async function openAgentTerminal(): Promise<{ ok: boolean; error?: string }> {
+export async function openAgentTerminal(): Promise<{ ok: boolean; error?: string; command: string }> {
   const os = platform()
+  const COMMAND = 'prime-agent'
 
   if (os === 'darwin') {
-    const child = spawn('open', ['-a', 'Terminal', join(homedir())], { detached: true, stdio: 'ignore' })
-    child.unref()
-    return { ok: true }
+    const script = `tell application "Terminal" to do script "${COMMAND}"\ntell application "Terminal" to activate`
+    const started = await trySpawn('osascript', ['-e', script])
+    return { ...started, command: COMMAND }
   }
 
+  const inner = `${COMMAND}; exec bash`
+
+  /**
+   * `--disable-factory` no gnome-terminal é deliberado: sem ele, o cliente fala
+   * com o servidor por D-Bus e, quando esse canal está degradado, falha com
+   * "Failed to get screen from object path" — e ainda assim sai com código 0.
+   * Com a flag, o processo abre a própria janela e o erro deixa de existir.
+   */
   const candidates: [string, string[]][] = [
-    ['gnome-terminal', ['--', 'bash', '-lc', 'prime-agent; exec bash']],
-    ['konsole', ['-e', 'bash', '-lc', 'prime-agent; exec bash']],
-    ['xfce4-terminal', ['-e', 'bash -lc "prime-agent; exec bash"']],
-    ['x-terminal-emulator', ['-e', 'bash', '-lc', 'prime-agent; exec bash']],
-    ['xterm', ['-e', 'bash', '-lc', 'prime-agent; exec bash']]
+    ['gnome-terminal', ['--disable-factory', '--', 'bash', '-lc', inner]],
+    ['ptyxis', ['--', 'bash', '-lc', inner]],
+    ['konsole', ['-e', 'bash', '-lc', inner]],
+    ['xfce4-terminal', ['--disable-server', '-e', `bash -lc "${inner}"`]],
+    ['kitty', ['bash', '-lc', inner]],
+    ['alacritty', ['-e', 'bash', '-lc', inner]],
+    ['xterm', ['-e', 'bash', '-lc', inner]],
+    ['x-terminal-emulator', ['-e', 'bash', '-lc', inner]]
   ]
 
+  const errors: string[] = []
   for (const [bin, args] of candidates) {
     const found = await run('which', [bin], 4000)
     if (found.code !== 0) continue
-    const child = spawn(bin, args, { detached: true, stdio: 'ignore', cwd: homedir() })
-    child.unref()
-    return { ok: true }
+    const started = await trySpawn(bin, args)
+    if (started.ok) return { ok: true, command: COMMAND }
+    errors.push(`${bin}: ${started.error ?? 'falhou'}`)
   }
 
-  return { ok: false, error: 'Nenhum terminal encontrado. Abra um manualmente e rode: prime-agent' }
+  return {
+    ok: false,
+    command: COMMAND,
+    error: errors.length
+      ? `Não foi possível abrir um terminal. ${errors[0]}`
+      : 'Nenhum terminal encontrado no sistema.'
+  }
+}
+
+/**
+ * Lança um terminal e confirma que ele realmente abriu.
+ *
+ * Emuladores de terminal costumam sair com código 0 mesmo quando falham, então
+ * código de saída não serve de prova. Observamos a saída de erro por um instante
+ * e tratamos qualquer mensagem de erro como falha, para poder tentar o próximo.
+ */
+function trySpawn(bin: string, args: string[]): Promise<{ ok: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    let child: ReturnType<typeof spawn>
+    try {
+      child = spawn(bin, args, { detached: true, stdio: ['ignore', 'pipe', 'pipe'], cwd: homedir() })
+    } catch (e) {
+      return resolve({ ok: false, error: e instanceof Error ? e.message : String(e) })
+    }
+
+    let stderr = ''
+    let settled = false
+    const finish = (result: { ok: boolean; error?: string }) => {
+      if (settled) return
+      settled = true
+      resolve(result)
+    }
+
+    child.stderr?.setEncoding('utf-8')
+    child.stderr?.on('data', (d: string) => {
+      stderr += d
+    })
+    child.on('error', (e) => finish({ ok: false, error: e.message }))
+    child.on('exit', (code) => {
+      if (code && code !== 0) finish({ ok: false, error: stderr.trim().split('\n')[0] || `código ${code}` })
+    })
+
+    setTimeout(() => {
+      const failed = /error|failed|cannot|unable/i.test(stderr)
+      if (failed) finish({ ok: false, error: stderr.trim().split('\n')[0] })
+      else {
+        child.unref()
+        finish({ ok: true })
+      }
+    }, 1400)
+  })
 }
 
 

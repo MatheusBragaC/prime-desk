@@ -469,3 +469,41 @@ da conversa aberta não surtia efeito visível.
 Correção: quando o alvo é a sessão ativa, o app chama `new_session` primeiro —
 o worker passa a apontar para uma sessão nova — e só então remove o arquivo.
 Validado: o `.jsonl` sumiu do disco, a sidebar atualizou e o `sessionId` mudou.
+
+## 24. `gnome-terminal` falha em silêncio e sai com código 0
+
+Ao abrir um terminal para o `/login`, o botão não fazia nada. O comando usado era:
+
+```bash
+gnome-terminal -- bash -lc 'prime-agent; exec bash'
+```
+
+Ele imprime no stderr
+
+```
+# Error creating terminal: Failed to get screen from object path /org/gnome/Terminal/screen/…
+```
+
+e ainda assim **sai com código 0**. Como o app só olhava o código de saída, achava
+que tinha dado certo.
+
+O cliente do gnome-terminal fala com o `gnome-terminal-server` por D-Bus; quando
+esse canal está degradado, a criação da janela falha. `--disable-factory` faz o
+processo abrir a própria janela, sem passar pelo servidor — e aí funciona.
+
+Testado nesta máquina:
+
+| Invocação | Resultado |
+|---|---|
+| `gnome-terminal --` | erro no stderr, nenhuma janela |
+| `gnome-terminal --window --` | erro no stderr, nenhuma janela |
+| `setsid gnome-terminal --` | erro no stderr, nenhuma janela |
+| `gnome-terminal --disable-factory --` | **abre normalmente** |
+
+**Correções:** usar `--disable-factory`; validar o lançamento observando o stderr
+por ~1,4 s em vez de confiar no código de saída; percorrer mais candidatos
+(ptyxis, konsole, xfce4-terminal, kitty, alacritty, xterm); e, se todos falharem,
+mostrar o comando para o usuário rodar à mão.
+
+Detalhe de diagnóstico: `pgrep -c gnome-terminal-server` retorna 0 mesmo com o
+servidor no ar, porque `comm` é truncado em 15 caracteres. Use `pgrep -f`.

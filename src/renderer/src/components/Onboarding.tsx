@@ -49,6 +49,8 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   const [command, setCommand] = useState('')
   const [output, setOutput] = useState('')
   const [copied, setCopied] = useState(false)
+  const [termError, setTermError] = useState<string | null>(null)
+  const [opening, setOpening] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -103,6 +105,15 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
       return
     }
     await check()
+  }
+
+  /** Abre o terminal e, se não der, entrega o comando para o usuário rodar. */
+  async function openTerminal() {
+    setOpening(true)
+    setTermError(null)
+    const r = await window.prime.openAgentTerminal()
+    setOpening(false)
+    if (!r?.ok) setTermError(r?.error ?? 'Falha ao abrir terminal.')
   }
 
   async function copyCommand() {
@@ -236,13 +247,14 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             </p>
 
             <button
-              onClick={() => void window.prime.openAgentTerminal()}
+              onClick={() => void openTerminal()}
+              disabled={opening}
               className="mt-3 flex w-full items-start gap-3 rounded-lg border border-white/[0.08] p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
             >
               <Terminal size={15} className="mt-[2px] shrink-0 text-primarySoft" />
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.8px] font-medium text-fg">
-                  {t('onb.subTitle')}
+                  {opening ? t('onb.opening') : t('onb.subTitle')}
                 </span>
                 <span className="mt-0.5 block text-[11.5px] leading-snug text-dim">
                   {t('onb.subDesc')}
@@ -250,6 +262,22 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               </span>
               <ArrowRight size={13} className="mt-[3px] shrink-0 text-dim" />
             </button>
+
+            {termError && (
+              <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
+                <div className="flex items-start gap-2 text-[11.8px] leading-snug text-warn">
+                  <AlertTriangle size={13} className="mt-[2px] shrink-0" />
+                  <span>
+                    {t('onb.termFailed')}
+                    <code className="mt-1.5 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-[11px] text-mint">
+                      prime-agent
+                    </code>
+                    <span className="mt-1 block">{t('onb.termThenLogin')}</span>
+                    <span className="mt-1 block font-mono text-[10.5px] opacity-70">{termError}</span>
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="mt-2 flex items-start gap-3 rounded-lg border border-white/[0.08] p-3">
               <KeyRound size={15} className="mt-[2px] shrink-0 text-warn" />

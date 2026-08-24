@@ -121,7 +121,9 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             className={item}
             onClick={() => {
               setOpen(false)
-              void window.prime.openAgentTerminal()
+              void window.prime.openAgentTerminal().then((r) => {
+                if (!r?.ok) notify('error', r?.error ?? t('onb.termFailed'))
+              })
             }}
             title={t('acct.switchHint')}
           >
