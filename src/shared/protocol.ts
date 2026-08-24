@@ -90,6 +90,8 @@ export interface AgentState {
   steeringMode: string
   followUpMode: string
   sessionId: string
+  /** Nome de exibição definido via `set_session_name`; ausente se não houver. */
+  sessionName?: string
   autoCompactionEnabled: boolean
   messageCount: number
   sessionActions: SessionActions

@@ -10,6 +10,7 @@ import { getAgentTree } from './agent-tree.js'
 import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
+import { generateTitle } from './titles.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
@@ -219,6 +220,21 @@ ipcMain.handle('sessions:transcript', async (_e, path: string) => {
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
+})
+
+ipcMain.handle('title:generate', async (_e, conversation: string) => {
+  try {
+    return { ok: true, title: await generateTitle(conversation, workspaceRoot) }
+  } catch {
+    return { ok: false, title: null }
+  }
+})
+
+ipcMain.handle('view:zoom', (_e, level: number) => {
+  if (!win || win.isDestroyed()) return { ok: false }
+  const clamped = Math.max(-3, Math.min(4, level))
+  win.webContents.setZoomLevel(clamped)
+  return { ok: true, level: clamped }
 })
 
 ipcMain.handle('usage:stats', async () => {

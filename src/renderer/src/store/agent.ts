@@ -309,6 +309,53 @@ export async function openSession(sessionPath: string): Promise<void> {
   void refreshSessions()
 }
 
+// ------------------------------------------------------------------ título
+
+function plainText(m: UiMessage): string {
+  return m.content
+    .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+    .map((b) => b.text)
+    .join(' ')
+    .trim()
+}
+
+let titling = false
+
+/**
+ * Dá nome à conversa depois do primeiro turno.
+ *
+ * O nome é gravado com `set_session_name`, então vive no próprio arquivo de
+ * sessão (entrada `session_info`) e aparece também no TUI — não é um rótulo
+ * paralelo só da GUI.
+ */
+export async function maybeGenerateTitle(): Promise<void> {
+  if (titling) return
+  const st = useAgent.getState()
+  if (st.state?.sessionName) return
+
+  const msgs = st.messages
+  const user = msgs.find((m) => m.role === 'user')
+  const assistant = msgs.find((m) => m.role === 'assistant')
+  if (!user || !assistant) return
+
+  titling = true
+  try {
+    const convo =
+      `usuário: ${plainText(user).slice(0, 900)}\n` +
+      `assistente: ${plainText(assistant).slice(0, 700)}`
+
+    const r = await bridge().generateTitle(convo)
+    const title = r?.ok ? (r.title as string | null) : null
+    if (!title) return
+
+    await rpc('set_session_name', { name: title })
+    await refreshState()
+    void refreshSessions()
+  } finally {
+    titling = false
+  }
+}
+
 // ------------------------------------------------------------------ observe
 
 /**

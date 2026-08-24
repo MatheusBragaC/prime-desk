@@ -59,10 +59,32 @@ function firstUserText(lines: string[]): { title: string; count: number; name: s
   return { title, count, name }
 }
 
+const GREETINGS =
+  /^(ol[áa]|oi|e\s*a[íi]|fala|bom dia|boa tarde|boa noite|hey|hi|hello|chat|meu amigo)[,!\s]+/i
+
+/**
+ * Título de fallback, usado enquanto a conversa não recebeu nome gerado.
+ * Corta saudação, pega a primeira frase e trunca em limite de palavra — bem
+ * melhor que exibir 90 caracteres crus do primeiro prompt.
+ */
 function cleanTitle(raw: string): string {
-  const flat = raw.replace(/\s+/g, ' ').trim()
-  if (!flat) return 'Sessão sem título'
-  return flat.length > 90 ? flat.slice(0, 90) + '…' : flat
+  let flat = raw.replace(/\s+/g, ' ').trim()
+  if (!flat) return 'Conversa sem título'
+
+  // Remove saudações encadeadas ("Chat, meu amigo, ...").
+  for (let i = 0; i < 3 && GREETINGS.test(flat); i++) flat = flat.replace(GREETINGS, '')
+
+  const sentence = flat.split(/(?<=[.!?])\s+/)[0] ?? flat
+  let title = sentence.trim() || flat
+
+  const MAX = 58
+  if (title.length > MAX) {
+    const cut = title.slice(0, MAX)
+    const space = cut.lastIndexOf(' ')
+    title = (space > 24 ? cut.slice(0, space) : cut).trim() + '…'
+  }
+
+  return title.charAt(0).toUpperCase() + title.slice(1)
 }
 
 /**

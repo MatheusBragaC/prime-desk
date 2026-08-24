@@ -66,14 +66,23 @@ function SessionRow({
         disabled={busy}
         onClick={onOpen}
         className={
-          'mb-px flex w-full items-center gap-1.5 rounded-[9px] py-[7px] pl-3 pr-7 text-left transition-colors disabled:opacity-50 ' +
+          'mb-[1px] flex w-full items-center gap-2 rounded-[8px] py-[6px] pl-2.5 pr-7 text-left transition-colors disabled:opacity-50 ' +
           (active
             ? 'bg-[var(--p-selected)] text-fg'
             : 'text-muted hover:bg-white/[0.04] hover:text-fg')
         }
         title={s.title}
       >
-        {pinned && <Pin size={9.5} className="shrink-0 text-primarySoft" />}
+        {pinned ? (
+          <Pin size={9} className="ml-[1px] mr-[3px] shrink-0 text-primarySoft" />
+        ) : (
+          <span
+            className={
+              'ml-[2px] mr-[3px] h-[5px] w-[5px] shrink-0 rounded-full border transition-colors ' +
+              (active ? 'border-primarySoft' : 'border-grid group-hover:border-muted')
+            }
+          />
+        )}
         <span className="min-w-0 flex-1 truncate text-[12.8px] leading-snug">{s.title}</span>
       </button>
 
@@ -158,11 +167,14 @@ function GroupHeader({
   }
 
   return (
-    <div className="group/h flex items-center gap-1 px-2 pb-0.5 pt-2.5">
+    <div className="group/h flex items-center gap-1 px-2 pb-1 pt-4">
       <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1 text-left">
         <ChevronRight
-          size={11}
-          className={'shrink-0 text-dim transition-transform duration-200 ' + (collapsed ? '' : 'rotate-90')}
+          size={10}
+          className={
+            'shrink-0 text-dim opacity-0 transition-all duration-200 group-hover/h:opacity-100 ' +
+            (collapsed ? '' : 'rotate-90')
+          }
         />
         {renaming ? (
           <input
@@ -177,9 +189,8 @@ function GroupHeader({
             className="min-w-0 flex-1 rounded border border-primary/40 bg-black/40 px-1 text-[11.5px] text-fg outline-none"
           />
         ) : (
-          <span className="truncate text-[11.5px] font-medium text-muted">{group.label}</span>
+          <span className="truncate text-[11.5px] text-dim">{group.label}</span>
         )}
-        <span className="shrink-0 text-[10px] text-dim">{group.sessions.length}</span>
       </button>
 
       <button
@@ -345,8 +356,8 @@ export function Sidebar({
       </div>
 
       <div className="flex items-center justify-between px-4 pb-0.5 pt-2">
-        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-dim">
-          {filtered.length} sessões · {groups.length} grupos
+        <span className="text-[10.5px] uppercase tracking-wider text-dim">
+          {filtered.length} conversas
         </span>
         {archivedCount > 0 && (
           <button

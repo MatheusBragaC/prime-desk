@@ -94,6 +94,9 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 15 | Dock direito exclusivo | Dois painéis simultâneos reduziam o chat a ~280px e inutilizavam o composer |
 | 16 | Pasta só nasce com nome | Criar direto acumulava "Nova pasta" vazia sem propósito |
 | 17 | Estatísticas com cache por mtime | Sessões chegam a vários MB; revarrer tudo a cada abertura é desperdício |
+| 18 | Título via RPC efêmero, não `-p` | O modo print não retorna quando lançado do main do Electron |
+| 19 | Título gravado com `set_session_name` | Vive na sessão do agente e aparece no TUI, em vez de virar rótulo só da GUI |
+| 20 | Cores do tema com canais RGB | Sem isso o modificador de opacidade do Tailwind é descartado em silêncio |
 
 ## Segurança
 

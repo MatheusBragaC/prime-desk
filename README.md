@@ -32,6 +32,7 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Modelos** | troca em tempo real, com custo por Mtok e indicador de reasoning |
 | **Thinking** | sete níveis, de `off` a `max` |
 | **Sessões** | sidebar com busca, lida direto de `~/.prime/agent/sessions` |
+| **Título automático** | a conversa ganha um nome curto após o primeiro turno |
 | **HUD** | tokens, ocupação da janela de contexto, custo acumulado, goal ativo |
 | **Controle** | abort (`Esc`), steer durante streaming, compactação manual |
 | **Paleta** | `Ctrl+K` com skills descobertas via `get_commands` |
@@ -151,6 +152,18 @@ npm start        # roda o build
 npm run typecheck
 ```
 
+## Título automático
+
+Depois do primeiro turno, a conversa recebe um título curto gerado a partir da
+pergunta e da resposta. Ele é gravado com `set_session_name`, ou seja, vive na
+própria sessão do agente (entrada `session_info`) e aparece também no TUI — não
+é um rótulo paralelo da GUI.
+
+A geração usa um cliente RPC efêmero com um modelo barato, sem ferramentas,
+skills, extensões ou arquivos de contexto. Leva ~4 s e roda em segundo plano.
+Falhou? A sidebar cai no título heurístico (primeira frase do prompt, sem
+saudação, cortada em limite de palavra).
+
 ## Painel de uso
 
 Em uma conversa nova, o centro mostra o consumo agregado de todas as sessões
@@ -203,6 +216,8 @@ bloqueado para a conversa aberta.
 | `Ctrl+B` | árvore de agentes |
 | `Ctrl+Shift+F` | explorador de arquivos |
 | `Ctrl+S` | salvar arquivo no editor |
+| `Ctrl` `+` / `-` | aumentar e diminuir a interface |
+| `Ctrl+0` | voltar ao zoom padrão |
 | `Esc` | interromper o turno |
 
 ## Arquitetura

@@ -26,6 +26,28 @@
   --p-diff-added: #3fb950;
   --p-diff-removed: #f85149;
 
+  /*
+   * Canais separados para o Tailwind.
+   * Modificador de opacidade (`bg-primary/15`) exige a cor como
+   * `rgb(var(--x) / <alpha-value>)`. Com a variável guardando um hex pronto, a
+   * classe é descartada em silêncio e o elemento cai no cinza do preflight —
+   * foi o que deixava a borda do "Nova conversa" branca.
+   */
+  --p-bg-rgb: 5 5 6;
+  --p-surface-rgb: 13 13 16;
+  --p-panel-rgb: 21 21 24;
+  --p-fg-rgb: 244 244 245;
+  --p-muted-rgb: 161 161 170;
+  --p-dim-rgb: 113 113 122;
+  --p-grid-rgb: 82 82 91;
+  --p-primary-rgb: 124 111 175;
+  --p-primary-soft-rgb: 141 127 192;
+  --p-success-rgb: 125 168 118;
+  --p-warning-rgb: 245 158 11;
+  --p-error-rgb: 208 111 130;
+  --p-info-rgb: 56 189 248;
+  --p-mint-rgb: 139 168 136;
+
   --p-radius: 14px;
   --p-titlebar: 44px;
 }
@@ -160,3 +182,18 @@ body {
 
 textarea { font-family: inherit; }
 button { font-family: inherit; }
+
+/*
+ * O Chromium desenha um anel branco em :focus-visible. Depois de clicar em
+ * "Nova conversa" o botão continuava focado e o anel ficava aparente.
+ * Trocamos por um anel discreto do tema, só para navegação por teclado.
+ */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: 2px solid rgba(124, 111, 175, 0.55);
+  outline-offset: 1px;
+  border-radius: 8px;
+}
+
+button:focus:not(:focus-visible) { outline: none; }

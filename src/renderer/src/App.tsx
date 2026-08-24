@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { StatusBar } from './components/StatusBar'
 import { Composer } from './components/Composer'
@@ -12,7 +12,7 @@ import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
-  refreshFolders, abortTurn
+  refreshFolders, abortTurn, maybeGenerateTitle
 } from './store/agent'
 import type { AgentEvent, AgentTreeSnapshot } from '../../shared/protocol'
 
@@ -33,6 +33,21 @@ export function App() {
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
+  const zoomRef = useRef(0)
+
+  const applyZoom = useCallback(async (level: number) => {
+    const r = await window.prime.setZoom(level)
+    if (r?.ok) {
+      zoomRef.current = r.level as number
+      localStorage.setItem('prime-desk:zoom', String(r.level))
+    }
+  }, [])
+
+  // Restaura o zoom escolhido antes de a janela aparecer.
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('prime-desk:zoom'))
+    if (Number.isFinite(saved) && saved !== 0) void applyZoom(saved)
+  }, [applyZoom])
 
   // ---- ciclo de vida da ponte -------------------------------------------
   useEffect(() => {
@@ -59,7 +74,10 @@ export function App() {
 
       // A sessão só entra no catálogo quando ganha a primeira mensagem; sem
       // isto a conversa recém-criada ficaria invisível até um refresh manual.
-      if (ev.type === 'agent_end') void refreshSessions()
+      if (ev.type === 'agent_end') {
+        void refreshSessions()
+        void maybeGenerateTitle()
+      }
     })
     const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
     const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))
@@ -141,13 +159,27 @@ export function App() {
         e.preventDefault()
         setDock((d) => (d === 'files' ? null : 'files'))
       }
+
+      // Zoom da interface. `=` cobre o Ctrl+= sem Shift, comum em teclado ABNT.
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          void applyZoom(zoomRef.current + 0.5)
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault()
+          void applyZoom(zoomRef.current - 0.5)
+        } else if (e.key === '0') {
+          e.preventDefault()
+          void applyZoom(0)
+        }
+      }
       if (e.key === 'Escape' && useAgent.getState().state?.isStreaming) {
         void abortTurn()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [applyZoom])
 
   // ---- autoscroll aderente ----------------------------------------------
   useEffect(() => {

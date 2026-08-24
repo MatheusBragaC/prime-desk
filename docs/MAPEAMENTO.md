@@ -325,3 +325,43 @@ manual, `agent_end` dispara a recarga do catálogo.
 
 **Bônus:** o título passou a preferir `session_info.name` (definido por
 `set_session_name` ou `/title`) sobre o texto da primeira mensagem.
+
+## 16. Modo print (`-p`) não retorna quando lançado do main do Electron
+
+Ao implementar o título automático, `execFile('prime-agent', ['-p', …])` a partir
+do processo main **nunca completa**: estoura o timeout (testado com 25 s e 90 s)
+e o stderr volta vazio.
+
+O mesmo comando, com os mesmos argumentos, responde em ~4 s a partir do shell.
+Descartado: stdin como pipe aberto (testado, não é), binário fora do PATH (daria
+ENOENT imediato) e execFile em geral (o `git` do chip de branch funciona).
+
+**Solução:** gerar o título por um cliente RPC efêmero — `--mode rpc` é o caminho
+que a ponte principal já usa e comprovadamente funciona sob Electron. Sobe com
+`--no-session --no-tools --no-skills --no-extensions --no-context-files`, manda um
+`prompt`, espera `agent_end`, lê `get_last_assistant_text` e encerra. ~4 s.
+
+## 17. Modificador de opacidade do Tailwind exige canais, não hex
+
+Sintoma: a borda do botão "Nova conversa" aparecia branca.
+
+Causa: as cores do tema estavam declaradas como `primary: 'var(--p-primary)'`,
+com a variável guardando `#7c6faf`. O Tailwind **não** consegue aplicar
+`/25` sobre isso, então `border-primary/25` não gera regra alguma e o elemento
+cai no `border-color` do preflight — cinza-200, que sobre fundo escuro lê como
+branco. O mesmo valia para `bg-primary/[0.11]`, que simplesmente sumia.
+
+Não era um caso isolado: **mais de 40 usos** de opacidade em cores do tema
+estavam sendo descartados em silêncio.
+
+**Correção:** manter o hex para uso direto em CSS/SVG e adicionar canais
+separados para o Tailwind:
+
+```css
+--p-primary: #7c6faf;          /* uso direto */
+--p-primary-rgb: 124 111 175;  /* canais */
+```
+
+```js
+primary: 'rgb(var(--p-primary-rgb) / <alpha-value>)'
+```

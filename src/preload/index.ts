@@ -14,6 +14,8 @@ const api = {
 
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   usageStats: () => ipcRenderer.invoke('usage:stats'),
+  generateTitle: (conversation: string) => ipcRenderer.invoke('title:generate', conversation),
+  setZoom: (level: number) => ipcRenderer.invoke('view:zoom', level),
   transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),
 
   agentTree: () => ipcRenderer.invoke('agents:tree'),
