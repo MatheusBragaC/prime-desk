@@ -594,3 +594,42 @@ nascer.
 A condição não é só "está transmitindo": o bloco também aparece quando a
 mensagem do assistente já existe mas ainda está sem conteúdo visível — sem isso,
 haveria uma janela de silêncio entre `message_start` e o primeiro delta.
+
+## 29. Distribuição: por que `curl` sozinho não basta no Linux
+
+Testado com o AppImage recém-gerado nesta máquina:
+
+```
+FATAL:setuid_sandbox_host.cc(163) The SUID sandbox helper binary was found,
+but is not configured correctly. …/chrome-sandbox is owned by root and mode 4755
+```
+
+O Ubuntu 24.04 define `kernel.apparmor_restrict_unprivileged_userns=1`. Nesse
+regime o Chromium precisa de **uma** destas duas coisas: um perfil AppArmor que
+conceda `userns` ao binário, ou um `chrome-sandbox` com dono root e modo 4755.
+O AppImage monta somente leitura em `/tmp` e não pode ter nenhuma das duas.
+
+### A armadilha no postinst padrão
+
+O `postinst` gerado pelo electron-builder decide assim:
+
+```bash
+if ! { [[ -L /proc/self/ns/user ]] && unshare --user true; }; then
+    chmod 4755 chrome-sandbox   # sem userns: usa setuid
+else
+    chmod 0755 chrome-sandbox   # com userns: dispensa setuid
+fi
+```
+
+Medido aqui: `unshare --user true` **retorna sucesso** para usuário comum mesmo
+com a restrição ativa, porque o Ubuntu distribui um perfil AppArmor para o
+próprio `unshare`. O teste conclui que namespaces funcionam, deixa o sandbox sem
+setuid — e o app não abre.
+
+**Correção:** `afterInstall` próprio que instala um perfil AppArmor para
+`/opt/Prime Desk/prime-desk`, como fazem Chrome e VS Code, e só recorre ao setuid
+quando não há AppArmor. O `afterRemove` desfaz.
+
+Consequência para a documentação: no Linux o `.deb` é o canal recomendado; o
+AppImage funciona, mas precisa de `--no-sandbox` nessas distros — e o instalador
+avisa em vez de entregar um atalho que não abre.

@@ -38,6 +38,9 @@ linux:
       StartupWMClass: prime-desk
 
 deb:
+  # Corrige o sandbox do Chromium em distros com user namespace restrito.
+  afterInstall: scripts/deb/after-install.sh
+  afterRemove: scripts/deb/after-remove.sh
   # `prime-agent` vem do npm, não do apt: fica como recomendação, não dependência.
   depends:
     - libgtk-3-0

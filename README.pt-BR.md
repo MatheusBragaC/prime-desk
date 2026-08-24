@@ -164,6 +164,47 @@ responsabilidade exclusiva do `prime-agent`.
 
 ## Instalação
 
+### Instalação rápida
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MatheusBragaC/prime-desk/main/scripts/install.sh | sh
+```
+
+O script escolhe o artefato certo e resolve o que muda em cada sistema. Leia
+antes de rodar — são poucas dezenas de linhas de `sh`.
+
+> **Ainda não disponível.** O script instala a partir das Releases do GitHub,
+> e ainda não há release publicada. Até lá, use a instalação a partir do código.
+
+### `curl` é suficiente?
+
+Para **baixar**, sim. Para **instalar bem**, depende da plataforma:
+
+| Plataforma | Canal | Contrapartida |
+|---|---|---|
+| **Linux (recomendado)** | `.deb` | Exige `sudo`. Entrega ícone, item de menu, comando `prime-desk` e sandbox funcionando |
+| Linux (sem sudo) | AppImage | Arquivo único, mas **não abre no Ubuntu 24.04+** sem `--no-sandbox` |
+| **macOS** | `.zip` → `/Applications` | Build não assinado: o Gatekeeper bloqueia até remover a quarentena |
+| Homebrew | ainda não publicado | Exigiria um tap; e, sem assinatura, não traria vantagem real hoje |
+
+#### Por que o AppImage falha no Ubuntu 24.04+
+
+O Ubuntu 24.04 define `kernel.apparmor_restrict_unprivileged_userns=1`. O
+Chromium então precisa de um perfil AppArmor que conceda `userns` ao binário, ou
+de um `chrome-sandbox` com dono root e modo 4755. O AppImage monta somente
+leitura em `/tmp`, então não pode ter nenhum dos dois, e o app aborta.
+
+O `.deb` resolve na instalação, publicando um perfil AppArmor para
+`/opt/Prime Desk/prime-desk` — a mesma abordagem de Chrome e VS Code.
+
+> O `postinst` padrão do electron-builder decide isso rodando
+> `unshare --user true`, que **passa** no Ubuntu 24.04 porque a distro traz um
+> perfil AppArmor para o próprio `unshare`. O teste engana, o sandbox fica sem
+> configuração e o app não abre. Por isso este projeto usa um `afterInstall`
+> próprio.
+
+### A partir do código
+
 ```bash
 npm install
 ```
