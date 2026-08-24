@@ -51,6 +51,35 @@ export function isValidSshTarget(target: string): boolean {
   return /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+(:\/[^\s'"`$;|&]*)?$/.test(target.trim())
 }
 
+/**
+ * Porta TCP.
+ *
+ * Chega pelo IPC, então o `number` do TypeScript não prova nada em tempo de
+ * execução: o renderer pode mandar string, float ou objeto.
+ */
+export function isValidSshPort(port: unknown): port is number {
+  return typeof port === 'number' && Number.isInteger(port) && port > 0 && port < 65536
+}
+
+/**
+ * Caminho de chave privada.
+ *
+ * Recusa metacaractere de shell e valor iniciado por `-`: mesmo com o shim já
+ * parametrizado por ambiente, um `-oProxyCommand=...` viraria opção do ssh — e
+ * o ssh executa ProxyCommand. Validado ANTES de expandir o `~`, para que um
+ * diretório home fora do comum não reprove caminho legítimo.
+ */
+export function isValidIdentityPath(p: unknown): p is string {
+  return (
+    typeof p === 'string' &&
+    p.length > 0 &&
+    p.length <= 512 &&
+    !p.startsWith('-') &&
+    // Espaço é seguro: o valor viaja por argv e por variável já entre aspas.
+    /^[A-Za-z0-9_@+./~ -]+$/.test(p)
+  )
+}
+
 
 // ---------------------------------------------------------------- conexões
 
@@ -67,27 +96,48 @@ function connectionsFile(): string {
   return join(app.getPath('userData'), 'ssh-connections.json')
 }
 
+/**
+ * Saneamento único, aplicado na leitura E na escrita.
+ *
+ * O arquivo vive em `userData` e é editável fora do app, então o que foi
+ * gravado um dia não é prova de nada: sem sanear na leitura, um `identity`
+ * plantado à mão chegaria ao shim sem passar por validação alguma.
+ */
+function sanitizeConnections(list: unknown): SshConnection[] {
+  if (!Array.isArray(list)) return []
+
+  const clean: SshConnection[] = []
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue
+    const c = item as Partial<SshConnection>
+    if (typeof c.host !== 'string' || !isValidSshTarget(c.host)) continue
+
+    const identity = typeof c.identity === 'string' ? c.identity.trim() : undefined
+    const remotePath = typeof c.remotePath === 'string' ? c.remotePath.trim() : undefined
+
+    clean.push({
+      id: String(c.id ?? '').slice(0, 40),
+      name: String(c.name ?? '').slice(0, 60),
+      host: c.host.trim(),
+      port: isValidSshPort(c.port) ? c.port : undefined,
+      identity: isValidIdentityPath(identity) ? identity : undefined,
+      remotePath: remotePath || undefined
+    })
+  }
+  return clean
+}
+
 export async function loadConnections(): Promise<SshConnection[]> {
   try {
     const raw = await readFile(connectionsFile(), 'utf-8')
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as SshConnection[]) : []
+    return sanitizeConnections(JSON.parse(raw))
   } catch {
     return []
   }
 }
 
 export async function saveConnections(list: SshConnection[]): Promise<SshConnection[]> {
-  const clean = list
-    .filter((c) => c && typeof c.host === 'string' && isValidSshTarget(c.host))
-    .map((c) => ({
-      id: String(c.id).slice(0, 40),
-      name: String(c.name ?? '').slice(0, 60),
-      host: c.host.trim(),
-      port: c.port && c.port > 0 && c.port < 65536 ? Math.floor(c.port) : undefined,
-      identity: c.identity?.trim() || undefined,
-      remotePath: c.remotePath?.trim() || undefined
-    }))
+  const clean = sanitizeConnections(list)
   const path = connectionsFile()
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, JSON.stringify(clean, null, 2), 'utf-8')
@@ -109,6 +159,13 @@ export function testConnection(conn: {
   return new Promise((resolve) => {
     if (!isValidSshTarget(conn.host)) {
       return resolve({ ok: false, message: 'Host inválido. Use usuário@host.' })
+    }
+    if (conn.port !== undefined && !isValidSshPort(conn.port)) {
+      return resolve({ ok: false, message: 'Porta inválida.' })
+    }
+    // `execFile` não abre shell, mas um valor iniciado por `-` viraria opção do ssh.
+    if (conn.identity !== undefined && !isValidIdentityPath(conn.identity)) {
+      return resolve({ ok: false, message: 'Caminho de chave inválido.' })
     }
 
     const args = [
@@ -150,25 +207,65 @@ export function testConnection(conn: {
  * repassa tudo para o ssh real acrescentando `-p` e `-i`. Nada global, nada
  * persistente no ambiente do usuário.
  */
+export interface SshShim {
+  /** Entra na frente do PATH, apenas no processo do agente. */
+  dir: string
+  /** Valores que o shim lê em tempo de execução. */
+  env: Record<string, string>
+}
+
 export async function prepareSshShim(conn: {
   port?: number
   identity?: string
-}): Promise<string | null> {
-  if (!conn.port && !conn.identity) return null
+}): Promise<SshShim | null> {
+  if (conn.port !== undefined && !isValidSshPort(conn.port)) {
+    throw new Error('Porta SSH inválida.')
+  }
+  if (conn.identity !== undefined && !isValidIdentityPath(conn.identity)) {
+    throw new Error('Caminho de chave SSH inválido. Use apenas letras, números, "." "_" "-" "/" "~".')
+  }
+
+  const port = conn.port
+  const identity = conn.identity ? expandHome(conn.identity) : undefined
+  if (port === undefined && identity === undefined) return null
 
   const dir = join(app.getPath('userData'), 'ssh-shim')
   await mkdir(dir, { recursive: true })
 
-  const opts: string[] = []
-  if (conn.port) opts.push('-p', String(conn.port))
-  if (conn.identity) opts.push('-i', JSON.stringify(expandHome(conn.identity)))
+  /**
+   * Script FIXO: nada vindo do usuário é interpolado aqui.
+   *
+   * A versão anterior montava `-p <porta>` e `-i <chave>` por interpolação, e
+   * isso era injeção de comando. `JSON.stringify` escapa `"` e `\`, mas não `$`
+   * nem backtick — exatamente os metacaracteres ativos dentro de aspas duplas
+   * no sh — então um `identity` com `$(...)` executava; a porta ia sem aspas
+   * nenhuma. Agora os valores viajam por ambiente e o shim os expande já
+   * entre aspas.
+   *
+   * As opções são PREPENDIDAS via `set --` porque o ssh exige opção antes do
+   * host, e `set -- ... "$@"` preserva o argumento original palavra por palavra
+   * (nada de word splitting sobre caminho com espaço).
+   */
+  const script = [
+    '#!/bin/sh',
+    '# Gerado pelo Prime Desk. Repassa para o ssh real com a porta/chave da conexão.',
+    '# Os valores vêm do ambiente e nunca são interpolados neste arquivo.',
+    'if [ -n "$PRIME_DESK_SSH_IDENTITY" ]; then',
+    '  set -- -i "$PRIME_DESK_SSH_IDENTITY" "$@"',
+    'fi',
+    'if [ -n "$PRIME_DESK_SSH_PORT" ]; then',
+    '  set -- -p "$PRIME_DESK_SSH_PORT" "$@"',
+    'fi',
+    'exec /usr/bin/ssh "$@"',
+    ''
+  ].join('\n')
 
-  const script = `#!/bin/sh
-# Gerado pelo Prime Desk. Repassa para o ssh real com porta/chave da conexão.
-exec /usr/bin/ssh ${opts.join(' ')} "$@"
-`
   const file = join(dir, 'ssh')
   await writeFile(file, script, 'utf-8')
   await chmod(file, 0o755)
-  return dir
+
+  const env: Record<string, string> = {}
+  if (port !== undefined) env.PRIME_DESK_SSH_PORT = String(port)
+  if (identity !== undefined) env.PRIME_DESK_SSH_IDENTITY = identity
+  return { dir, env }
 }

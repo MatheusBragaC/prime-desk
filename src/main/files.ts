@@ -1,6 +1,6 @@
-import { readdir, stat, open, writeFile, rename, unlink } from 'node:fs/promises'
+import { readdir, stat, open, writeFile, rename, unlink, realpath } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
-import { join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import type { DirEntry } from '../shared/protocol.js'
 
 /**
@@ -16,6 +16,44 @@ export function insideRoot(root: string, target: string): boolean {
   return t === r || t.startsWith(r + sep)
 }
 
+const OUTSIDE = 'Caminho fora do diretório de trabalho.'
+
+async function realpathOr(p: string): Promise<string> {
+  try {
+    return await realpath(p)
+  } catch {
+    return resolve(p)
+  }
+}
+
+/**
+ * Resolve `target` seguindo symlinks e confirma que o resultado segue dentro de
+ * `root`.
+ *
+ * `insideRoot` sozinho não basta: `path.resolve` é textual e não enxerga
+ * symlink, então um `ws/atalho -> ../../.ssh/id_rsa` passava pela checagem e a
+ * leitura saía do workspace. A raiz também é resolvida, senão um `~` que seja
+ * link — comum em ambiente gerenciado — reprovaria caminho legítimo.
+ *
+ * Devolve o caminho REAL, e é ele que deve ser aberto: reabrir o caminho
+ * original seguiria o symlink de novo, reabrindo a janela de troca entre a
+ * validação e o `open`.
+ */
+export async function realPathInside(root: string, target: string): Promise<string | null> {
+  const realRoot = await realpathOr(root)
+  const abs = resolve(target)
+
+  let real: string
+  try {
+    real = await realpath(abs)
+  } catch {
+    // Alvo pode ainda não existir (gravação nova): vale o pai já resolvido.
+    real = join(await realpathOr(dirname(abs)), basename(abs))
+  }
+
+  return insideRoot(realRoot, real) ? real : null
+}
+
 /** Pastas que só poluem a árvore. Continuam acessíveis se digitadas no filtro. */
 const NOISY = new Set(['.git', '.cache', '__pycache__', '.pytest_cache', '.mypy_cache'])
 
@@ -24,9 +62,15 @@ export async function listDir(root: string, relPath = ''): Promise<{
   entries?: DirEntry[]
   error?: string
 }> {
-  const target = resolve(join(root, relPath))
-  if (!insideRoot(root, target)) {
-    return { ok: false, error: 'Caminho fora do diretório de trabalho.' }
+  /**
+   * Dois caminhos, de propósito: o lógico alimenta os `path` devolvidos ao
+   * renderer (que os manda de volta como `relPath`), e o real é o que abrimos.
+   * Misturar os dois quebraria a navegação quando a própria raiz for um link.
+   */
+  const logical = resolve(join(root, relPath))
+  const target = await realPathInside(root, logical)
+  if (!target) {
+    return { ok: false, error: OUTSIDE }
   }
 
   try {
@@ -43,10 +87,10 @@ export async function listDir(root: string, relPath = ''): Promise<{
         // Symlink que escapa da raiz não entra na listagem.
         try {
           const full = join(target, d.name)
+          if (!(await realPathInside(root, full))) continue
           const st = await stat(full)
           isDir = st.isDirectory()
           size = st.size
-          if (!insideRoot(root, resolve(full))) continue
         } catch {
           continue
         }
@@ -60,7 +104,7 @@ export async function listDir(root: string, relPath = ''): Promise<{
 
       entries.push({
         name: d.name,
-        path: relative(root, join(target, d.name)),
+        path: relative(root, join(logical, d.name)),
         isDir,
         size
       })
@@ -109,8 +153,8 @@ export interface FileRead {
 
 /** Lê um arquivo do workspace. Recusa binário e trunca acima do limite. */
 export async function readFileSafe(root: string, relPath: string): Promise<FileRead> {
-  const target = resolve(join(root, relPath))
-  if (!insideRoot(root, target)) return { ok: false, error: 'Caminho fora do diretório de trabalho.' }
+  const target = await realPathInside(root, join(root, relPath))
+  if (!target) return { ok: false, error: OUTSIDE }
 
   try {
     const st = await stat(target)
@@ -148,8 +192,8 @@ export async function writeFileSafe(
   relPath: string,
   content: string
 ): Promise<{ ok: boolean; error?: string; size?: number }> {
-  const target = resolve(join(root, relPath))
-  if (!insideRoot(root, target)) return { ok: false, error: 'Caminho fora do diretório de trabalho.' }
+  const target = await realPathInside(root, join(root, relPath))
+  if (!target) return { ok: false, error: OUTSIDE }
   try {
     const st = await stat(target)
     if (st.isDirectory()) return { ok: false, error: 'É um diretório.' }
@@ -166,7 +210,9 @@ export async function renameSessionFile(
   path: string,
   _newName: string
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!insideRoot(agentDir, path)) return { ok: false, error: 'Fora do diretório do agente.' }
+  if (!(await realPathInside(agentDir, path))) {
+    return { ok: false, error: 'Fora do diretório do agente.' }
+  }
   return { ok: false, error: 'Renomear arquivo de sessão não é suportado.' }
 }
 
@@ -174,11 +220,12 @@ export async function deleteSessionFile(
   agentDir: string,
   path: string
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!insideRoot(agentDir, path) || !path.endsWith('.jsonl')) {
+  const target = await realPathInside(agentDir, path)
+  if (!target || !target.endsWith('.jsonl')) {
     return { ok: false, error: 'Caminho inválido para exclusão.' }
   }
   try {
-    await unlink(path)
+    await unlink(target)
     return { ok: true }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }

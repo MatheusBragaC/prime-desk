@@ -11,7 +11,16 @@ export default defineConfig({
   },
   preload: {
     build: {
-      rollupOptions: { input: { index: resolve('src/preload/index.ts') } },
+      /**
+       * CommonJS, não ESM: preload em renderer sandboxed não aceita `import`
+       * (falha com "Cannot use import statement outside a module" e a API nem
+       * chega ao `window`). Como o package.json é `type: module`, o CJS precisa
+       * da extensão `.cjs` — que é o caminho carregado em src/main/index.ts.
+       */
+      rollupOptions: {
+        input: { index: resolve('src/preload/index.ts') },
+        output: { format: 'cjs', entryFileNames: 'index.cjs' }
+      },
       outDir: 'out/preload'
     }
   },

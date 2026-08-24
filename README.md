@@ -81,6 +81,69 @@ switch accounts or sign out.
 
 ## Install
 
+### Quick install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MatheusBragaC/prime-desk/main/scripts/install.sh | sh
+```
+
+The script picks the right artifact for your system and handles the
+platform-specific setup. Read it before running it — it is a few dozen lines of
+plain `sh`.
+
+> **Not available yet.** The script installs from GitHub Releases, and no
+> release is published yet. Until then, build from source (below).
+
+### Is `curl` enough?
+
+Downloading is, installing well is not — and it differs per platform:
+
+| Platform | Channel | Trade-off |
+|---|---|---|
+| **Linux (recommended)** | `.deb` | Needs `sudo`. Gets menu entry, icon, `prime-desk` command and a working Chromium sandbox |
+| Linux (no sudo) | AppImage | Single file, but **fails to start on Ubuntu 24.04+** unless launched with `--no-sandbox` (see below) |
+| **macOS** | `.zip` → `/Applications` | Build is unsigned: Gatekeeper blocks it until the quarantine flag is removed |
+| Homebrew | not published yet | Would need a tap; still unsigned, so it brings no real advantage today |
+
+So `curl` is enough to *fetch*, but a plain `curl && chmod +x && run` is not
+enough on Linux — which is exactly what the install script exists to absorb.
+
+#### Why the AppImage fails on Ubuntu 24.04+
+
+Ubuntu 24.04 sets `kernel.apparmor_restrict_unprivileged_userns=1`. Chromium then
+needs either an AppArmor profile granting `userns` to the binary, or a
+`chrome-sandbox` helper owned by root with mode 4755. An AppImage mounts
+read-only under `/tmp`, so it can have neither, and the app aborts with:
+
+```
+FATAL:setuid_sandbox_host.cc(163) The SUID sandbox helper binary was found,
+but is not configured correctly.
+```
+
+The `.deb` fixes this at install time by shipping an AppArmor profile for
+`/opt/Prime Desk/prime-desk`, the same approach Chrome and VS Code use.
+
+> Note: electron-builder's stock `postinst` decides this by running
+> `unshare --user true`, which **succeeds** on Ubuntu 24.04 because the distro
+> ships an AppArmor profile for `unshare` itself. The test passes, the sandbox is
+> left unconfigured, and the app does not start. That is why this project
+> replaces it with its own `afterInstall` script.
+
+### Manual download
+
+Grab a file from [Releases](https://github.com/MatheusBragaC/prime-desk/releases):
+
+```bash
+# Linux
+sudo dpkg -i prime-desk_<version>_amd64.deb
+
+# macOS (unsigned build)
+unzip "Prime Desk-<version>-mac.zip" -d /Applications
+xattr -dr com.apple.quarantine "/Applications/Prime Desk.app"
+```
+
+### From source
+
 ```bash
 npm install
 ```
