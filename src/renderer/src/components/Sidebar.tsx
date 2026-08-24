@@ -9,6 +9,7 @@ import { shortPath } from '../lib/format'
 import { groupSessions, withTitles, type Group } from '../lib/grouping'
 import { SessionMenu } from './SessionMenu'
 import { AccountBadge } from './AccountBadge'
+import { useIsMac, MAC_TRAFFIC_LIGHTS_WIDTH } from '../lib/platform'
 import { useResizable } from '../lib/useResizable'
 import { ResizeHandle } from './ResizeHandle'
 import type { SessionSummary } from '../../../shared/protocol'
@@ -242,13 +243,16 @@ export function Sidebar({
   onPickCwd,
   onToggleTree,
   treeOpen,
-  onSignedOut
+  onSignedOut,
+  onNavigate
 }: {
   home: string
   onPickCwd: () => void
   onToggleTree: () => void
   treeOpen: boolean
   onSignedOut: () => void
+  /** Chamado ao abrir uma conversa, para fechar a sobreposição em tela estreita. */
+  onNavigate?: () => void
 }) {
   const sessions = useAgent((s) => s.sessions)
   const state = useAgent((s) => s.state)
@@ -261,6 +265,7 @@ export function Sidebar({
   const [showArchived, setShowArchived] = useState(false)
   const [creating, setCreating] = useState(false)
   const size = useResizable('sidebar', 272, 200, 560, 'right')
+  const isMac = useIsMac()
 
   const archivedCount = useMemo(
     () => sessions.filter((s) => folders.archived?.[s.id]).length,
@@ -304,6 +309,7 @@ export function Sidebar({
     setBusy(true)
     await openSession(path)
     setBusy(false)
+    onNavigate?.()
   }
 
   /** A pasta só nasce com nome: evita ficar acumulando "Nova pasta" vazia. */
@@ -336,7 +342,11 @@ export function Sidebar({
         onMouseDown={size.onMouseDown}
         onReset={size.reset}
       />
-      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 px-4">
+      {/* No macOS os semáforos ficam aqui: o cabeçalho recua para não ficar sob eles. */}
+      <div
+        className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 pr-4"
+        style={{ paddingLeft: isMac ? MAC_TRAFFIC_LIGHTS_WIDTH : 16 }}
+      >
         <Butterfly size={19} />
         <span className="flex-1 text-[13.5px] font-semibold tracking-tight">Prime Desk</span>
         <button

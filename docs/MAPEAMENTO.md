@@ -718,3 +718,172 @@ Duas correções:
    `prime-agent stop <id>`, com confirmação que diz o que será interrompido e
    que o histórico em disco é preservado. Após parar, esperamos ~1,2 s — o
    worker leva um instante para soltar o arquivo — e repetimos a abertura.
+
+## 32. Diferenças de janela entre macOS e Windows/Linux
+
+A janela usa `titleBarStyle: 'hidden'`, então a interface desenha o próprio
+cabeçalho. O que muda por plataforma:
+
+| | macOS | Windows/Linux |
+|---|---|---|
+| Controles | semáforos nativos, canto superior **esquerdo** | botões desenhados no conteúdo, à **direita** |
+| Opção correta | `trafficLightPosition` | `titleBarOverlay` |
+
+Os dois problemas que isso causava:
+
+1. O cabeçalho da sidebar (borboleta e título) fica exatamente onde os semáforos
+   aparecem no macOS — ficaria por baixo deles. Agora recua 78px nessa
+   plataforma.
+2. A StatusBar reservava 150px à direita para os botões de janela. No macOS eles
+   não estão lá, então era só espaço morto. A reserva passou a ser condicional.
+
+`titleBarOverlay` também deixou de ser passado no macOS, onde não tem efeito.
+
+## 33. Recolhimento por largura
+
+Um MacBook de 13" com a janela em meia tela fica perto de 700px. Com sidebar de
+272px mais um painel lateral, a conversa não sobrevive.
+
+| Largura | Comportamento |
+|---|---|
+| < 1040px | painel lateral (arquivos/agentes) fecha sozinho |
+| < 820px | sidebar deixa de ser coluna e vira sobreposição, com botão na StatusBar |
+
+Medido por emulação de viewport: em 694px o botão de alternância aparece; em
+900px o painel lateral fecha sozinho; a sobreposição entra com `translate-x-0` e
+fundo escurecido, e some ao abrir uma conversa.
+
+## 34. Dois avatares seguidos no início do turno
+
+Relatado com captura: um bloco só com a borboleta, e logo abaixo a bolha
+"Pensando…" com outra borboleta.
+
+Causa: no começo do turno o `thinking` chega vazio (`thinking_start` traz string
+em branco). O `ThinkingBlock` não desenha nada nesse caso, então a mensagem do
+assistente renderizava apenas a coluna do avatar. Ao mesmo tempo, a bolha de
+atividade continuava visível — porque a condição dela é justamente "sem conteúdo
+visível". Resultado: dois avatares empilhados, um sem nada ao lado.
+
+Correção: a mensagem do assistente **não é renderizada** enquanto não tiver
+conteúdo visível (texto, raciocínio com texto ou chamada de ferramenta). Sobra
+só a bolha de atividade, que é o que faz sentido naquele instante. Medido depois
+da mudança: no máximo 1 avatar por amostra ao longo de um turno.
+
+## 35. Anexar imagem: seletor não era o único caminho esperado
+
+O seletor de arquivo funcionava, mas faltavam os dois gestos que as pessoas
+tentam primeiro: **colar** e **arrastar**.
+
+Ambos entregam objetos `File` sem caminho em disco, então não há o que pedir ao
+processo main: lemos com `FileReader` como data URL e extraímos o base64 — o que
+funciona com o renderer em sandbox. Limite de 10 MB por imagem, porque o payload
+vai embutido na mensagem.
+
+Dois cuidados:
+
+- **Colar** só é interceptado quando há imagem no `clipboardData`; colar texto
+  segue o comportamento normal.
+- **Soltar** um arquivo fora do composer faria o Electron navegar para ele,
+  substituindo a interface. Um bloqueio de `dragover`/`drop` na janela inteira
+  evita isso.
+
+Os anexos passaram a ficar **dentro** da caixa de texto, acima do cursor: eles
+fazem parte da mensagem em edição, e fora dela pareciam um elemento solto.
+
+## 36. De onde vêm os números de uso
+
+Dúvida legítima: os números do painel são calculados por nós ou vêm do provedor?
+
+Verificação: comparei minha varredura com `get_session_stats` do próprio agente,
+na mesma sessão.
+
+| | input | output | cacheRead | cacheWrite | total | custo |
+|---|---|---|---|---|---|---|
+| Varredura local | 30 | 8.219 | 340.436 | 61.713 | 410.398 | 0,3046 |
+| `get_session_stats` | 30 | 8.219 | 340.436 | 61.713 | 410.398 | 0,3046 |
+
+Idênticos. A origem é o objeto `usage` que o provedor devolve em cada resposta e
+que o agente grava na sessão — não há cálculo nosso, apenas soma.
+
+**O problema era de apresentação.** Exibíamos um único "Tokens" somando tudo, e
+`cacheRead` costuma ser uma ordem de grandeza maior que o texto, com preço
+próprio. O painel passou a mostrar a mesma quebra do agente — entrada, saída e
+cache separados — com o custo em destaque, que é o número que importa.
+
+## 37. Troca de conversa: 10 s para 1,6 s
+
+Medido ao abrir uma sessão de 13,6 MB com 1.320 mensagens:
+
+| Etapa | Antes |
+|---|---|
+| `switch_session` | 444 ms |
+| `get_messages` | **6.148 ms** (payload de 12,5 MB) |
+| Hidratação e render de tudo | ~3,5 s |
+| **Total** | **10,1 s** |
+
+Três mudanças:
+
+1. **Janela de render.** Só as 60 mensagens mais recentes entram na tela, com
+   botão para carregar as anteriores. Renderizar 1.300 blocos de markdown com
+   realce de sintaxe era o segundo maior custo.
+2. **Histórico lido do arquivo, não do RPC.** `get_messages` devolve a conversa
+   inteira; o arquivo tem a mesma informação e permite pegar só o fim.
+3. **Leitura parcial.** Em vez de carregar 13,6 MB para usar as últimas linhas,
+   lemos os últimos 4 MB por offset e descartamos a primeira linha, que vem
+   cortada.
+
+Resultado medido em duas rodadas: **1.931 ms** e **1.324 ms**.
+
+## 38. "Preparando ipython…" que nunca termina
+
+Relatado com captura: um card de ferramenta girando indefinidamente, em mensagem
+de turno já encerrado.
+
+Não era laço nem formatação. Análise dos dados reais, na cauda de 400 entradas da
+sessão:
+
+```
+toolCalls: 114 | toolResults: 112 | chamadas sem resultado: 2
+```
+
+Buscando as duas no arquivo inteiro:
+
+| Chamada | Posição na cauda | Resultado no arquivo |
+|---|---|---|
+| `toolu_01Keg…` | 399 (última) | existe — foi gravado depois da leitura |
+| `toolu_01K8g…` | 325 | **não existe em lugar nenhum** |
+
+Ou seja: uma chamada em voo no instante da leitura, e outra que **nunca teve
+resposta** — o turno foi interrompido entre a chamada e a execução, e o arquivo
+guarda esse estado.
+
+O defeito era tratar os dois casos como um só. Sem entrada de execução, o card
+sempre mostrava "preparando" com spinner, o que para uma chamada órfã significa
+girar para sempre.
+
+**Correção:** o card passa a receber se a mensagem ainda está transmitindo.
+Transmitindo e sem execução → "preparando", com spinner. Turno encerrado e sem
+execução → estado estático "sem resultado — execução interrompida", em âmbar,
+sem animação.
+
+Verificado abrindo a sessão pesada: 69 blocos renderizados, **0 spinners** e as
+2 chamadas órfãs exibidas como "sem resultado".
+
+## 39. Painel de uso no formato do Claude Desktop
+
+O painel passou a espelhar o layout da referência: 4 colunas por 2 linhas, com
+**Sessões, Mensagens, Total de tokens, Dias ativos** na primeira e **Sequência
+atual, Maior sequência, Horário de pico, Modelo preferido** na segunda, heatmap
+abaixo e uma linha de comparação.
+
+Decisão que mudou em relação à versão anterior: **um único "Total de tokens"**,
+em vez da quebra entrada/saída/cache. A quebra era tecnicamente mais precisa,
+mas o pedido é comparabilidade com a referência — e ali o número é agregado.
+O custo, que continua sendo o dado com consequência prática, ficou no rodapé do
+cartão.
+
+Formatação por idioma: `8.3B` em inglês vira `8,3bi` em português e espanhol, e
+o horário de pico sai como `5 PM` em inglês e `17h` nos demais.
+
+A linha de comparação usa uma base declarada (~89 mil tokens para um livro
+inteiro) e é apresentada com `~`, para não passar por medição exata.

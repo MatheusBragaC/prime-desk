@@ -6,6 +6,7 @@ import {
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
+import { useMod } from '../lib/platform'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -18,6 +19,36 @@ export interface SshConnection {
 }
 
 interface Attachment { path: string; data: string; mimeType: string }
+
+/** Acima disso o payload em base64 fica grande demais para uma mensagem. */
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+/**
+ * Converte um arquivo de imagem em anexo.
+ *
+ * Vem de colar ou arrastar, então não há caminho no disco para pedir ao main:
+ * lemos pelo FileReader, que funciona com o renderer em sandbox.
+ */
+function fileToAttachment(file: File): Promise<Attachment | null> {
+  if (!file.type.startsWith('image/')) return Promise.resolve(null)
+  if (file.size > MAX_IMAGE_BYTES) return Promise.resolve(null)
+
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result)
+      const comma = result.indexOf(',')
+      if (comma < 0) return resolve(null)
+      resolve({
+        path: file.name || 'imagem',
+        data: result.slice(comma + 1),
+        mimeType: file.type
+      })
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(file)
+  })
+}
 
 /**
  * Menu de contexto de execução.
@@ -262,10 +293,12 @@ export function Composer({
   const { t } = useT()
   const [value, setValue] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
+  const [dragging, setDragging] = useState(false)
   const [slash, setSlash] = useState<{ query: string; start: number } | null>(null)
   const [slashCursor, setSlashCursor] = useState(0)
   const ta = useRef<HTMLTextAreaElement>(null)
   const commands = useAgent((s) => s.commands)
+  const mod = useMod()
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const queued = useAgent((s) => s.state?.sessionActions?.queuedCount ?? 0)
   const ready = useAgent((s) => s.status === 'ready')
@@ -384,6 +417,25 @@ export function Composer({
     }
   }
 
+  /** Adiciona imagens vindas de colar ou arrastar. */
+  async function addFiles(list: FileList | File[]): Promise<void> {
+    const files = Array.from(list).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) return
+    const added = (await Promise.all(files.map(fileToAttachment))).filter(
+      (a): a is Attachment => a !== null
+    )
+    if (added.length > 0) setAtts((prev) => [...prev, ...added])
+  }
+
+  function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>): void {
+    const files = e.clipboardData?.files
+    if (files && files.length > 0 && Array.from(files).some((f) => f.type.startsWith('image/'))) {
+      // Só intercepta quando há imagem: colar texto continua normal.
+      e.preventDefault()
+      void addFiles(files)
+    }
+  }
+
   async function attach() {
     const r = await window.prime.pickImage()
     if (r?.ok) setAtts((a) => [...a, { path: r.path, data: r.data, mimeType: r.mimeType }])
@@ -410,28 +462,33 @@ export function Composer({
         </div>
       )}
 
-      {atts.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {atts.map((a, i) => (
-            <div key={i} className="relative">
-              <img
-                src={`data:${a.mimeType};base64,${a.data}`}
-                alt=""
-                className="h-14 w-14 rounded-lg border border-white/10 object-cover"
-              />
-              <button
-                onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
-                className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-panel p-0.5 text-muted hover:text-fg"
-              >
-                <X size={10} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Caixa de entrada: o envio fica dentro dela, à direita. */}
-      <div className="relative rounded-[12px] border border-white/[0.09] bg-[var(--p-surface)] transition-colors focus-within:border-primary/40">
+      <div
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={(e) => {
+          // `relatedTarget` fora da caixa evita piscar ao cruzar filhos.
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false)
+        }}
+        onDrop={(e) => {
+          if (!e.dataTransfer.files?.length) return
+          e.preventDefault()
+          setDragging(false)
+          void addFiles(e.dataTransfer.files)
+        }}
+        className={
+          'relative rounded-[12px] border bg-[var(--p-surface)] transition-colors focus-within:border-primary/40 ' +
+          (dragging ? 'border-primary/70 bg-primary/[0.06]' : 'border-white/[0.09]')
+        }
+      >
+        {dragging && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-[var(--p-surface)]/80 text-[12.5px] text-primarySoft">
+            {t('composer.dropHere')}
+          </div>
+        )}
         {slash && (
           <SlashMenu
             items={slashItems}
@@ -440,6 +497,29 @@ export function Composer({
             onHover={setSlashCursor}
           />
         )}
+        {/* Anexos dentro da caixa: fazem parte da mensagem que está sendo escrita. */}
+        {atts.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-3 pb-1 pt-3">
+            {atts.map((a, i) => (
+              <div key={i} className="group/att relative">
+                <img
+                  src={`data:${a.mimeType};base64,${a.data}`}
+                  alt={a.path}
+                  title={a.path}
+                  className="h-14 w-14 rounded-lg border border-white/[0.12] object-cover"
+                />
+                <button
+                  onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
+                  title={t('composer.removeAttachment')}
+                  className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover/att:opacity-100"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <textarea
           ref={ta}
           rows={1}
@@ -457,6 +537,7 @@ export function Composer({
           onClick={syncSlash}
           onBlur={() => setSlash(null)}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           placeholder={
             ready
               ? streaming
@@ -464,7 +545,10 @@ export function Composer({
                 : t('composer.placeholder')
               : t('composer.connecting')
           }
-          className="max-h-[260px] w-full resize-none bg-transparent py-3 pl-3.5 pr-11 text-[14px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50"
+          className={
+            'max-h-[260px] w-full resize-none bg-transparent pb-3 pl-3.5 pr-11 text-[14px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50 ' +
+            (atts.length > 0 ? 'pt-2' : 'pt-3')
+          }
         />
 
         {streaming ? (
@@ -500,7 +584,7 @@ export function Composer({
         <button
           onClick={onOpenPalette}
           className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
-          title={t('composer.commands')}
+          title={t('composer.commands').replace('Ctrl', mod)}
         >
           <Command size={14} />
         </button>

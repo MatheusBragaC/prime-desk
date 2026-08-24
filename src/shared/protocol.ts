@@ -211,7 +211,12 @@ export interface DirEntry {
 export interface UsageStats {
   sessions: number
   messages: number
+  /** Soma de `totalTokens`, incluindo cache — igual ao que o agente reporta. */
   tokens: number
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
   cost: number
   activeDays: number
   currentStreak: number

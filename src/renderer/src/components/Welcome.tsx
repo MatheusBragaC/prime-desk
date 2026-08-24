@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Butterfly } from './Butterfly'
 import type { UsageStats } from '../../../shared/protocol'
-import { fmtCost, fmtTokens } from '../lib/format'
+import { fmtCost, fmtCount, fmtHour } from '../lib/format'
 import { t, useT } from '../i18n'
 
 // Iniciais dos dias mudam por idioma.
@@ -11,8 +11,10 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
     <div className="rounded-lg border border-white/[0.06] bg-[var(--p-surface)] px-3 py-2">
       <div className="text-[10.5px] uppercase tracking-wider text-dim">{label}</div>
       <div
+        title={value}
         className={
-          'mt-0.5 font-mono text-[15px] leading-tight ' + (accent ? 'text-primarySoft' : 'text-fg')
+          'mt-0.5 truncate font-mono text-[14px] leading-tight ' +
+          (accent ? 'text-primarySoft' : 'text-fg')
         }
       >
         {value}
@@ -72,8 +74,11 @@ function Heatmap({ days }: { days: UsageStats['days'] }) {
   )
 }
 
+/** Tokens estimados de um livro inteiro, base da comparação exibida. */
+const BOOK_TOKENS = 89_000
+
 export function Welcome() {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [stats, setStats] = useState<UsageStats | null>(null)
 
   useEffect(() => {
@@ -101,33 +106,35 @@ export function Welcome() {
           className="animate-fade-up mt-7 w-full max-w-[560px] rounded-xl border border-white/[0.07] bg-black/20 p-4"
           style={{ animationDelay: '80ms' }}
         >
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            <Stat label={t('usage.sessions')} value={String(stats.sessions)} />
-            <Stat label={t('usage.messages')} value={stats.messages.toLocaleString()} />
-            <Stat label={t('usage.tokens')} value={fmtTokens(stats.tokens)} accent />
-            <Stat label={t('usage.cost')} value={fmtCost(stats.cost)} />
+          {/* Mesmas métricas do painel do Claude Desktop, em 4 colunas por 2 linhas. */}
+          <div className="mb-3 grid grid-cols-4 gap-2">
+            <Stat label={t('usage.sessions')} value={fmtCount(stats.sessions, lang)} />
+            <Stat label={t('usage.messages')} value={fmtCount(stats.messages, lang)} />
+            <Stat label={t('usage.totalTokens')} value={fmtCount(stats.tokens, lang)} accent />
             <Stat label={t('usage.activeDays')} value={String(stats.activeDays)} />
-            <Stat label={t('usage.streak')} value={`${stats.currentStreak} d`} />
+            <Stat label={t('usage.currentStreak')} value={`${stats.currentStreak}d`} />
+            <Stat label={t('usage.longestStreak')} value={`${stats.longestStreak}d`} />
+            <Stat
+              label={t('usage.peakHour')}
+              value={stats.peakHour >= 0 ? fmtHour(stats.peakHour, lang) : '—'}
+            />
+            <Stat label={t('usage.favorite')} value={stats.favoriteModel || '—'} />
           </div>
 
           <Heatmap days={stats.days} />
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-dim">
-            {stats.favoriteModel && (
-              <span>
-                {t('usage.favoriteModel')} <span className="text-muted">{stats.favoriteModel}</span>
-              </span>
-            )}
-            {stats.peakHour >= 0 && (
-              <span>
-                {t('usage.peak')}{' '}
-                <span className="text-muted">{String(stats.peakHour).padStart(2, '0')}h</span>
-              </span>
-            )}
-            <span>
-              {t('usage.longest')} <span className="text-muted">{stats.longestStreak} d</span>
+          <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <span className="text-[11px] text-dim" title={t('usage.compareBasis')}>
+              {t('usage.compare', { n: Math.round(stats.tokens / BOOK_TOKENS).toLocaleString() })}
+            </span>
+            <span className="font-mono text-[11px] text-muted">
+              {t('usage.costFooter')} {fmtCost(stats.cost)}
             </span>
           </div>
+
+          <p className="mt-2 border-t border-white/[0.06] pt-2 text-[10.5px] leading-snug text-dim">
+            {t('usage.source')}
+          </p>
         </div>
       )}
 

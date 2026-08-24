@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw } from 'lucide-react'
+import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
 import type { ToolExec } from '../store/agent'
 import { fmtDuration } from '../lib/format'
 import { useT } from '../i18n'
@@ -31,15 +31,44 @@ function summary(name: string, args: Record<string, unknown>): string {
   return keys.length ? `${name} · ${keys.slice(0, 3).join(', ')}` : name
 }
 
-export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?: string }) {
+export function ToolCard({
+  exec,
+  pendingName,
+  live = false
+}: {
+  exec?: ToolExec
+  pendingName?: string
+  /** A mensagem ainda está sendo transmitida: a chamada pode estar a caminho. */
+  live?: boolean
+}) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
 
   if (!exec) {
+    /*
+      Sem entrada de execução há dois casos bem diferentes, e tratá-los igual
+      deixava um spinner girando para sempre: a chamada pode estar a caminho
+      (mensagem ainda transmitindo) ou pode nunca ter tido resposta, quando o
+      turno foi interrompido entre a chamada e a execução — situação que fica
+      registrada assim no arquivo da sessão.
+    */
+    if (live) {
+      return (
+        <div className="my-1.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
+          <Loader2 size={13} className="animate-spin text-primary" />
+          <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
+        </div>
+      )
+    }
+
     return (
-      <div className="my-2.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
-        <Loader2 size={13} className="animate-spin text-primary" />
-        <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
+      <div
+        title={t('tool.noResultHint')}
+        className="my-1.5 flex items-center gap-2 rounded-[10px] border border-warn/25 bg-warn/[0.05] px-3 py-2 text-[12.3px] text-warn"
+      >
+        <CircleSlash size={13} className="shrink-0" />
+        <span className="font-mono text-[12px] opacity-80">{pendingName ?? 'tool'}</span>
+        <span className="opacity-90">· {t('tool.noResult')}</span>
       </div>
     )
   }
@@ -59,7 +88,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
     : exec.text
 
   return (
-    <div className={`my-2.5 overflow-hidden rounded-[10px] border transition-colors ${bg}`}>
+    <div className={`my-1.5 overflow-hidden rounded-[10px] border transition-colors ${bg}`}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"

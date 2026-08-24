@@ -97,8 +97,13 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
           </div>
         ) : (
           <div className="mx-auto max-w-[860px] py-4">
-            {transcript.messages.map((m) => (
-              <Message key={m.key} msg={m} tools={transcript.tools} />
+            {transcript.messages.map((m, i) => (
+              <Message
+                key={m.key}
+                msg={m}
+                tools={transcript.tools}
+                continuation={i > 0 && transcript.messages[i - 1].role === m.role}
+              />
             ))}
             <div className="h-4" />
           </div>
