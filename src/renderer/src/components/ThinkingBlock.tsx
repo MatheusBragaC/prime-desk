@@ -8,7 +8,7 @@ export function ThinkingBlock({ text, streaming }: { text: string; streaming: bo
   if (!text.trim()) return null
 
   return (
-    <div className="mb-3">
+    <div className="mb-1.5">
       <button
         onClick={() => setOpen((v) => !v)}
         className="group flex items-center gap-1.5 text-[12.5px] text-dim transition-colors hover:text-muted"

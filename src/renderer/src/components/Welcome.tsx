@@ -104,15 +104,24 @@ export function Welcome() {
           <div className="mb-3 grid grid-cols-3 gap-2">
             <Stat label={t('usage.sessions')} value={String(stats.sessions)} />
             <Stat label={t('usage.messages')} value={stats.messages.toLocaleString()} />
-            <Stat label={t('usage.tokens')} value={fmtTokens(stats.tokens)} accent />
-            <Stat label={t('usage.cost')} value={fmtCost(stats.cost)} />
-            <Stat label={t('usage.activeDays')} value={String(stats.activeDays)} />
-            <Stat label={t('usage.streak')} value={`${stats.currentStreak} d`} />
+            <Stat label={t('usage.cost')} value={fmtCost(stats.cost)} accent />
+            <Stat label={t('usage.input')} value={fmtTokens(stats.input)} />
+            <Stat label={t('usage.output')} value={fmtTokens(stats.output)} />
+            <Stat
+              label={t('usage.cache')}
+              value={fmtTokens(stats.cacheRead + stats.cacheWrite)}
+            />
           </div>
 
           <Heatmap days={stats.days} />
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-dim">
+            <span>
+              {t('usage.activeDays')} <span className="text-muted">{stats.activeDays}</span>
+            </span>
+            <span>
+              {t('usage.streak')} <span className="text-muted">{stats.currentStreak} d</span>
+            </span>
             {stats.favoriteModel && (
               <span>
                 {t('usage.favoriteModel')} <span className="text-muted">{stats.favoriteModel}</span>
@@ -128,6 +137,13 @@ export function Welcome() {
               {t('usage.longest')} <span className="text-muted">{stats.longestStreak} d</span>
             </span>
           </div>
+
+          <p
+            className="mt-2.5 border-t border-white/[0.06] pt-2 text-[10.5px] leading-snug text-dim"
+            title={`${stats.tokens.toLocaleString()} tokens`}
+          >
+            {t('usage.source')}
+          </p>
         </div>
       )}
 

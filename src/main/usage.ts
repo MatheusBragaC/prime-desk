@@ -9,6 +9,10 @@ const HEATMAP_DAYS = 133 // 19 semanas cheias
 interface FileAgg {
   messages: number
   tokens: number
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
   cost: number
   models: Record<string, number>
   perDay: Record<string, number>
@@ -19,7 +23,10 @@ interface FileAgg {
 const cache = new Map<string, { mtimeMs: number; size: number; agg: FileAgg }>()
 
 function emptyAgg(): FileAgg {
-  return { messages: 0, tokens: 0, cost: 0, models: {}, perDay: {}, perHour: new Array(24).fill(0) }
+  return {
+    messages: 0, tokens: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0,
+    cost: 0, models: {}, perDay: {}, perHour: new Array(24).fill(0)
+  }
 }
 
 function dayKey(iso: string): string {
@@ -43,7 +50,18 @@ function scan(content: string): FileAgg {
 
     if (type === 'message') {
       const msg = entry.message as
-        | { role?: string; model?: string; usage?: { totalTokens?: number; cost?: { total?: number } } }
+        | {
+            role?: string
+            model?: string
+            usage?: {
+              totalTokens?: number
+              input?: number
+              output?: number
+              cacheRead?: number
+              cacheWrite?: number
+              cost?: { total?: number }
+            }
+          }
         | undefined
       if (!msg?.role) continue
 
@@ -57,8 +75,18 @@ function scan(content: string): FileAgg {
       }
 
       if (msg.role === 'assistant') {
-        agg.tokens += msg.usage?.totalTokens ?? 0
-        agg.cost += msg.usage?.cost?.total ?? 0
+        /*
+          Mesma quebra que o agente usa em `get_session_stats`. Somar tudo num
+          número só inflava a leitura: cache read/write costuma ser uma ordem de
+          grandeza maior que o texto e tem preço próprio.
+        */
+        const u = msg.usage
+        agg.tokens += u?.totalTokens ?? 0
+        agg.input += u?.input ?? 0
+        agg.output += u?.output ?? 0
+        agg.cacheRead += u?.cacheRead ?? 0
+        agg.cacheWrite += u?.cacheWrite ?? 0
+        agg.cost += u?.cost?.total ?? 0
         if (msg.model) agg.models[msg.model] = (agg.models[msg.model] ?? 0) + 1
       }
       continue
@@ -66,8 +94,14 @@ function scan(content: string): FileAgg {
 
     // Uso dos subagentes é atribuído ao pai: sem isso o total fica subestimado.
     if (type === 'child_usage_attributed') {
-      const u = entry.childUsage as { totalTokens?: number; cost?: { total?: number } } | undefined
+      const u = entry.childUsage as
+        | { totalTokens?: number; input?: number; output?: number; cacheRead?: number; cacheWrite?: number; cost?: { total?: number } }
+        | undefined
       agg.tokens += u?.totalTokens ?? 0
+      agg.input += u?.input ?? 0
+      agg.output += u?.output ?? 0
+      agg.cacheRead += u?.cacheRead ?? 0
+      agg.cacheWrite += u?.cacheWrite ?? 0
       agg.cost += u?.cost?.total ?? 0
     }
   }
@@ -105,6 +139,10 @@ export async function getUsageStats(): Promise<UsageStats> {
     sessions += 1
     total.messages += agg.messages
     total.tokens += agg.tokens
+    total.input += agg.input
+    total.output += agg.output
+    total.cacheRead += agg.cacheRead
+    total.cacheWrite += agg.cacheWrite
     total.cost += agg.cost
     for (const [m, n] of Object.entries(agg.models)) total.models[m] = (total.models[m] ?? 0) + n
     for (const [d, n] of Object.entries(agg.perDay)) total.perDay[d] = (total.perDay[d] ?? 0) + n
@@ -154,6 +192,10 @@ export async function getUsageStats(): Promise<UsageStats> {
     sessions,
     messages: total.messages,
     tokens: total.tokens,
+    input: total.input,
+    output: total.output,
+    cacheRead: total.cacheRead,
+    cacheWrite: total.cacheWrite,
     cost: total.cost,
     activeDays,
     currentStreak: current,
@@ -166,7 +208,8 @@ export async function getUsageStats(): Promise<UsageStats> {
 
 function emptyStats(): UsageStats {
   return {
-    sessions: 0, messages: 0, tokens: 0, cost: 0, activeDays: 0,
+    sessions: 0, messages: 0, tokens: 0, input: 0, output: 0, cacheRead: 0,
+    cacheWrite: 0, cost: 0, activeDays: 0,
     currentStreak: 0, longestStreak: 0, favoriteModel: '', peakHour: -1, days: []
   }
 }

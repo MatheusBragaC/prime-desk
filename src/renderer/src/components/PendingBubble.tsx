@@ -12,7 +12,7 @@ export function PendingBubble({ label }: { label?: string }) {
   const { t } = useT()
 
   return (
-    <div className="animate-fade-up px-6 py-3">
+    <div className="animate-fade-up px-6 pb-1.5 pt-2.5">
       <div className="flex gap-3.5">
         <div className="mt-0.5 shrink-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-surface">

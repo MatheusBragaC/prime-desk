@@ -14,6 +14,9 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { Onboarding } from './components/Onboarding'
 import { PendingBubble } from './components/PendingBubble'
 import { useWindowWidth, DOCK_MIN_WIDTH, SIDEBAR_MIN_WIDTH } from './lib/useWindowWidth'
+
+/** Mensagens renderizadas por vez ao abrir uma conversa. */
+const PAGE_SIZE = 60
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
@@ -51,6 +54,12 @@ export function App() {
   }, [narrowDock])
   const [fileDraft, setFileDraft] = useState<string | undefined>()
   const [openFile, setOpenFile] = useState<string | null>(null)
+  /*
+    Conversas longas chegam a milhares de mensagens. Renderizar tudo de uma vez
+    trava a troca, porque cada bloco reprocessa markdown e realce de sintaxe.
+    Mostramos uma janela recente e o resto sob demanda.
+  */
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   // Modais vivem aqui, no nível mais estável da árvore: um diálogo não deve
   // depender do ciclo de vida de um chip da barra de contexto.
   const [sshModal, setSshModal] = useState(false)
@@ -60,6 +69,7 @@ export function App() {
   const tools = useAgent((s) => s.tools)
   const fatal = useAgent((s) => s.fatal)
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
+  const loadingSession = useAgent((s) => s.loadingSession)
   const observed = useAgent((s) => s.observed)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
@@ -242,6 +252,14 @@ export function App() {
    * mas só tem blocos vazios. Nos dois casos o usuário precisa de um sinal no
    * lugar onde a resposta vai surgir.
    */
+  // Ao trocar de conversa a janela volta ao tamanho padrão.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [useAgent.getState().state?.sessionId, loadingSession])
+
+  const hiddenCount = Math.max(0, messages.length - visibleCount)
+  const visibleMessages = hiddenCount > 0 ? messages.slice(hiddenCount) : messages
+
   const last = messages[messages.length - 1]
   const showPending =
     streaming &&
@@ -395,12 +413,35 @@ export function App() {
             onScroll={onScroll}
             className="relative z-10 min-h-0 flex-1 overflow-y-auto"
           >
-            {messages.length === 0 ? (
+            {loadingSession ? (
+              <div className="flex h-full items-center justify-center gap-2 text-[13px] text-dim">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                {t('chat.opening')}
+              </div>
+            ) : messages.length === 0 ? (
               <Welcome />
             ) : (
               <div className="mx-auto max-w-[860px] py-4">
-                {messages.map((m) => (
-                  <Message key={m.key} msg={m} tools={tools} />
+                {hiddenCount > 0 && (
+                  <div className="mb-2 flex flex-col items-center gap-1 px-6">
+                    <button
+                      onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                      className="rounded-lg border border-white/[0.1] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-primary/40 hover:text-fg"
+                    >
+                      {t('chat.loadOlder')}
+                    </button>
+                    <span className="text-[10.5px] text-dim">
+                      {t('chat.hiddenCount', { n: hiddenCount })}
+                    </span>
+                  </div>
+                )}
+                {visibleMessages.map((m, i) => (
+                  <Message
+                    key={m.key}
+                    msg={m}
+                    tools={tools}
+                    continuation={i > 0 && visibleMessages[i - 1].role === m.role}
+                  />
                 ))}
                 {showPending && <PendingBubble />}
                 <div className="h-4" />

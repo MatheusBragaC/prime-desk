@@ -37,7 +37,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
 
   if (!exec) {
     return (
-      <div className="my-2.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
+      <div className="my-1.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
         <Loader2 size={13} className="animate-spin text-primary" />
         <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
       </div>
@@ -59,7 +59,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
     : exec.text
 
   return (
-    <div className={`my-2.5 overflow-hidden rounded-[10px] border transition-colors ${bg}`}>
+    <div className={`my-1.5 overflow-hidden rounded-[10px] border transition-colors ${bg}`}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"

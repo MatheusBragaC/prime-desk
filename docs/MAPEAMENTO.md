@@ -789,3 +789,47 @@ Dois cuidados:
 
 Os anexos passaram a ficar **dentro** da caixa de texto, acima do cursor: eles
 fazem parte da mensagem em edição, e fora dela pareciam um elemento solto.
+
+## 36. De onde vêm os números de uso
+
+Dúvida legítima: os números do painel são calculados por nós ou vêm do provedor?
+
+Verificação: comparei minha varredura com `get_session_stats` do próprio agente,
+na mesma sessão.
+
+| | input | output | cacheRead | cacheWrite | total | custo |
+|---|---|---|---|---|---|---|
+| Varredura local | 30 | 8.219 | 340.436 | 61.713 | 410.398 | 0,3046 |
+| `get_session_stats` | 30 | 8.219 | 340.436 | 61.713 | 410.398 | 0,3046 |
+
+Idênticos. A origem é o objeto `usage` que o provedor devolve em cada resposta e
+que o agente grava na sessão — não há cálculo nosso, apenas soma.
+
+**O problema era de apresentação.** Exibíamos um único "Tokens" somando tudo, e
+`cacheRead` costuma ser uma ordem de grandeza maior que o texto, com preço
+próprio. O painel passou a mostrar a mesma quebra do agente — entrada, saída e
+cache separados — com o custo em destaque, que é o número que importa.
+
+## 37. Troca de conversa: 10 s para 1,6 s
+
+Medido ao abrir uma sessão de 13,6 MB com 1.320 mensagens:
+
+| Etapa | Antes |
+|---|---|
+| `switch_session` | 444 ms |
+| `get_messages` | **6.148 ms** (payload de 12,5 MB) |
+| Hidratação e render de tudo | ~3,5 s |
+| **Total** | **10,1 s** |
+
+Três mudanças:
+
+1. **Janela de render.** Só as 60 mensagens mais recentes entram na tela, com
+   botão para carregar as anteriores. Renderizar 1.300 blocos de markdown com
+   realce de sintaxe era o segundo maior custo.
+2. **Histórico lido do arquivo, não do RPC.** `get_messages` devolve a conversa
+   inteira; o arquivo tem a mesma informação e permite pegar só o fim.
+3. **Leitura parcial.** Em vez de carregar 13,6 MB para usar as últimas linhas,
+   lemos os últimos 4 MB por offset e descartamos a primeira linha, que vem
+   cortada.
+
+Resultado medido em duas rodadas: **1.931 ms** e **1.324 ms**.

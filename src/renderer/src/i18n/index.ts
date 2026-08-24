@@ -261,6 +261,13 @@ const pt: Record<string, string> = {
   "sidebar.toggle": "Mostrar ou ocultar conversas",
   "composer.dropHere": "Solte a imagem para anexar",
   "composer.removeAttachment": "Remover anexo",
+  "usage.input": "Entrada",
+  "usage.output": "Saída",
+  "usage.cache": "Cache",
+  "usage.source": "Números reportados pelo provedor em cada resposta — os mesmos que o prime-agent usa em get_session_stats.",
+  "chat.loadOlder": "Carregar mensagens anteriores",
+  "chat.hiddenCount": "{n} mensagens antes desta",
+  "chat.opening": "Abrindo conversa…",
 }
 
 const en: Record<string, string> = {
@@ -508,6 +515,13 @@ const en: Record<string, string> = {
   "sidebar.toggle": "Show or hide chats",
   "composer.dropHere": "Drop the image to attach",
   "composer.removeAttachment": "Remove attachment",
+  "usage.input": "Input",
+  "usage.output": "Output",
+  "usage.cache": "Cache",
+  "usage.source": "Figures reported by the provider on each response — the same ones prime-agent uses in get_session_stats.",
+  "chat.loadOlder": "Load older messages",
+  "chat.hiddenCount": "{n} messages before this one",
+  "chat.opening": "Opening chat…",
 }
 
 const es: Record<string, string> = {
@@ -755,6 +769,13 @@ const es: Record<string, string> = {
   "sidebar.toggle": "Mostrar u ocultar conversaciones",
   "composer.dropHere": "Suelta la imagen para adjuntar",
   "composer.removeAttachment": "Quitar adjunto",
+  "usage.input": "Entrada",
+  "usage.output": "Salida",
+  "usage.cache": "Caché",
+  "usage.source": "Cifras reportadas por el proveedor en cada respuesta — las mismas que prime-agent usa en get_session_stats.",
+  "chat.loadOlder": "Cargar mensajes anteriores",
+  "chat.hiddenCount": "{n} mensajes antes de este",
+  "chat.opening": "Abriendo conversación…",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
