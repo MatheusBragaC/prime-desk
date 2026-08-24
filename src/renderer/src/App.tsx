@@ -56,6 +56,10 @@ export function App() {
       }
 
       store.ingest(ev)
+
+      // A sessão só entra no catálogo quando ganha a primeira mensagem; sem
+      // isto a conversa recém-criada ficaria invisível até um refresh manual.
+      if (ev.type === 'agent_end') void refreshSessions()
     })
     const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
     const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))

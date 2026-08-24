@@ -297,3 +297,31 @@ Dois cuidados:
 
 `totalTokens` inclui `cacheRead` e `cacheWrite`, então o número é bem maior que
 "tokens de texto" — é consumo real de billing, coerente com o `cost`.
+
+## 15. Toda inicialização do agente cria um arquivo de sessão vazio
+
+Sintoma relatado: a sidebar enchia de "Sessão sem título".
+
+Causa: subir `prime-agent --mode rpc` **cria a sessão imediatamente**, antes de
+qualquer mensagem. O arquivo nasce com header e mais nada:
+
+```json
+{"type":"session","version":3,"id":"…","cwd":"…","rlmDepth":0}
+{"type":"model_change", …}
+{"type":"thinking_level_change", …}
+{"type":"service_tier_change", …}
+{"type":"session_state","state":{"status":"active"}}
+```
+
+Zero entradas `message`. Como o título vem da primeira mensagem do usuário, todas
+caíam no fallback "Sessão sem título". Cada abertura do app somava mais uma.
+
+O daemon poda essas sessões quando o worker sai, mas enquanto o app roda elas
+ficam visíveis.
+
+**Correção:** o catálogo ignora sessões com zero mensagens. A conversa entra na
+lista quando ganha conteúdo — e, para ela não ficar invisível até um refresh
+manual, `agent_end` dispara a recarga do catálogo.
+
+**Bônus:** o título passou a preferir `session_info.name` (definido por
+`set_session_name` ou `/title`) sobre o texto da primeira mensagem.

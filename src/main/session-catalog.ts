@@ -17,8 +17,9 @@ interface HeaderLine {
   cwd?: string
 }
 
-function firstUserText(lines: string[]): { title: string; count: number } {
+function firstUserText(lines: string[]): { title: string; count: number; name: string } {
   let title = ''
+  let name = ''
   let count = 0
   for (const line of lines) {
     let obj: Record<string, unknown>
@@ -28,6 +29,15 @@ function firstUserText(lines: string[]): { title: string; count: number } {
       continue
     }
     const type = obj.type as string | undefined
+
+    // Nome explícito da sessão (definido via /title ou set_session_name) ganha
+    // do texto da primeira mensagem.
+    if (type === 'session_info') {
+      const n = obj.name
+      if (typeof n === 'string' && n.trim()) name = n.trim()
+      continue
+    }
+
     if (type !== 'message') continue
     count += 1
     if (title) continue
@@ -46,7 +56,7 @@ function firstUserText(lines: string[]): { title: string; count: number } {
       if (textBlock) title = textBlock.text
     }
   }
-  return { title, count }
+  return { title, count, name }
 }
 
 function cleanTitle(raw: string): string {
@@ -87,7 +97,12 @@ export async function listSessions(): Promise<SessionSummary[]> {
       }
       if (header.type !== 'session') continue
 
-      const { title, count } = firstUserText(lines)
+      const { title, count, name } = firstUserText(lines)
+
+      // Toda inicialização do agente cria um arquivo de sessão com header e
+      // nenhuma mensagem. Listar isso enche a sidebar de "Sessão sem título"
+      // que o usuário nunca criou. A sessão aparece assim que tiver conteúdo.
+      if (count === 0) continue
 
       out.push({
         id: header.id ?? file.replace(/\.jsonl$/, ''),
@@ -95,7 +110,7 @@ export async function listSessions(): Promise<SessionSummary[]> {
         cwd: header.cwd ?? '',
         createdAt: header.timestamp ?? info.birthtime.toISOString(),
         updatedAt: info.mtime.toISOString(),
-        title: cleanTitle(title),
+        title: cleanTitle(name || title),
         messageCount: count,
         sizeBytes: info.size
       })
