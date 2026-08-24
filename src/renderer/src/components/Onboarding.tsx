@@ -51,6 +51,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   const [copied, setCopied] = useState(false)
   const [termError, setTermError] = useState<string | null>(null)
   const [opening, setOpening] = useState(false)
+  const [termOpened, setTermOpened] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -113,7 +114,14 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
     setTermError(null)
     const r = await window.prime.openAgentTerminal()
     setOpening(false)
-    if (!r?.ok) setTermError(r?.error ?? 'Falha ao abrir terminal.')
+    if (!r?.ok) {
+      setTermError(r?.error ?? 'Falha ao abrir terminal.')
+      setTermOpened(false)
+      return
+    }
+    // `/login` só existe dentro do TUI: passá-lo como argumento vira mensagem
+    // para o modelo. Por isso o passo a passo fica aqui, explícito.
+    setTermOpened(true)
   }
 
   async function copyCommand() {
@@ -262,6 +270,34 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               </span>
               <ArrowRight size={13} className="mt-[3px] shrink-0 text-dim" />
             </button>
+
+            {termOpened && !termError && (
+              <div className="mt-2 animate-fade-up rounded-lg border border-ok/25 bg-ok/[0.06] p-3">
+                <div className="flex items-center gap-1.5 text-[12.3px] font-medium text-ok">
+                  <CheckCircle2 size={13} />
+                  {t('onb.termOpened')}
+                </div>
+                <ol className="mt-2 space-y-1.5 text-[11.8px] leading-snug text-muted">
+                  <li className="flex gap-2">
+                    <span className="text-dim">1.</span>
+                    <span>
+                      {t('onb.step1', { cmd: '' })}
+                      <code className="ml-1 rounded border border-white/[0.12] bg-black/40 px-1.5 py-0.5 font-mono text-[11px] text-mint">
+                        /login
+                      </code>
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-dim">2.</span>
+                    <span>{t('onb.step2')}</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-dim">3.</span>
+                    <span>{t('onb.step3', { label: t('onb.recheck') })}</span>
+                  </li>
+                </ol>
+              </div>
+            )}
 
             {termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">

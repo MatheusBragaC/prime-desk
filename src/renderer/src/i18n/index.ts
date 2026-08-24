@@ -242,6 +242,10 @@ const pt: Record<string, string> = {
   "onb.termFailed": "Não foi possível abrir um terminal automaticamente. Abra um você mesmo e rode:",
   "onb.termThenLogin": "Depois digite /login e escolha o provedor.",
   "onb.opening": "Abrindo terminal…",
+  "onb.termOpened": "Terminal aberto. Agora, dentro dele:",
+  "onb.step1": "Digite {cmd} e pressione Enter",
+  "onb.step2": "Escolha o provedor e conclua no navegador",
+  "onb.step3": "Volte aqui e clique em “{label}”",
 }
 
 const en: Record<string, string> = {
@@ -470,6 +474,10 @@ const en: Record<string, string> = {
   "onb.termFailed": "Could not open a terminal automatically. Open one yourself and run:",
   "onb.termThenLogin": "Then type /login and pick your provider.",
   "onb.opening": "Opening terminal…",
+  "onb.termOpened": "Terminal opened. Now, inside it:",
+  "onb.step1": "Type {cmd} and press Enter",
+  "onb.step2": "Pick your provider and finish in the browser",
+  "onb.step3": "Come back here and click “{label}”",
 }
 
 const es: Record<string, string> = {
@@ -698,6 +706,10 @@ const es: Record<string, string> = {
   "onb.termFailed": "No se pudo abrir una terminal automáticamente. Abre una y ejecuta:",
   "onb.termThenLogin": "Luego escribe /login y elige tu proveedor.",
   "onb.opening": "Abriendo terminal…",
+  "onb.termOpened": "Terminal abierta. Ahora, dentro de ella:",
+  "onb.step1": "Escribe {cmd} y pulsa Enter",
+  "onb.step2": "Elige el proveedor y termina en el navegador",
+  "onb.step3": "Vuelve aquí y haz clic en “{label}”",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
