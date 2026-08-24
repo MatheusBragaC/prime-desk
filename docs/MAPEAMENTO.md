@@ -633,3 +633,88 @@ quando não há AppArmor. O `afterRemove` desfaz.
 Consequência para a documentação: no Linux o `.deb` é o canal recomendado; o
 AppImage funciona, mas precisa de `--no-sandbox` nessas distros — e o instalador
 avisa em vez de entregar um atalho que não abre.
+
+## 30. App aberto pelo menu não herda o PATH do shell
+
+Sintoma: instalado pelo `.deb` e aberto pelo menu, o app dizia "prime-agent não
+encontrado no PATH" — com o binário instalado e funcionando no terminal.
+
+Medido nesta máquina:
+
+```
+prime-agent            -> /home/…/.npm-global/bin/prime-agent
+.bashrc:139            -> export PATH="$HOME/.npm-global/bin:$PATH"
+PATH do gnome-shell    -> …/.local/bin:…/bin:/usr/local/sbin:…  (sem npm-global)
+```
+
+O diretório entra no PATH pelo **rc da shell**, lido só por shell interativa. A
+sessão gráfica exporta um PATH mínimo, então `which prime-agent` falha no app
+instalado e funciona quando ele é aberto de um terminal.
+
+### Resolução em quatro etapas
+
+1. `which` no PATH atual — acerta quando o app veio de um terminal;
+2. **PATH da shell do usuário**, obtido perguntando à própria shell;
+3. `npm prefix -g` + `/bin`;
+4. diretórios conhecidos (`~/.npm-global/bin`, `~/.local/bin`, `/usr/local/bin`,
+   `/opt/homebrew/bin`…).
+
+### Por que perguntar o PATH, e não `command -v`
+
+`command -v` muda de sintaxe entre famílias de shell. Pedir o `PATH` e procurar
+o binário do lado do app funciona para todas, bastando saber imprimir uma
+variável. Marcadores delimitam o valor, então MOTD e prompt de shell interativa
+não atrapalham, e `TERM=dumb` evita cor e prompt.
+
+Tabela de invocação por shell:
+
+| Shell | Argumentos |
+|---|---|
+| bash, zsh, ksh, dash, sh | `-l -i -c 'echo …$PATH…'` (cai para `-l -c`, depois `-c`) |
+| fish | `-l -i -c 'echo …(string join : $PATH)…'` |
+| nu | `-l -i -c 'print $"…($env.PATH \| str join \":\")…"'` |
+| pwsh | `-Login -Command '"…" + $env:PATH + "…"'` |
+| csh, tcsh | `-l -c` (não combina bem `-i` com `-c`) |
+| elvish | `-c 'echo …$E:PATH…'` |
+
+Medição com PATH mínimo da sessão gráfica: **zsh e bash** encontram o binário;
+`dash` e `sh` não, como esperado — eles não leem `.zshrc`/`.bashrc`.
+
+### O PATH também vai para o agente
+
+`agentEnv` repassa o PATH da shell aos processos filhos. Sem isso o agente
+herdaria o PATH mínimo e não acharia `git`, `python`, `docker` e afins ao usar a
+ferramenta `bash`. Verificado no processo do agente: 30 diretórios, incluindo
+pnpm, Homebrew, JDK, Android SDK e Go.
+
+## 31. "Conversa já aberta em outro agente": por que acontece e o que fazer
+
+Sintoma: usuário fecha o terminal onde usava o `prime-agent`, abre o Prime Desk,
+clica naquela conversa e recebe *"já está aberta em outro agente ativo"*.
+
+Não é bug: `docs/daemon.md` é explícito — **"Closing the TUI detaches the
+client; it does not stop the worker."** O worker segue residente e mantém o
+arquivo da sessão carregado, então `switch_session` é recusado com:
+
+```
+Session is already active in <activeSessionId>: <caminho>
+```
+
+Confirmado com `prime-agent list --json` após fechar o terminal: a sessão
+continuava `lifecycle: live`, `attachedClients: 1`.
+
+**O problema real era de interface:** a mensagem mandava encerrar o outro agente,
+mas a GUI não oferecia nenhuma forma de fazer isso.
+
+Duas correções:
+
+1. **Marcador na sidebar.** A árvore de agentes já é consultada a cada 3 s;
+   cruzando `sessionId` de cada nó com a lista de conversas, as que estão
+   carregadas em outro worker ganham um ponto âmbar com explicação no tooltip.
+   A sessão da própria ponte fica de fora — clicar nela é inofensivo.
+
+2. **Saída acionável.** O erro traz o `activeSessionId`; extraímos com
+   `/already active in ([A-Za-z0-9_-]+)/` e oferecemos encerrar via
+   `prime-agent stop <id>`, com confirmação que diz o que será interrompido e
+   que o histórico em disco é preservado. Após parar, esperamos ~1,2 s — o
+   worker leva um instante para soltar o arquivo — e repetimos a abertura.

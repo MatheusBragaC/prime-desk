@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import type { AgentNode, AgentTreeSnapshot } from '../shared/protocol.js'
+import { agentBinary, agentEnv } from './agent-path.js'
 
 /**
  * Árvore de agentes (root + descendentes RLM).
@@ -45,7 +46,7 @@ function runList(binary: string): Promise<RawSession[]> {
     execFile(
       binary,
       ['list', '--json'],
-      { timeout: LIST_TIMEOUT_MS, maxBuffer: 12 * 1024 * 1024, env: { ...process.env, NO_COLOR: '1' } },
+      { timeout: LIST_TIMEOUT_MS, maxBuffer: 12 * 1024 * 1024, env: agentEnv({ NO_COLOR: '1' }) },
       (err, stdout) => {
         if (err) return reject(err)
         try {
@@ -111,7 +112,7 @@ export function buildTree(sessions: RawSession[]): AgentNode[] {
   return roots
 }
 
-export async function getAgentTree(binary = 'prime-agent'): Promise<AgentTreeSnapshot> {
+export async function getAgentTree(binary = agentBinary()): Promise<AgentTreeSnapshot> {
   const sessions = await runList(binary)
   const roots = buildTree(sessions)
   return {

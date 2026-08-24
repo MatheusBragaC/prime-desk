@@ -305,8 +305,34 @@ export async function openSession(sessionPath: string): Promise<void> {
   const out = await rpcCall<{ cancelled?: boolean }>('switch_session', { sessionPath })
 
   if (!out.ok) {
-    const already = /already active/i.test(out.error ?? '')
-    store.notify('error', already ? t('session.alreadyOpen') : (out.error ?? t('session.openFailed')))
+    /*
+      O daemon recusa abrir uma sessão que outro worker mantém carregada. Isso é
+      comum depois de fechar o terminal: fechar o TUI só desconecta o cliente, o
+      worker continua residente. Em vez de só informar, oferecemos encerrá-lo.
+    */
+    const busy = (out.error ?? '').match(/already active in ([A-Za-z0-9_-]+)/i)
+    if (busy) {
+      store.requestConfirm({
+        title: t('session.busyTitle'),
+        message: t('session.busyMsg'),
+        detail: t('session.busyWarn'),
+        confirmLabel: t('session.busyConfirm'),
+        danger: true,
+        onConfirm: async () => {
+          const stopped = await bridge().stopAgent(busy[1])
+          if (!stopped?.ok) {
+            store.notify('error', stopped?.error ?? t('session.stopFailed'))
+            return
+          }
+          // O worker leva um instante para soltar o arquivo.
+          await new Promise((r) => setTimeout(r, 1200))
+          await openSession(sessionPath)
+        }
+      })
+      return
+    }
+
+    store.notify('error', out.error ?? t('session.openFailed'))
     return
   }
   if (out.data?.cancelled) {

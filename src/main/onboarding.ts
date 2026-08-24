@@ -4,6 +4,7 @@ import { readFile, writeFile, rename, stat, unlink } from 'node:fs/promises'
 import { watch, type FSWatcher } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
+import { resolveAgentPath, invalidateAgentPath } from './agent-path.js'
 
 /**
  * Verificação de ambiente para a primeira execução.
@@ -35,8 +36,8 @@ function run(cmd: string, args: string[], timeout = 8000): Promise<{ code: numbe
 }
 
 export async function checkEnvironment(): Promise<EnvStatus> {
-  const which = await run('which', ['prime-agent'], 5000)
-  const path = which.code === 0 && which.out ? which.out.split('\n')[0] : null
+  // Não basta `which`: app aberto pelo menu não herda o PATH do shell.
+  const path = await resolveAgentPath(true)
 
   let version: string | null = null
   if (path) {
@@ -73,6 +74,7 @@ export const INSTALL_COMMAND =
  * Nunca roda sozinho: só a partir de ação explícita, com o comando à vista.
  */
 export function installAgent(onData: (chunk: string) => void): Promise<{ ok: boolean; code: number }> {
+  invalidateAgentPath()
   return new Promise((resolve) => {
     const child = spawn('sh', ['-c', INSTALL_COMMAND], {
       env: { ...process.env, NO_COLOR: '1' },
@@ -86,7 +88,12 @@ export function installAgent(onData: (chunk: string) => void): Promise<{ ok: boo
       onData(`\nFalha ao iniciar o instalador: ${e.message}\n`)
       resolve({ ok: false, code: 1 })
     })
-    child.on('close', (code) => resolve({ ok: code === 0, code: code ?? 1 }))
+    child.on('close', async (code) => {
+      // O instalador grava num prefixo que pode não estar no PATH desta sessão.
+      invalidateAgentPath()
+      await resolveAgentPath(true)
+      resolve({ ok: code === 0, code: code ?? 1 })
+    })
   })
 }
 
