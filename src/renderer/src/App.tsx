@@ -8,6 +8,8 @@ import { CommandPalette } from './components/CommandPalette'
 import { AgentTree } from './components/AgentTree'
 import { ObservedPanel } from './components/ObservedPanel'
 import { Notice } from './components/Notice'
+import type { SshConnection } from './components/Composer'
+import { SshModal, type SshForm } from './components/SshModal'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
 import {
@@ -25,6 +27,10 @@ export function App() {
   const filesOpen = dock === 'files'
   const [fileDraft, setFileDraft] = useState<string | undefined>()
   const [openFile, setOpenFile] = useState<string | null>(null)
+  // Modais vivem aqui, no nível mais estável da árvore: um diálogo não deve
+  // depender do ciclo de vida de um chip da barra de contexto.
+  const [sshModal, setSshModal] = useState(false)
+  const [connections, setConnections] = useState<SshConnection[]>([])
   const [home, setHome] = useState('')
   const messages = useAgent((s) => s.messages)
   const tools = useAgent((s) => s.tools)
@@ -129,6 +135,9 @@ export function App() {
       void refreshCommands()
       void refreshSessions()
       void refreshFolders()
+      void window.prime.listSshConnections().then((res) => {
+        if (res?.ok) setConnections(res.connections as SshConnection[])
+      })
     }
 
     void boot()
@@ -193,14 +202,38 @@ export function App() {
     pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90
   }
 
+  async function persistConnections(list: SshConnection[]) {
+    const r = await window.prime.saveSshConnections(list)
+    if (r?.ok) setConnections(r.connections as SshConnection[])
+  }
+
+  async function addConnection(form: SshForm) {
+    setSshModal(false)
+    const conn: SshConnection = {
+      id: 'c' + Date.now().toString(36),
+      name: form.name,
+      host: form.host.trim(),
+      port: form.port ? Number(form.port) : undefined,
+      identity: form.identity.trim() || undefined,
+      remotePath: form.remotePath.trim() || undefined
+    }
+    await persistConnections([...connections, conn])
+    await setExecution(conn)
+  }
+
   /** Reinicia a ponte no destino escolhido (local ou SSH). */
-  async function setExecution(ssh: string | null) {
+  async function setExecution(conn: SshConnection | null) {
     const store = useAgent.getState()
     store.setStatus('starting')
     store.reset()
     await window.prime.stopBridge()
 
-    const r = await window.prime.startBridge({ cwd: store.cwd, ssh: ssh ?? undefined })
+    const r = await window.prime.startBridge({
+      cwd: store.cwd,
+      ssh: conn ? (conn.remotePath ? `${conn.host}:${conn.remotePath}` : conn.host) : undefined,
+      sshPort: conn?.port,
+      sshIdentity: conn?.identity
+    })
     if (!r?.ok) {
       store.setStatus('error')
       store.notify('error', r?.error ?? 'Não foi possível iniciar nesse destino.')
@@ -214,7 +247,7 @@ export function App() {
       if (useAgent.getState().state) break
     }
     store.setStatus('ready')
-    store.notify('info', ssh ? `Executando em ${ssh}` : 'Executando localmente')
+    store.notify('info', conn ? `Executando em ${conn.name}` : 'Executando localmente')
   }
 
   async function pickCwd() {
@@ -286,7 +319,12 @@ export function App() {
             onOpenPalette={() => setPalette(true)}
             onPickCwd={() => void pickCwd()}
             onToggleFiles={() => setDock((d) => (d === 'files' ? null : 'files'))}
-            onSetExecution={(ssh) => void setExecution(ssh)}
+            onSetExecution={(conn) => void setExecution(conn)}
+            connections={connections}
+            onOpenSshModal={() => setSshModal(true)}
+            onRemoveConnection={(id) =>
+              void persistConnections(connections.filter((x) => x.id !== id))
+            }
             home={home}
             draft={fileDraft}
             onDraftConsumed={() => setFileDraft(undefined)}
@@ -312,6 +350,8 @@ export function App() {
       {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
+
+      <SshModal open={sshModal} onClose={() => setSshModal(false)} onSubmit={addConnection} />
     </div>
   )
 }

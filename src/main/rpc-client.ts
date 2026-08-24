@@ -26,6 +26,8 @@ export interface RpcClientOptions {
   binary?: string
   model?: string
   extraArgs?: string[]
+  /** Sobrescreve variáveis de ambiente do processo do agente (ex.: PATH). */
+  env?: Record<string, string>
 }
 
 interface Pending {
@@ -59,7 +61,7 @@ export class RpcClient extends EventEmitter {
     if (this.opts.model) args.push('--model', this.opts.model)
     if (this.opts.extraArgs) args.push(...this.opts.extraArgs)
 
-    const env = { ...process.env }
+    const env = { ...process.env, ...(this.opts.env ?? {}) }
     // A GUI não é um TTY. Cor ANSI no stream poluiria o JSON.
     delete env.FORCE_COLOR
     env.NO_COLOR = '1'

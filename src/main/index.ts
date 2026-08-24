@@ -11,7 +11,10 @@ import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
 import { generateTitle } from './titles.js'
-import { resolveSshExtension, isValidSshTarget } from './ssh.js'
+import {
+  resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
+  loadConnections, saveConnections, type SshConnection
+} from './ssh.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
@@ -39,8 +42,13 @@ function pushToRenderer(channel: string, payload: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
 
-function createRpc(cwd: string, model?: string, extraArgs?: string[]): RpcClient {
-  const client = new RpcClient({ cwd, model, extraArgs })
+function createRpc(
+  cwd: string,
+  model?: string,
+  extraArgs?: string[],
+  env?: Record<string, string>
+): RpcClient {
+  const client = new RpcClient({ cwd, model, extraArgs, env })
 
   client.on('event', (ev: AgentEvent) => pushToRenderer('agent:event', ev))
   client.on('response', (res: RpcResponse) => pushToRenderer('agent:response', res))
@@ -132,7 +140,21 @@ let workspaceRoot = homedir()
 
 let executionTarget: { kind: 'local' | 'ssh'; target?: string } = { kind: 'local' }
 
-ipcMain.handle('bridge:start', async (_e, args: { cwd?: string; model?: string; ssh?: string }) => {
+ipcMain.handle('ssh:test', async (_e, conn: { host: string; port?: number; identity?: string }) =>
+  testConnection(conn)
+)
+
+ipcMain.handle('ssh:list', async () => ({ ok: true, connections: await loadConnections() }))
+
+ipcMain.handle('ssh:save', async (_e, list: SshConnection[]) => ({
+  ok: true,
+  connections: await saveConnections(list)
+}))
+
+ipcMain.handle('bridge:start', async (
+  _e,
+  args: { cwd?: string; model?: string; ssh?: string; sshPort?: number; sshIdentity?: string }
+) => {
   // Se a ponte já roda, o diretório dela é a verdade. Aceitar um cwd novo aqui
   // faria o explorador apontar para uma pasta onde o agente NÃO está executando.
   if (rpc?.running) {
@@ -141,6 +163,7 @@ ipcMain.handle('bridge:start', async (_e, args: { cwd?: string; model?: string; 
 
   const cwd = args?.cwd || homedir()
   const extraArgs: string[] = []
+  let sshEnv: Record<string, string> | undefined
 
   if (args?.ssh) {
     const target = args.ssh.trim()
@@ -156,12 +179,16 @@ ipcMain.handle('bridge:start', async (_e, args: { cwd?: string; model?: string; 
     }
     extraArgs.push('-e', ext, '--ssh', target)
     executionTarget = { kind: 'ssh', target }
+
+    // Porta e chave entram por um `ssh` próprio na frente do PATH do agente.
+    const shimDir = await prepareSshShim({ port: args.sshPort, identity: args.sshIdentity })
+    if (shimDir) sshEnv = { PATH: `${shimDir}:${process.env.PATH ?? ''}` }
   } else {
     executionTarget = { kind: 'local' }
   }
 
   workspaceRoot = cwd
-  rpc = createRpc(cwd, args?.model, extraArgs)
+  rpc = createRpc(cwd, args?.model, extraArgs, sshEnv)
   return { ok: true, cwd, execution: executionTarget }
 })
 

@@ -5,8 +5,17 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
  * Credenciais do prime-agent (~/.prime/agent/auth.json) nunca transitam por aqui.
  */
 const api = {
-  startBridge: (args: { cwd?: string; model?: string; ssh?: string }) =>
-    ipcRenderer.invoke('bridge:start', args),
+  startBridge: (args: {
+    cwd?: string
+    model?: string
+    ssh?: string
+    sshPort?: number
+    sshIdentity?: string
+  }) => ipcRenderer.invoke('bridge:start', args),
+  testSsh: (conn: { host: string; port?: number; identity?: string }) =>
+    ipcRenderer.invoke('ssh:test', conn),
+  listSshConnections: () => ipcRenderer.invoke('ssh:list'),
+  saveSshConnections: (list: unknown) => ipcRenderer.invoke('ssh:save', list),
   execution: () => ipcRenderer.invoke('bridge:execution'),
   stopBridge: () => ipcRenderer.invoke('bridge:stop'),
   send: (type: string, payload?: Record<string, unknown>) =>

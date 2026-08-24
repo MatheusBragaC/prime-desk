@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft,
-  FolderOpen, Check, Terminal, ChevronRight
+  FolderOpen, Check, Terminal, Trash2
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
+
+export interface SshConnection {
+  id: string
+  name: string
+  host: string
+  port?: number
+  identity?: string
+  remotePath?: string
+}
 
 interface Attachment { path: string; data: string; mimeType: string }
 
@@ -18,17 +27,21 @@ interface Attachment { path: string; data: string; mimeType: string }
  */
 function ExecutionMenu({
   execution,
+  connections,
   onLocal,
-  onSsh,
+  onConnect,
+  onRemove,
+  onAdd,
   onClose
 }: {
   execution: { kind: 'local' | 'ssh'; target?: string }
+  connections: SshConnection[]
   onLocal: () => void
-  onSsh: (target: string) => void
+  onConnect: (c: SshConnection) => void
+  onRemove: (id: string) => void
+  onAdd: () => void
   onClose: () => void
 }) {
-  const [sshMode, setSshMode] = useState(false)
-  const [target, setTarget] = useState(execution.target ?? '')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,7 +58,7 @@ function ExecutionMenu({
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 z-50 mb-2 w-[268px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute bottom-full left-0 z-50 mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
     >
       <button className={item} onClick={onLocal}>
         <Monitor size={12} />
@@ -53,43 +66,47 @@ function ExecutionMenu({
         {execution.kind === 'local' && <Check size={12} className="text-primarySoft" />}
       </button>
 
-      {sshMode ? (
-        <div className="px-2 py-1.5">
-          <input
-            autoFocus
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && target.trim()) onSsh(target.trim())
-              if (e.key === 'Escape') setSshMode(false)
-            }}
-            placeholder="usuário@host ou usuário@host:/caminho"
-            className="w-full rounded border border-primary/45 bg-black/40 px-2 py-1 text-[11.5px] text-fg outline-none placeholder:text-dim"
-          />
-          <div className="mt-1.5 text-[10.5px] leading-snug text-dim">
-            Exige autenticação por chave: um pedido de senha travaria o agente.
-            Roda <span className="font-mono">bash</span> e{' '}
-            <span className="font-mono">edit</span> na máquina remota.
+      {connections.length > 0 && (
+        <>
+          <div className="mt-1 px-2 py-1 text-[10px] uppercase tracking-wider text-dim">
+            Conexões SSH
           </div>
-        </div>
-      ) : (
-        <button className={item} onClick={() => setSshMode(true)}>
-          <Terminal size={12} />
-          <span className="flex-1">
-            SSH
-            {execution.kind === 'ssh' && (
-              <span className="ml-1.5 text-[10.5px] text-dim">{execution.target}</span>
-            )}
-          </span>
-          {execution.kind === 'ssh' ? (
-            <Check size={12} className="text-primarySoft" />
-          ) : (
-            <ChevronRight size={11} className="text-dim" />
-          )}
-        </button>
+          {connections.map((c) => {
+            const active = execution.kind === 'ssh' && execution.target === c.host
+            return (
+              <div key={c.id} className="group/conn relative">
+                <button className={item + ' pr-7'} onClick={() => onConnect(c)}>
+                  <Terminal size={12} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{c.name}</span>
+                    <span className="block truncate font-mono text-[10.5px] text-dim">
+                      {c.host}
+                      {c.port ? `:${c.port}` : ''}
+                    </span>
+                  </span>
+                  {active && <Check size={12} className="shrink-0 text-primarySoft" />}
+                </button>
+                <button
+                  onClick={() => onRemove(c.id)}
+                  title="Remover conexão"
+                  className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/conn:opacity-100"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
+            )
+          })}
+        </>
       )}
 
-      <div className="mt-1 border-t border-white/[0.07] px-2 pb-1 pt-1.5 text-[10.5px] leading-snug text-dim">
+      <div className="mt-1 border-t border-white/[0.07] pt-1">
+        <button className={item} onClick={onAdd}>
+          <Plus size={12} />
+          Adicionar conexão SSH
+        </button>
+      </div>
+
+      <div className="px-2 pb-1 pt-1 text-[10.5px] leading-snug text-dim">
         O prime-agent executa localmente ou por SSH. Não há modo em nuvem.
       </div>
     </div>
@@ -101,12 +118,18 @@ function ContextChips({
   home,
   onPickCwd,
   onToggleFiles,
-  onSetExecution
+  onSetExecution,
+  connections,
+  onOpenSshModal,
+  onRemoveConnection
 }: {
   home: string
   onPickCwd: () => void
   onToggleFiles: () => void
-  onSetExecution: (ssh: string | null) => void
+  onSetExecution: (conn: SshConnection | null) => void
+  connections: SshConnection[]
+  onOpenSshModal: () => void
+  onRemoveConnection: (id: string) => void
 }) {
   const cwd = useAgent((s) => s.cwd)
   const [branch, setBranch] = useState<string | null>(null)
@@ -154,13 +177,19 @@ function ContextChips({
         {menu && (
           <ExecutionMenu
             execution={execution}
+            connections={connections}
             onLocal={() => {
               setMenu(false)
               onSetExecution(null)
             }}
-            onSsh={(t) => {
+            onConnect={(conn) => {
               setMenu(false)
-              onSetExecution(t)
+              onSetExecution(conn)
+            }}
+            onRemove={(id) => onRemoveConnection(id)}
+            onAdd={() => {
+              setMenu(false)
+              onOpenSshModal()
             }}
             onClose={() => setMenu(false)}
           />
@@ -208,6 +237,9 @@ export function Composer({
   onPickCwd,
   onToggleFiles,
   onSetExecution,
+  connections,
+  onOpenSshModal,
+  onRemoveConnection,
   home,
   draft,
   onDraftConsumed
@@ -215,7 +247,10 @@ export function Composer({
   onOpenPalette: () => void
   onPickCwd: () => void
   onToggleFiles: () => void
-  onSetExecution: (ssh: string | null) => void
+  onSetExecution: (conn: SshConnection | null) => void
+  connections: SshConnection[]
+  onOpenSshModal: () => void
+  onRemoveConnection: (id: string) => void
   home: string
   draft?: string
   onDraftConsumed?: () => void
@@ -275,6 +310,9 @@ export function Composer({
         onPickCwd={onPickCwd}
         onToggleFiles={onToggleFiles}
         onSetExecution={onSetExecution}
+        connections={connections}
+        onOpenSshModal={onOpenSshModal}
+        onRemoveConnection={onRemoveConnection}
       />
 
       {queued > 0 && (

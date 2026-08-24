@@ -172,10 +172,18 @@ saudação, cortada em limite de palavra).
 O primeiro chip acima do composer abre o menu de execução:
 
 - **Local** — padrão, no seu computador.
-- **SSH** — informe `usuário@host` ou `usuário@host:/caminho`. Usa a extensão
-  `examples/extensions/ssh.ts` do próprio prime-agent, que passa `bash` e `edit`
-  para a máquina remota. Exige autenticação por chave; um pedido de senha
-  travaria o agente.
+- **SSH** — o diálogo pede nome, host, porta, chave privada e diretório remoto,
+  com **Testar conexão** antes de salvar. As conexões ficam guardadas e aparecem
+  no próprio menu.
+
+Por baixo, o SSH usa a extensão `examples/extensions/ssh.ts` do próprio
+prime-agent, que passa `bash` e `edit` para a máquina remota. Como essa extensão
+só aceita `user@host`, porta e chave entram por um `ssh` próprio colocado à
+frente do `PATH` **apenas do processo do agente** — nada é escrito no seu
+`~/.ssh/config`.
+
+Exige autenticação por chave: o teste usa `BatchMode`, então falha em vez de
+pedir senha (um prompt interativo travaria o agente).
 
 Não há modo em nuvem: o prime-agent não tem essa capacidade, e um botão que não
 faz nada seria pior que a ausência dele.
