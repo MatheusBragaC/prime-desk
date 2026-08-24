@@ -13,6 +13,7 @@ const api = {
     ipcRenderer.invoke('bridge:fire', { type, payload }),
 
   listSessions: () => ipcRenderer.invoke('sessions:list'),
+  usageStats: () => ipcRenderer.invoke('usage:stats'),
   transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),
 
   agentTree: () => ipcRenderer.invoke('agents:tree'),

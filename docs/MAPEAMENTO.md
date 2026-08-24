@@ -274,3 +274,26 @@ rodando. Resultado possível: explorador apontando para uma pasta onde o agente
 Correção: o main é a fonte da verdade. Com a ponte de pé, `bridge:start` devolve
 o `cwd` real e ignora o pedido; o renderer passa a exibir o que o main devolveu,
 em vez do que pediu.
+
+## 14. Uso agregado a partir dos arquivos de sessão
+
+Entradas relevantes do JSONL para contabilizar consumo:
+
+```json
+{"type":"message","timestamp":"…","message":{"role":"assistant","model":"claude-opus-5",
+  "usage":{"totalTokens":11713,"cost":{"total":0.0823}}}}
+
+{"type":"child_usage_attributed","timestamp":"…",
+  "childUsage":{"totalTokens":10224,"cost":{"total":0.0553}},
+  "aggregateUsage":{ … }}
+```
+
+Dois cuidados:
+
+1. **Somar `child_usage_attributed`.** É o consumo dos subagentes atribuído ao
+   pai. Ignorar isso subestima o total em sessões que usam RLM.
+2. **Usar `childUsage`, não `aggregateUsage`.** O agregado é cumulativo; somá-lo
+   contaria o mesmo consumo várias vezes.
+
+`totalTokens` inclui `cacheRead` e `cacheWrite`, então o número é bem maior que
+"tokens de texto" — é consumo real de billing, coerente com o `cost`.

@@ -9,6 +9,7 @@ import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
 import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
+import { getUsageStats } from './usage.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
@@ -215,6 +216,14 @@ ipcMain.handle('sessions:transcript', async (_e, path: string) => {
     const raw = await readFile(path, 'utf-8')
     const lines = raw.split('\n').filter((l) => l.trim().length > 0)
     return { ok: true, entries: lines.slice(-400).map((l) => JSON.parse(l)) }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+})
+
+ipcMain.handle('usage:stats', async () => {
+  try {
+    return { ok: true, stats: await getUsageStats() }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }

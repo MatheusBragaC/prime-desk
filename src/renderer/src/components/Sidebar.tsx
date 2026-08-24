@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  Plus, Search, FolderOpen, RefreshCw, ChevronRight, Folder,
+  Plus, Search, FolderOpen, RefreshCw, ChevronRight,
   FolderPlus, MoreHorizontal, Trash2, Pencil, GitBranch, Pin, Eye, EyeOff
 } from 'lucide-react'
 import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
@@ -164,9 +164,6 @@ function GroupHeader({
           size={11}
           className={'shrink-0 text-dim transition-transform duration-200 ' + (collapsed ? '' : 'rotate-90')}
         />
-        {group.kind === 'folder' ? (
-          <Folder size={11} className="shrink-0 text-primarySoft" />
-        ) : null}
         {renaming ? (
           <input
             autoFocus
@@ -237,6 +234,7 @@ export function Sidebar({
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [creating, setCreating] = useState(false)
   const size = useResizable('sidebar', 272, 200, 560, 'right')
 
   const archivedCount = useMemo(
@@ -267,11 +265,15 @@ export function Sidebar({
     setBusy(false)
   }
 
-  async function createFolder() {
+  /** A pasta só nasce com nome: evita ficar acumulando "Nova pasta" vazia. */
+  async function createFolder(name: string) {
+    const clean = name.trim()
+    setCreating(false)
+    if (!clean) return
     const id = 'f' + Date.now().toString(36)
     await mutateFolders((s) => ({
       ...s,
-      folders: [...s.folders, { id, name: 'Nova pasta', order: s.folders.length }]
+      folders: [...s.folders, { id, name: clean, order: s.folders.length }]
     }))
   }
 
@@ -322,7 +324,7 @@ export function Sidebar({
           Nova conversa
         </button>
         <button
-          onClick={() => void createFolder()}
+          onClick={() => setCreating(true)}
           className="no-drag flex items-center justify-center rounded-[10px] border border-white/[0.08] px-2.5 text-dim transition-colors hover:border-primary/35 hover:text-primarySoft"
           title="Nova pasta"
         >
@@ -365,7 +367,21 @@ export function Sidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
-        {groups.length === 0 && (
+        {creating && (
+          <div className="px-2 pb-1 pt-2">
+            <input
+              autoFocus
+              placeholder="Nome da pasta"
+              onBlur={(e) => void createFolder(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void createFolder(e.currentTarget.value)
+                if (e.key === 'Escape') setCreating(false)
+              }}
+              className="w-full rounded border border-primary/45 bg-black/40 px-2 py-1 text-[12px] text-fg outline-none placeholder:text-dim"
+            />
+          </div>
+        )}
+        {groups.length === 0 && !creating && (
           <div className="px-2 py-6 text-center text-[12.5px] text-dim">Nenhuma sessão.</div>
         )}
         {groups.map((g) => {
@@ -374,21 +390,15 @@ export function Sidebar({
             <div key={g.key}>
               <GroupHeader group={g} collapsed={collapsed} onToggle={() => void toggleGroup(g.key)} />
               {!collapsed &&
-                (g.sessions.length === 0 ? (
-                  <div className="px-6 py-1.5 text-[11px] italic text-dim">
-                    vazia — use o menu de uma conversa para mover
-                  </div>
-                ) : (
-                  g.sessions.map((s) => (
-                    <SessionRow
-                      key={s.id}
-                      s={s}
-                      active={state?.sessionId === s.id}
-                      busy={busy}
-                      onOpen={() => void open(s.path)}
-                      groups={groups}
-                    />
-                  ))
+                g.sessions.map((s) => (
+                  <SessionRow
+                    key={s.id}
+                    s={s}
+                    active={state?.sessionId === s.id}
+                    busy={busy}
+                    onOpen={() => void open(s.path)}
+                    groups={groups}
+                  />
                 ))}
             </div>
           )

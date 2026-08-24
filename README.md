@@ -42,6 +42,7 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Explorador** | árvore de arquivos do diretório de trabalho, com filtro (`Ctrl+Shift+F`) |
 | **Editor** | abre arquivos com syntax highlight, edita e salva (`Ctrl+S`) |
 | **Barra de contexto** | chips com Local, diretório, branch do git e atalho para os arquivos |
+| **Painel de uso** | conversa nova mostra sessões, mensagens, tokens, custo e mapa de atividade |
 | **Painéis redimensionáveis** | arraste os divisores; duplo clique restaura |
 | **Dock à direita** | arquivos e agentes se alternam, para o chat nunca ficar espremido |
 
@@ -149,6 +150,16 @@ npm run build    # compila para out/
 npm start        # roda o build
 npm run typecheck
 ```
+
+## Painel de uso
+
+Em uma conversa nova, o centro mostra o consumo agregado de todas as sessões
+locais: sessões, mensagens, tokens, custo, dias ativos, sequência atual, modelo
+mais usado, horário de pico e um mapa de atividade de 19 semanas.
+
+Os números vêm da varredura dos `.jsonl` em `~/.prime/agent/sessions`, com cache
+por `mtime` — só relê o que mudou. O uso atribuído a subagentes
+(`child_usage_attributed`) entra no total; sem isso a conta ficaria subestimada.
 
 ## Explorador e editor de arquivos
 

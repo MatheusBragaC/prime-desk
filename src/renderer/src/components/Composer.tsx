@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowUp, Square, ImagePlus, X, Command, Folder, GitBranch, Monitor, FolderTree
+  Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft, FolderOpen
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
@@ -70,6 +70,14 @@ function ContextChips({
         <FolderTree size={11} />
         Arquivos
       </button>
+
+      <button
+        onClick={onPickCwd}
+        className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-[var(--p-surface)] px-2 py-1 text-dim transition-colors hover:border-primary/40 hover:text-fg"
+        title="Escolher outro diretório de trabalho"
+      >
+        <FolderOpen size={12} />
+      </button>
     </div>
   )
 }
@@ -136,39 +144,40 @@ export function Composer({
   }
 
   return (
-    <div className="relative shrink-0 px-6 pb-5 pt-1">
+    <div className="relative shrink-0 px-6 pb-4 pt-1">
       <div className="pointer-events-none absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[var(--p-bg)] to-transparent" />
 
       <ContextChips home={home} onPickCwd={onPickCwd} onToggleFiles={onToggleFiles} />
 
       {queued > 0 && (
         <div className="mb-2 flex items-center gap-2 text-[11.5px] text-warn">
-          <span className="h-1.5 w-1.5 rounded-full bg-warn animate-pulse-soft" />
+          <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-warn" />
           {queued} mensagem(ns) na fila
         </div>
       )}
 
-      <div className="rounded-[16px] border border-white/[0.09] bg-[var(--p-surface)] shadow-xl shadow-black/40 transition-colors focus-within:border-primary/40">
-        {atts.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-b border-white/[0.06] p-2.5">
-            {atts.map((a, i) => (
-              <div key={i} className="relative">
-                <img
-                  src={`data:${a.mimeType};base64,${a.data}`}
-                  alt=""
-                  className="h-16 w-16 rounded-lg border border-white/10 object-cover"
-                />
-                <button
-                  onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-panel p-0.5 text-muted hover:text-fg"
-                >
-                  <X size={10} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      {atts.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {atts.map((a, i) => (
+            <div key={i} className="relative">
+              <img
+                src={`data:${a.mimeType};base64,${a.data}`}
+                alt=""
+                className="h-14 w-14 rounded-lg border border-white/10 object-cover"
+              />
+              <button
+                onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
+                className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-panel p-0.5 text-muted hover:text-fg"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* Caixa de entrada: o envio fica dentro dela, à direita. */}
+      <div className="relative rounded-[12px] border border-white/[0.09] bg-[var(--p-surface)] transition-colors focus-within:border-primary/40">
         <textarea
           ref={ta}
           rows={1}
@@ -180,61 +189,61 @@ export function Composer({
             ready
               ? streaming
                 ? 'Interromper com uma nova instrução (steer)…'
-                : 'Pergunte ou peça uma tarefa ao Prime…'
+                : 'Descreva uma tarefa ou faça uma pergunta'
               : 'Conectando ao agente…'
           }
-          className="max-h-[260px] w-full resize-none bg-transparent px-4 pb-1.5 pt-3.5 text-[14.5px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50"
+          className="max-h-[260px] w-full resize-none bg-transparent py-3 pl-3.5 pr-11 text-[14px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50"
         />
 
-        <div className="flex items-center gap-1 px-2.5 pb-2.5 pt-0.5">
+        {streaming ? (
           <button
-            onClick={() => void attach()}
-            disabled={!ready}
-            className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted disabled:opacity-40"
-            title="Anexar imagem"
+            onClick={() => void abortTurn()}
+            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg border border-err/30 bg-err/15 text-err transition-colors hover:bg-err/25"
+            title="Interromper (Esc)"
           >
-            <ImagePlus size={15} />
+            <Square size={11} fill="currentColor" />
           </button>
+        ) : (
           <button
-            onClick={onOpenPalette}
-            className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
-            title="Paleta de comandos (Ctrl+K)"
+            onClick={() => void submit()}
+            disabled={!value.trim() || !ready}
+            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg text-dim transition-colors hover:bg-white/[0.07] hover:text-fg disabled:pointer-events-none disabled:opacity-35"
+            title="Enviar (Enter)"
           >
-            <Command size={15} />
+            <CornerDownLeft size={14} />
           </button>
-
-          <div className="flex-1" />
-
-          <ThinkingPicker />
-          <ModelPicker />
-
-          {streaming ? (
-            <button
-              onClick={() => void abortTurn()}
-              className="ml-1 flex h-8 w-8 items-center justify-center rounded-[10px] border border-err/30 bg-err/15 text-err transition-colors hover:bg-err/25"
-              title="Interromper (Esc)"
-            >
-              <Square size={12} fill="currentColor" />
-            </button>
-          ) : (
-            <button
-              onClick={() => void submit()}
-              disabled={!value.trim() || !ready}
-              className="ml-1 flex h-8 w-8 items-center justify-center rounded-[10px] bg-primary text-white transition-all hover:bg-primarySoft disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-dim"
-              title="Enviar (Enter)"
-            >
-              <ArrowUp size={15} strokeWidth={2.4} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      <div className="mt-2 flex justify-center gap-3 text-[10.5px] text-dim">
-        <span><kbd className="font-mono">Enter</kbd> enviar</span>
-        <span><kbd className="font-mono">Shift+Enter</kbd> nova linha</span>
-        <span><kbd className="font-mono">Ctrl+K</kbd> comandos</span>
-        <span><kbd className="font-mono">Ctrl+B</kbd> agentes</span>
-        <span><kbd className="font-mono">Ctrl+Shift+F</kbd> arquivos</span>
+      {/* Controles fora da caixa, como no Claude Code. */}
+      <div className="mt-2 flex items-center gap-0.5 px-0.5">
+        <button
+          onClick={() => void attach()}
+          disabled={!ready}
+          className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted disabled:opacity-40"
+          title="Anexar imagem"
+        >
+          <Plus size={15} />
+        </button>
+        <button
+          onClick={onOpenPalette}
+          className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
+          title="Comandos e skills (Ctrl+K)"
+        >
+          <Command size={14} />
+        </button>
+
+        <div className="flex-1" />
+
+        <ThinkingPicker />
+        <ModelPicker />
+        <span
+          className={
+            'ml-1.5 h-2 w-2 rounded-full transition-colors ' +
+            (streaming ? 'animate-pulse-soft bg-primary' : ready ? 'bg-ok/70' : 'bg-warn')
+          }
+          title={streaming ? 'Executando' : ready ? 'Pronto' : 'Conectando'}
+        />
       </div>
     </div>
   )

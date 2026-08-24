@@ -203,3 +203,19 @@ export interface DirEntry {
   isDir: boolean
   size: number
 }
+
+// ------------------------------------------------------------------ uso
+
+export interface UsageStats {
+  sessions: number
+  messages: number
+  tokens: number
+  cost: number
+  activeDays: number
+  currentStreak: number
+  longestStreak: number
+  favoriteModel: string
+  /** Hora do dia com mais mensagens; -1 quando não há dados. */
+  peakHour: number
+  days: { day: string; count: number }[]
+}

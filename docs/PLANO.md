@@ -92,6 +92,8 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 13 | Painel observado é somente leitura | Injetar prompt exigiria `send_message` e mudaria "observar" para "interferir" |
 | 14 | Explorador com escopo na raiz | Recusa `..`, absoluto e symlink externo: é explorador de projeto, não leitor de disco |
 | 15 | Dock direito exclusivo | Dois painéis simultâneos reduziam o chat a ~280px e inutilizavam o composer |
+| 16 | Pasta só nasce com nome | Criar direto acumulava "Nova pasta" vazia sem propósito |
+| 17 | Estatísticas com cache por mtime | Sessões chegam a vários MB; revarrer tudo a cada abertura é desperdício |
 
 ## Segurança
 
