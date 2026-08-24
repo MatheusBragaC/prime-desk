@@ -9,6 +9,8 @@ import { existsSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
+import { execFile } from 'node:child_process'
+import { agentBinary, agentEnv } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
   listDir, gitBranch, realPathInside, readFileSafe, writeFileSafe, deleteSessionFile
@@ -355,6 +357,33 @@ handle('agents:tree', async () => {
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
+})
+
+/**
+ * Encerra outro agente do daemon.
+ *
+ * Fechar o TUI apenas desconecta o cliente: o worker continua residente e
+ * segura o arquivo da sessão. Sem isto, a GUI informava o conflito mas não
+ * oferecia nenhuma forma de resolvê-lo.
+ */
+handle('agents:stop', async (_e, activeSessionId: string) => {
+  if (!/^[A-Za-z0-9_-]{4,64}$/.test(String(activeSessionId ?? ''))) {
+    return { ok: false, error: 'Identificador de agente inválido.' }
+  }
+  return new Promise((resolve) => {
+    execFile(
+      agentBinary(),
+      ['stop', activeSessionId],
+      { timeout: 20_000, env: agentEnv({ NO_COLOR: '1' }) },
+      (err, stdout, stderr) => {
+        if (err) {
+          resolve({ ok: false, error: `${stderr || stdout || err.message}`.trim().split('\n')[0] })
+          return
+        }
+        resolve({ ok: true })
+      }
+    )
+  })
 })
 
 handle('agents:refresh', () => {

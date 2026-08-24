@@ -18,12 +18,14 @@ function SessionRow({
   s,
   active,
   busy,
+  inUse,
   onOpen,
   groups
 }: {
   s: SessionSummary
   active: boolean
   busy: boolean
+  inUse: boolean
   onOpen: () => void
   groups: Group[]
 }) {
@@ -80,9 +82,14 @@ function SessionRow({
           <Pin size={9} className="ml-[1px] mr-[3px] shrink-0 text-primarySoft" />
         ) : (
           <span
+            title={inUse ? t('session.inUse') : undefined}
             className={
               'ml-[2px] mr-[3px] h-[5px] w-[5px] shrink-0 rounded-full border transition-colors ' +
-              (active ? 'border-primarySoft' : 'border-grid group-hover:border-muted')
+              (active
+                ? 'border-primarySoft'
+                : inUse
+                  ? 'border-warn bg-warn/40'
+                  : 'border-grid group-hover:border-muted')
             }
           />
         )}
@@ -260,6 +267,22 @@ export function Sidebar({
     [sessions, folders.archived]
   )
 
+  /**
+   * Sessões carregadas por outro worker do daemon. A própria sessão da ponte
+   * fica de fora: clicar nela é inofensivo.
+   */
+  const inUseIds = useMemo(() => {
+    const ids = new Set<string>()
+    const walk = (nodes: typeof tree extends null ? never : NonNullable<typeof tree>['roots']) => {
+      for (const n of nodes) {
+        if (n.sessionId && n.sessionId !== state?.sessionId) ids.add(n.sessionId)
+        if (n.children.length) walk(n.children)
+      }
+    }
+    if (tree) walk(tree.roots)
+    return ids
+  }, [tree, state?.sessionId])
+
   const filtered = useMemo(() => {
     const named = withTitles(sessions, folders)
     const visible = showArchived
@@ -414,6 +437,7 @@ export function Sidebar({
                     s={s}
                     active={state?.sessionId === s.id}
                     busy={busy}
+                    inUse={inUseIds.has(s.id)}
                     onOpen={() => void open(s.path)}
                     groups={groups}
                   />

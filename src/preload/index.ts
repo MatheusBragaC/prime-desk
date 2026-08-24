@@ -40,6 +40,7 @@ const api = {
 
   agentTree: () => ipcRenderer.invoke('agents:tree'),
   refreshAgentTree: () => ipcRenderer.invoke('agents:refresh'),
+  stopAgent: (activeSessionId: string) => ipcRenderer.invoke('agents:stop', activeSessionId),
 
   listFiles: (relPath: string) => ipcRenderer.invoke('files:list', relPath),
   filesRoot: () => ipcRenderer.invoke('files:root'),

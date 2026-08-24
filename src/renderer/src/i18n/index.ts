@@ -252,6 +252,12 @@ const pt: Record<string, string> = {
   "onb.waiting": "Aguardando você concluir o login…",
   "chat.thinking": "Pensando",
   "chat.working": "Trabalhando",
+  "session.busyTitle": "Conversa em uso por outro agente",
+  "session.busyMsg": "Esta conversa está carregada em um agente que continua rodando em segundo plano. Fechar o terminal apenas desconecta a tela — o agente segue vivo e segura o arquivo.",
+  "session.busyConfirm": "Encerrar o outro agente e abrir",
+  "session.busyWarn": "Se houver trabalho em andamento nele, será interrompido. O histórico no disco é preservado.",
+  "session.stopFailed": "Não foi possível encerrar o outro agente.",
+  "session.inUse": "Em uso por outro agente",
 }
 
 const en: Record<string, string> = {
@@ -490,6 +496,12 @@ const en: Record<string, string> = {
   "onb.waiting": "Waiting for you to finish signing in…",
   "chat.thinking": "Thinking",
   "chat.working": "Working",
+  "session.busyTitle": "Chat in use by another agent",
+  "session.busyMsg": "This chat is loaded in an agent that is still running in the background. Closing the terminal only detaches the screen — the agent stays alive and holds the file.",
+  "session.busyConfirm": "Stop the other agent and open",
+  "session.busyWarn": "If it has work in progress, it will be interrupted. The history on disk is preserved.",
+  "session.stopFailed": "Could not stop the other agent.",
+  "session.inUse": "In use by another agent",
 }
 
 const es: Record<string, string> = {
@@ -728,6 +740,12 @@ const es: Record<string, string> = {
   "onb.waiting": "Esperando a que completes el inicio de sesión…",
   "chat.thinking": "Pensando",
   "chat.working": "Trabajando",
+  "session.busyTitle": "Conversación en uso por otro agente",
+  "session.busyMsg": "Esta conversación está cargada en un agente que sigue ejecutándose en segundo plano. Cerrar la terminal solo desconecta la pantalla — el agente sigue vivo y retiene el archivo.",
+  "session.busyConfirm": "Detener el otro agente y abrir",
+  "session.busyWarn": "Si tiene trabajo en curso, se interrumpirá. El historial en disco se conserva.",
+  "session.stopFailed": "No se pudo detener el otro agente.",
+  "session.inUse": "En uso por otro agente",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }

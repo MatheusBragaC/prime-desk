@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
+import { agentBinary, agentEnv } from './agent-path.js'
 
 /**
  * Divide um buffer em registros JSONL.
@@ -61,12 +62,12 @@ export class RpcClient extends EventEmitter {
     if (this.opts.model) args.push('--model', this.opts.model)
     if (this.opts.extraArgs) args.push(...this.opts.extraArgs)
 
-    const env = { ...process.env, ...(this.opts.env ?? {}) }
+    const env = agentEnv(this.opts.env)
     // A GUI não é um TTY. Cor ANSI no stream poluiria o JSON.
     delete env.FORCE_COLOR
     env.NO_COLOR = '1'
 
-    const child = spawn(this.opts.binary ?? 'prime-agent', args, {
+    const child = spawn(this.opts.binary ?? agentBinary(), args, {
       cwd: this.opts.cwd,
       env,
       stdio: ['pipe', 'pipe', 'pipe']
