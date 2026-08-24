@@ -686,3 +686,35 @@ Medição com PATH mínimo da sessão gráfica: **zsh e bash** encontram o biná
 herdaria o PATH mínimo e não acharia `git`, `python`, `docker` e afins ao usar a
 ferramenta `bash`. Verificado no processo do agente: 30 diretórios, incluindo
 pnpm, Homebrew, JDK, Android SDK e Go.
+
+## 31. "Conversa já aberta em outro agente": por que acontece e o que fazer
+
+Sintoma: usuário fecha o terminal onde usava o `prime-agent`, abre o Prime Desk,
+clica naquela conversa e recebe *"já está aberta em outro agente ativo"*.
+
+Não é bug: `docs/daemon.md` é explícito — **"Closing the TUI detaches the
+client; it does not stop the worker."** O worker segue residente e mantém o
+arquivo da sessão carregado, então `switch_session` é recusado com:
+
+```
+Session is already active in <activeSessionId>: <caminho>
+```
+
+Confirmado com `prime-agent list --json` após fechar o terminal: a sessão
+continuava `lifecycle: live`, `attachedClients: 1`.
+
+**O problema real era de interface:** a mensagem mandava encerrar o outro agente,
+mas a GUI não oferecia nenhuma forma de fazer isso.
+
+Duas correções:
+
+1. **Marcador na sidebar.** A árvore de agentes já é consultada a cada 3 s;
+   cruzando `sessionId` de cada nó com a lista de conversas, as que estão
+   carregadas em outro worker ganham um ponto âmbar com explicação no tooltip.
+   A sessão da própria ponte fica de fora — clicar nela é inofensivo.
+
+2. **Saída acionável.** O erro traz o `activeSessionId`; extraímos com
+   `/already active in ([A-Za-z0-9_-]+)/` e oferecemos encerrar via
+   `prime-agent stop <id>`, com confirmação que diz o que será interrompido e
+   que o histórico em disco é preservado. Após parar, esperamos ~1,2 s — o
+   worker leva um instante para soltar o arquivo — e repetimos a abertura.
