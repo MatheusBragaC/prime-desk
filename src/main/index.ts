@@ -1,14 +1,18 @@
-import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electron'
-import { join, dirname } from 'node:path'
+import {
+  app, BrowserWindow, ipcMain, shell, dialog, nativeImage, type IpcMainInvokeEvent
+} from 'electron'
+import { basename, join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
 import { loadFolders, saveFolders } from './folders.js'
-import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
+import {
+  listDir, gitBranch, realPathInside, readFileSafe, writeFileSafe, deleteSessionFile
+} from './files.js'
 import { getUsageStats } from './usage.js'
 import {
   checkEnvironment, installAgent, openAgentTerminal, logoutProvider, checkLoginPort,
@@ -17,7 +21,7 @@ import {
 import { generateTitle } from './titles.js'
 import {
   resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
-  loadConnections, saveConnections, type SshConnection
+  loadConnections, saveConnections, type SshConnection, type SshShim
 } from './ssh.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
@@ -45,6 +49,91 @@ let rpc: RpcClient | null = null
 function pushToRenderer(channel: string, payload: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
+
+/**
+ * Origem legítima do IPC.
+ *
+ * O app não tem iframe, webview nem navegação interna, então a única origem
+ * esperada é o frame principal da janela. Qualquer outra é sinal de conteúdo
+ * injetado, não de uso normal — e como `bridge:send` fala com um agente que tem
+ * ferramenta `bash`, o custo de não checar é alto.
+ */
+function isTrustedSender(event: IpcMainInvokeEvent): boolean {
+  if (!win || win.isDestroyed()) return false
+  if (event.sender !== win.webContents) return false
+  try {
+    // `senderFrame` lança se o frame já sumiu (janela fechando durante a chamada).
+    return event.senderFrame === null || event.senderFrame === event.sender.mainFrame
+  } catch {
+    return false
+  }
+}
+
+/** `any[]` para aceitar a assinatura já tipada de cada handler existente. */
+type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => unknown
+
+/** `ipcMain.handle` com a guarda de origem aplicada em ponto único. */
+function handle(channel: string, fn: IpcHandler): void {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!isTrustedSender(event)) return { ok: false, error: 'Origem IPC não autorizada.' }
+    return fn(event, ...args)
+  })
+}
+
+/**
+ * Porta única de saída para o navegador do sistema.
+ *
+ * `shell.openExternal` aceita qualquer esquema registrado no SO — `file:`,
+ * `smb:`, `ms-msdt:` — então validar em cada chamador convidava ao esquecimento
+ * (era o caso de `setWindowOpenHandler` e `will-navigate`, que não validavam
+ * nada). Devolve se abriu, para o chamador poder reportar.
+ */
+function openExternalSafe(url: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+  void shell.openExternal(parsed.toString())
+  return true
+}
+
+/** Extensões que o desktop executa em vez de abrir. */
+const NEVER_OPEN = new Set([
+  'desktop', 'sh', 'bash', 'zsh', 'fish', 'run', 'appimage', 'bin', 'exe',
+  'msi', 'bat', 'cmd', 'com', 'ps1', 'scr', 'vbs', 'jar', 'app', 'command',
+  'pkg', 'deb', 'rpm'
+])
+
+async function isRiskyToOpen(target: string): Promise<boolean> {
+  const ext = basename(target).split('.').pop()?.toLowerCase() ?? ''
+  if (NEVER_OPEN.has(ext)) return true
+  try {
+    const st = await stat(target)
+    return st.isFile() && (st.mode & 0o111) !== 0
+  } catch {
+    return true
+  }
+}
+
+/**
+ * Tipos RPC que a UI realmente usa.
+ *
+ * O renderer podia mandar qualquer `type` ao agente, e o agente tem ferramenta
+ * `bash` — logo, execução de script no renderer valia RCE local. Esta lista é o
+ * contrato: comando novo na UI precisa entrar aqui, e o erro nomeia o tipo para
+ * o esquecimento não virar bug silencioso.
+ */
+const RPC_SEND_ALLOWED = new Set([
+  'clone', 'compact', 'get_available_models', 'get_commands', 'get_messages',
+  'get_state', 'new_session', 'observe', 'prompt', 'set_model',
+  'set_session_name', 'set_thinking_level', 'switch_session'
+])
+
+/** `fire` não espera resposta: só o que precisa furar a fila. */
+const RPC_FIRE_ALLOWED = new Set(['abort', 'unobserve'])
 
 function createRpc(
   cwd: string,
@@ -89,11 +178,11 @@ function createWindow(): void {
     titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 },
     trafficLightPosition: { x: 14, y: 14 },
     webPreferences: {
-      // electron-vite emite o preload como ESM (.mjs) neste projeto (type: module).
-      preload: join(__dirname, '../preload/index.mjs'),
+      // Preload em CommonJS (.cjs): renderer sandboxed não carrega preload ESM.
+      preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
 
@@ -114,14 +203,14 @@ function createWindow(): void {
 
   // Nada de navegação dentro do app: links vão para o navegador do sistema.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    openExternalSafe(url)
     return { action: 'deny' }
   })
   win.webContents.on('will-navigate', (event, url) => {
     const devServer = process.env.ELECTRON_RENDERER_URL
     if (devServer && url.startsWith(devServer)) return
     event.preventDefault()
-    void shell.openExternal(url)
+    openExternalSafe(url)
   })
 
   const devServer = process.env.ELECTRON_RENDERER_URL
@@ -144,18 +233,18 @@ let workspaceRoot = homedir()
 
 let executionTarget: { kind: 'local' | 'ssh'; target?: string } = { kind: 'local' }
 
-ipcMain.handle('ssh:test', async (_e, conn: { host: string; port?: number; identity?: string }) =>
+handle('ssh:test', async (_e, conn: { host: string; port?: number; identity?: string }) =>
   testConnection(conn)
 )
 
-ipcMain.handle('ssh:list', async () => ({ ok: true, connections: await loadConnections() }))
+handle('ssh:list', async () => ({ ok: true, connections: await loadConnections() }))
 
-ipcMain.handle('ssh:save', async (_e, list: SshConnection[]) => ({
+handle('ssh:save', async (_e, list: SshConnection[]) => ({
   ok: true,
   connections: await saveConnections(list)
 }))
 
-ipcMain.handle('bridge:start', async (
+handle('bridge:start', async (
   _e,
   args: { cwd?: string; model?: string; ssh?: string; sshPort?: number; sshIdentity?: string }
 ) => {
@@ -181,12 +270,21 @@ ipcMain.handle('bridge:start', async (
         error: 'Extensão SSH do prime-agent não encontrada (examples/extensions/ssh.ts).'
       }
     }
+    /**
+     * Porta e chave entram por um `ssh` próprio na frente do PATH do agente.
+     * Preparado ANTES de mutar estado: entrada inválida não pode deixar
+     * `executionTarget` marcado como SSH sem conexão correspondente.
+     */
+    let shim: SshShim | null
+    try {
+      shim = await prepareSshShim({ port: args.sshPort, identity: args.sshIdentity })
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+
     extraArgs.push('-e', ext, '--ssh', target)
     executionTarget = { kind: 'ssh', target }
-
-    // Porta e chave entram por um `ssh` próprio na frente do PATH do agente.
-    const shimDir = await prepareSshShim({ port: args.sshPort, identity: args.sshIdentity })
-    if (shimDir) sshEnv = { PATH: `${shimDir}:${process.env.PATH ?? ''}` }
+    if (shim) sshEnv = { ...shim.env, PATH: `${shim.dir}:${process.env.PATH ?? ''}` }
   } else {
     executionTarget = { kind: 'local' }
   }
@@ -196,16 +294,19 @@ ipcMain.handle('bridge:start', async (
   return { ok: true, cwd, execution: executionTarget }
 })
 
-ipcMain.handle('bridge:execution', () => ({ ok: true, execution: executionTarget }))
+handle('bridge:execution', () => ({ ok: true, execution: executionTarget }))
 
-ipcMain.handle('bridge:stop', () => {
+handle('bridge:stop', () => {
   rpc?.stop()
   rpc = null
   return { ok: true }
 })
 
-ipcMain.handle('bridge:send', async (_e, args: { type: string; payload?: Record<string, unknown> }) => {
+handle('bridge:send', async (_e, args: { type: string; payload?: Record<string, unknown> }) => {
   if (!rpc?.running) return { ok: false, error: 'Agente não está em execução.' }
+  if (!RPC_SEND_ALLOWED.has(args?.type)) {
+    return { ok: false, error: `Comando RPC não permitido: ${args?.type}` }
+  }
   try {
     const res = await rpc.send(args.type, args.payload ?? {})
     return { ok: true, res }
@@ -214,8 +315,11 @@ ipcMain.handle('bridge:send', async (_e, args: { type: string; payload?: Record<
   }
 })
 
-ipcMain.handle('bridge:fire', (_e, args: { type: string; payload?: Record<string, unknown> }) => {
+handle('bridge:fire', (_e, args: { type: string; payload?: Record<string, unknown> }) => {
   if (!rpc?.running) return { ok: false }
+  if (!RPC_FIRE_ALLOWED.has(args?.type)) {
+    return { ok: false, error: `Comando RPC não permitido: ${args?.type}` }
+  }
   rpc.fire(args.type, args.payload ?? {})
   return { ok: true }
 })
@@ -245,7 +349,7 @@ function stopTreePolling(): void {
   treeTimer = null
 }
 
-ipcMain.handle('agents:tree', async () => {
+handle('agents:tree', async () => {
   try {
     return { ok: true, tree: await getAgentTree() }
   } catch (err) {
@@ -253,26 +357,36 @@ ipcMain.handle('agents:tree', async () => {
   }
 })
 
-ipcMain.handle('agents:refresh', () => {
+handle('agents:refresh', () => {
   void tickTree()
   return { ok: true }
 })
 
-ipcMain.handle('folders:load', async () => ({ ok: true, state: await loadFolders() }))
+handle('folders:load', async () => ({ ok: true, state: await loadFolders() }))
 
-ipcMain.handle('folders:save', async (_e, state: FolderState) => ({
+handle('folders:save', async (_e, state: FolderState) => ({
   ok: true,
   state: await saveFolders(state)
 }))
 
-ipcMain.handle('sessions:transcript', async (_e, path: string) => {
-  // Leitura restrita ao diretório do agente: evita virar um leitor de arquivos genérico.
+handle('sessions:transcript', async (_e, path: string) => {
+  /**
+   * Leitura restrita ao diretório do agente: evita virar um leitor de arquivos
+   * genérico.
+   *
+   * `startsWith` não servia como guarda: comparava string crua, então
+   * `<agentDir>/../../../etc/passwd.jsonl` passava (o `..` só colapsa no
+   * `resolve`) e `<agentDir>-backup/x.jsonl` também, por ser prefixo sem
+   * separador. `realPathInside` normaliza, exige o separador e ainda resolve
+   * symlink.
+   */
   const agentDir = join(homedir(), '.prime', 'agent')
-  if (!path.startsWith(agentDir) || !path.endsWith('.jsonl')) {
+  const target = await realPathInside(agentDir, path)
+  if (!target || !target.endsWith('.jsonl')) {
     return { ok: false, error: 'Caminho fora do diretório do agente.' }
   }
   try {
-    const raw = await readFile(path, 'utf-8')
+    const raw = await readFile(target, 'utf-8')
     const lines = raw.split('\n').filter((l) => l.trim().length > 0)
     return { ok: true, entries: lines.slice(-400).map((l) => JSON.parse(l)) }
   } catch (err) {
@@ -280,7 +394,7 @@ ipcMain.handle('sessions:transcript', async (_e, path: string) => {
   }
 })
 
-ipcMain.handle('onboarding:check', async () => {
+handle('onboarding:check', async () => {
   try {
     return { ok: true, status: await checkEnvironment() }
   } catch (err) {
@@ -288,30 +402,30 @@ ipcMain.handle('onboarding:check', async () => {
   }
 })
 
-ipcMain.handle('onboarding:command', () => ({ ok: true, command: INSTALL_COMMAND }))
+handle('onboarding:command', () => ({ ok: true, command: INSTALL_COMMAND }))
 
-ipcMain.handle('onboarding:install', async () => {
+handle('onboarding:install', async () => {
   const result = await installAgent((chunk) => pushToRenderer('onboarding:output', chunk))
   return result
 })
 
-ipcMain.handle('onboarding:terminal', async () => openAgentTerminal())
+handle('onboarding:terminal', async () => openAgentTerminal())
 
-ipcMain.handle('auth:logout', async (_e, provider: string) => logoutProvider(provider))
+handle('auth:logout', async (_e, provider: string) => logoutProvider(provider))
 
-ipcMain.handle('auth:loginPort', async () => checkLoginPort())
+handle('auth:loginPort', async () => checkLoginPort())
 
-ipcMain.handle('onboarding:watch', () => {
+handle('onboarding:watch', () => {
   startEnvWatch((status) => pushToRenderer('onboarding:env', status))
   return { ok: true }
 })
 
-ipcMain.handle('onboarding:unwatch', () => {
+handle('onboarding:unwatch', () => {
   stopEnvWatch()
   return { ok: true }
 })
 
-ipcMain.handle('title:generate', async (_e, conversation: string) => {
+handle('title:generate', async (_e, conversation: string) => {
   try {
     return { ok: true, title: await generateTitle(conversation, workspaceRoot) }
   } catch {
@@ -319,14 +433,14 @@ ipcMain.handle('title:generate', async (_e, conversation: string) => {
   }
 })
 
-ipcMain.handle('view:zoom', (_e, level: number) => {
+handle('view:zoom', (_e, level: number) => {
   if (!win || win.isDestroyed()) return { ok: false }
   const clamped = Math.max(-3, Math.min(4, level))
   win.webContents.setZoomLevel(clamped)
   return { ok: true, level: clamped }
 })
 
-ipcMain.handle('usage:stats', async () => {
+handle('usage:stats', async () => {
   try {
     return { ok: true, stats: await getUsageStats() }
   } catch (err) {
@@ -334,7 +448,7 @@ ipcMain.handle('usage:stats', async () => {
   }
 })
 
-ipcMain.handle('sessions:list', async () => {
+handle('sessions:list', async () => {
   try {
     return { ok: true, sessions: await listSessions() }
   } catch (err) {
@@ -342,7 +456,7 @@ ipcMain.handle('sessions:list', async () => {
   }
 })
 
-ipcMain.handle('dialog:pickDirectory', async () => {
+handle('dialog:pickDirectory', async () => {
   if (!win) return { ok: false }
   const r = await dialog.showOpenDialog(win, {
     properties: ['openDirectory'],
@@ -352,7 +466,7 @@ ipcMain.handle('dialog:pickDirectory', async () => {
   return { ok: true, path: r.filePaths[0] }
 })
 
-ipcMain.handle('dialog:pickImage', async () => {
+handle('dialog:pickImage', async () => {
   if (!win) return { ok: false }
   const r = await dialog.showOpenDialog(win, {
     properties: ['openFile'],
@@ -367,37 +481,46 @@ ipcMain.handle('dialog:pickImage', async () => {
   return { ok: true, path, data: buf.toString('base64'), mimeType }
 })
 
-ipcMain.handle('files:list', async (_e, relPath: string) => listDir(workspaceRoot, relPath ?? ''))
+handle('files:list', async (_e, relPath: string) => listDir(workspaceRoot, relPath ?? ''))
 
-ipcMain.handle('files:root', () => ({ ok: true, root: workspaceRoot }))
+handle('files:root', () => ({ ok: true, root: workspaceRoot }))
 
-ipcMain.handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspaceRoot) }))
+handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspaceRoot) }))
 
-ipcMain.handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
+handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
 
-ipcMain.handle('files:write', async (_e, args: { path: string; content: string }) =>
+handle('files:write', async (_e, args: { path: string; content: string }) =>
   writeFileSafe(workspaceRoot, args.path, args.content)
 )
 
-ipcMain.handle('sessions:delete', async (_e, path: string) =>
+handle('sessions:delete', async (_e, path: string) =>
   deleteSessionFile(join(homedir(), '.prime', 'agent'), path)
 )
 
-ipcMain.handle('files:reveal', async (_e, relPath: string) => {
-  const target = join(workspaceRoot, relPath)
-  if (!insideRoot(workspaceRoot, target)) {
+handle('files:reveal', async (_e, relPath: string) => {
+  const target = await realPathInside(workspaceRoot, join(workspaceRoot, relPath))
+  if (!target) {
     return { ok: false, error: 'Caminho fora do diretório de trabalho.' }
   }
+
+  /**
+   * `openPath` entrega o alvo ao handler do desktop, então um `.desktop`, um
+   * script ou qualquer arquivo com bit de execução seria EXECUTADO, não aberto.
+   * Nesses casos revelamos no gerenciador de arquivos: o botão continua útil
+   * sem virar atalho para rodar binário que veio dentro do workspace.
+   */
+  if (await isRiskyToOpen(target)) {
+    shell.showItemInFolder(target)
+    return { ok: true, revealed: true }
+  }
+
   const err = await shell.openPath(target)
   return err ? { ok: false, error: err } : { ok: true }
 })
 
-ipcMain.handle('shell:openExternal', (_e, url: string) => {
-  if (/^https?:\/\//.test(url)) void shell.openExternal(url)
-  return { ok: true }
-})
+handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
 
-ipcMain.handle('app:info', () => ({
+handle('app:info', () => ({
   version: app.getVersion(),
   home: homedir(),
   platform: process.platform

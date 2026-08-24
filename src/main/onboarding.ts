@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'node:child_process'
 import { createServer } from 'node:net'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, rename, stat, unlink } from 'node:fs/promises'
 import { watch, type FSWatcher } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
@@ -199,14 +199,30 @@ function trySpawn(bin: string, args: string[]): Promise<{ ok: boolean; error?: s
  */
 export async function logoutProvider(provider: string): Promise<{ ok: boolean; error?: string }> {
   const file = join(homedir(), '.prime', 'agent', 'auth.json')
+  const tmp = `${file}.prime-desk-${process.pid}.tmp`
   try {
     const raw = await readFile(file, 'utf-8')
     const parsed = JSON.parse(raw) as Record<string, unknown>
-    if (!(provider in parsed)) return { ok: false, error: 'Provedor não encontrado.' }
+    // `in` acharia chave herdada do protótipo ("toString"): só a própria conta.
+    if (!Object.prototype.hasOwnProperty.call(parsed, provider)) {
+      return { ok: false, error: 'Provedor não encontrado.' }
+    }
     delete parsed[provider]
-    await writeFile(file, JSON.stringify(parsed, null, 2), 'utf-8')
+
+    /**
+     * Grava por arquivo temporário + rename.
+     *
+     * São credenciais: um crash no meio de um `writeFile` direto deixaria o
+     * arquivo truncado e derrubaria o login de TODOS os provedores, não só o do
+     * logout pedido. O rename é atômico dentro do mesmo diretório, e o modo do
+     * arquivo original é preservado para não afrouxar a permissão.
+     */
+    const mode = (await stat(file)).mode & 0o777
+    await writeFile(tmp, JSON.stringify(parsed, null, 2), { encoding: 'utf-8', mode })
+    await rename(tmp, file)
     return { ok: true }
   } catch (err) {
+    await unlink(tmp).catch(() => undefined)
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
 }
