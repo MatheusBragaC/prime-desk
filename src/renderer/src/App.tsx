@@ -184,6 +184,22 @@ export function App() {
     }
   }, [])
 
+  /*
+    Soltar um arquivo fora do composer faria o Electron navegar para ele,
+    substituindo a interface pelo arquivo. Bloqueamos na janela inteira.
+  */
+  useEffect(() => {
+    const block = (e: DragEvent): void => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
+    }
+    window.addEventListener('dragover', block)
+    window.addEventListener('drop', block)
+    return () => {
+      window.removeEventListener('dragover', block)
+      window.removeEventListener('drop', block)
+    }
+  }, [])
+
   // ---- atalhos -----------------------------------------------------------
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

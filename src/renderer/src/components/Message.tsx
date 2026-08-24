@@ -67,6 +67,20 @@ export const Message = memo(function Message({
 
   const lastIdx = msg.content.length - 1
 
+  /*
+    Blocos vazios existem no começo do turno: o `thinking` chega antes de ter
+    texto e o `ThinkingBlock` não desenha nada. Sem esta saída, a mensagem
+    renderizava só o avatar e ele ficava empilhado com o da bolha de atividade —
+    dois avatares seguidos, um deles sem conteúdo nenhum ao lado.
+  */
+  const hasVisibleContent = msg.content.some(
+    (b) =>
+      (b.type === 'text' && b.text.trim().length > 0) ||
+      (b.type === 'thinking' && b.thinking.trim().length > 0) ||
+      b.type === 'toolCall'
+  )
+  if (!hasVisibleContent) return null
+
   return (
     <div className="animate-fade-up group px-6 py-3">
       <div className="flex gap-3.5">

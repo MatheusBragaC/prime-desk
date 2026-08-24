@@ -752,3 +752,40 @@ Um MacBook de 13" com a janela em meia tela fica perto de 700px. Com sidebar de
 Medido por emulação de viewport: em 694px o botão de alternância aparece; em
 900px o painel lateral fecha sozinho; a sobreposição entra com `translate-x-0` e
 fundo escurecido, e some ao abrir uma conversa.
+
+## 34. Dois avatares seguidos no início do turno
+
+Relatado com captura: um bloco só com a borboleta, e logo abaixo a bolha
+"Pensando…" com outra borboleta.
+
+Causa: no começo do turno o `thinking` chega vazio (`thinking_start` traz string
+em branco). O `ThinkingBlock` não desenha nada nesse caso, então a mensagem do
+assistente renderizava apenas a coluna do avatar. Ao mesmo tempo, a bolha de
+atividade continuava visível — porque a condição dela é justamente "sem conteúdo
+visível". Resultado: dois avatares empilhados, um sem nada ao lado.
+
+Correção: a mensagem do assistente **não é renderizada** enquanto não tiver
+conteúdo visível (texto, raciocínio com texto ou chamada de ferramenta). Sobra
+só a bolha de atividade, que é o que faz sentido naquele instante. Medido depois
+da mudança: no máximo 1 avatar por amostra ao longo de um turno.
+
+## 35. Anexar imagem: seletor não era o único caminho esperado
+
+O seletor de arquivo funcionava, mas faltavam os dois gestos que as pessoas
+tentam primeiro: **colar** e **arrastar**.
+
+Ambos entregam objetos `File` sem caminho em disco, então não há o que pedir ao
+processo main: lemos com `FileReader` como data URL e extraímos o base64 — o que
+funciona com o renderer em sandbox. Limite de 10 MB por imagem, porque o payload
+vai embutido na mensagem.
+
+Dois cuidados:
+
+- **Colar** só é interceptado quando há imagem no `clipboardData`; colar texto
+  segue o comportamento normal.
+- **Soltar** um arquivo fora do composer faria o Electron navegar para ele,
+  substituindo a interface. Um bloqueio de `dragover`/`drop` na janela inteira
+  evita isso.
+
+Os anexos passaram a ficar **dentro** da caixa de texto, acima do cursor: eles
+fazem parte da mensagem em edição, e fora dela pareciam um elemento solto.

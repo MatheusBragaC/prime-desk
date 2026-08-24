@@ -259,6 +259,8 @@ const pt: Record<string, string> = {
   "session.stopFailed": "Não foi possível encerrar o outro agente.",
   "session.inUse": "Em uso por outro agente",
   "sidebar.toggle": "Mostrar ou ocultar conversas",
+  "composer.dropHere": "Solte a imagem para anexar",
+  "composer.removeAttachment": "Remover anexo",
 }
 
 const en: Record<string, string> = {
@@ -504,6 +506,8 @@ const en: Record<string, string> = {
   "session.stopFailed": "Could not stop the other agent.",
   "session.inUse": "In use by another agent",
   "sidebar.toggle": "Show or hide chats",
+  "composer.dropHere": "Drop the image to attach",
+  "composer.removeAttachment": "Remove attachment",
 }
 
 const es: Record<string, string> = {
@@ -749,6 +753,8 @@ const es: Record<string, string> = {
   "session.stopFailed": "No se pudo detener el otro agente.",
   "session.inUse": "En uso por otro agente",
   "sidebar.toggle": "Mostrar u ocultar conversaciones",
+  "composer.dropHere": "Suelta la imagen para adjuntar",
+  "composer.removeAttachment": "Quitar adjunto",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }
