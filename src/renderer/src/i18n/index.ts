@@ -246,6 +246,8 @@ const pt: Record<string, string> = {
   "onb.step1": "Digite {cmd} e pressione Enter",
   "onb.step2": "Escolha o provedor e conclua no navegador",
   "onb.step3": "Volte aqui e clique em “{label}”",
+  "onb.portBusy": "Já existe um login do prime-agent em andamento segurando a porta {port}. Enquanto isso, o Enter no provedor não responde. Feche as outras janelas do prime-agent e tente de novo.",
+  "onb.portBusyCmd": "Para liberar, rode:",
 }
 
 const en: Record<string, string> = {
@@ -478,6 +480,8 @@ const en: Record<string, string> = {
   "onb.step1": "Type {cmd} and press Enter",
   "onb.step2": "Pick your provider and finish in the browser",
   "onb.step3": "Come back here and click “{label}”",
+  "onb.portBusy": "A prime-agent login is already in progress and is holding port {port}. While that lasts, Enter on a provider does nothing. Close the other prime-agent windows and try again.",
+  "onb.portBusyCmd": "To free it, run:",
 }
 
 const es: Record<string, string> = {
@@ -710,6 +714,8 @@ const es: Record<string, string> = {
   "onb.step1": "Escribe {cmd} y pulsa Enter",
   "onb.step2": "Elige el proveedor y termina en el navegador",
   "onb.step3": "Vuelve aquí y haz clic en “{label}”",
+  "onb.portBusy": "Ya hay un inicio de sesión de prime-agent en curso que retiene el puerto {port}. Mientras tanto, Enter en el proveedor no responde. Cierra las otras ventanas de prime-agent e inténtalo de nuevo.",
+  "onb.portBusyCmd": "Para liberarlo, ejecuta:",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }

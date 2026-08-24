@@ -507,3 +507,46 @@ mostrar o comando para o usuário rodar à mão.
 
 Detalhe de diagnóstico: `pgrep -c gnome-terminal-server` retorna 0 mesmo com o
 servidor no ar, porque `comm` é truncado em 15 caracteres. Use `pgrep -f`.
+
+## 25. Login OAuth trava em silêncio quando a porta 53692 está ocupada
+
+Sintoma: no `/login`, o Enter sobre "Anthropic (Claude Pro/Max) — subscription"
+não faz nada. Nem erro, nem URL, nem timeout.
+
+Reproduzido num PTY controlado: Enter no item 1 (Prime Inference) avança
+normalmente; Enter no item 2 (Anthropic) não produz saída alguma nem após 30 s.
+
+Causa, lendo o bundle: `loginAnthropic` chama `startCallbackServer(verifier)`
+**antes** de `options.onAuth(...)`. O servidor escuta em
+
+```js
+CALLBACK_PORT = 53692
+REDIRECT_URI  = `http://localhost:${CALLBACK_PORT}/callback`
+```
+
+Se o bind falhar, a promessa nunca resolve e nada é exibido — o `onAuth`, que é
+quem mostra o link, sequer chega a rodar.
+
+Na máquina de teste a porta estava presa:
+
+```
+LISTEN 127.0.0.1:53692  users:(("prime-agent",pid=166799))
+```
+
+Um `prime-agent` que iniciou um login e ficou aguardando o retorno do navegador
+mantém a porta ocupada — o `finally { server.server.close() }` só roda quando o
+fluxo termina ou é abortado, não enquanto ele espera.
+
+**Mitigação no Prime Desk:** antes de abrir o terminal de login, o app testa o
+bind em `127.0.0.1:53692`. Ocupada, ele explica o que está acontecendo e mostra o
+comando para encerrar os processos pendentes, em vez de abrir mais uma janela que
+também não vai funcionar.
+
+## 26. Tela sem barra de título precisa de região de arraste própria
+
+Com `titleBarStyle: 'hidden'`, só é possível mover a janela por elementos com
+`-webkit-app-region: drag`. A tela de onboarding não renderiza a StatusBar nem a
+sidebar, que eram os únicos lugares com essa propriedade — resultado: janela
+imóvel durante toda a primeira execução.
+
+Corrigido com uma faixa de arraste no topo da própria tela de onboarding.

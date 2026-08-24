@@ -52,6 +52,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   const [termError, setTermError] = useState<string | null>(null)
   const [opening, setOpening] = useState(false)
   const [termOpened, setTermOpened] = useState(false)
+  const [portBusy, setPortBusy] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -112,6 +113,16 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   async function openTerminal() {
     setOpening(true)
     setTermError(null)
+    setPortBusy(null)
+
+    // Um login pendente em outra janela prende a porta do callback e faz o TUI
+    // ignorar o Enter sem dizer nada. Melhor avisar antes de abrir mais um.
+    const port = await window.prime.checkLoginPort()
+    if (port && !port.free) {
+      setPortBusy(port.port as number)
+      setOpening(false)
+      return
+    }
     const r = await window.prime.openAgentTerminal()
     setOpening(false)
     if (!r?.ok) {
@@ -135,6 +146,11 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[var(--p-bg)] px-8">
+      {/*
+        Faixa de arraste: sem a barra de título nativa, esta tela não tinha
+        nenhuma região `-webkit-app-region: drag` e a janela ficava presa.
+      */}
+      <div className="drag-region absolute inset-x-0 top-0 z-20 h-[var(--p-titlebar)]" />
       <div className="aurora pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 w-full max-w-[520px]">
@@ -270,6 +286,21 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               </span>
               <ArrowRight size={13} className="mt-[3px] shrink-0 text-dim" />
             </button>
+
+            {portBusy !== null && (
+              <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
+                <div className="flex items-start gap-2 text-[11.8px] leading-snug text-warn">
+                  <AlertTriangle size={13} className="mt-[2px] shrink-0" />
+                  <span>
+                    {t('onb.portBusy', { port: portBusy })}
+                    <span className="mt-1.5 block">{t('onb.portBusyCmd')}</span>
+                    <code className="mt-1 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-[10.8px] text-mint">
+                      pkill -f &quot;bash -lc prime-agent&quot;
+                    </code>
+                  </span>
+                </div>
+              </div>
+            )}
 
             {termOpened && !termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-ok/25 bg-ok/[0.06] p-3">

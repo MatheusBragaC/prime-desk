@@ -31,6 +31,7 @@ const api = {
   installAgent: () => ipcRenderer.invoke('onboarding:install'),
   openAgentTerminal: () => ipcRenderer.invoke('onboarding:terminal'),
   logoutProvider: (provider: string) => ipcRenderer.invoke('auth:logout', provider),
+  checkLoginPort: () => ipcRenderer.invoke('auth:loginPort'),
   generateTitle: (conversation: string) => ipcRenderer.invoke('title:generate', conversation),
   setZoom: (level: number) => ipcRenderer.invoke('view:zoom', level),
   transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),

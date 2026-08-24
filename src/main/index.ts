@@ -11,7 +11,7 @@ import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
-  checkEnvironment, installAgent, openAgentTerminal, logoutProvider, INSTALL_COMMAND
+  checkEnvironment, installAgent, openAgentTerminal, logoutProvider, checkLoginPort, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
 import {
@@ -297,6 +297,8 @@ ipcMain.handle('onboarding:install', async () => {
 ipcMain.handle('onboarding:terminal', async () => openAgentTerminal())
 
 ipcMain.handle('auth:logout', async (_e, provider: string) => logoutProvider(provider))
+
+ipcMain.handle('auth:loginPort', async () => checkLoginPort())
 
 ipcMain.handle('title:generate', async (_e, conversation: string) => {
   try {

@@ -1,4 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
+import { createServer } from 'node:net'
 import { readFile, writeFile } from 'node:fs/promises'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
@@ -207,4 +208,27 @@ export async function logoutProvider(provider: string): Promise<{ ok: boolean; e
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
+}
+
+
+/** Porta do callback OAuth do prime-agent (`CALLBACK_PORT` no bundle). */
+const OAUTH_CALLBACK_PORT = 53692
+
+/**
+ * Verifica se a porta do callback OAuth está livre.
+ *
+ * Um `prime-agent` que iniciou um login e ficou esperando o retorno do navegador
+ * mantém essa porta presa. Qualquer nova tentativa de login — nele ou em outra
+ * janela — falha ao dar bind e o TUI **não mostra nada**: a tela simplesmente
+ * não reage ao Enter. Detectar isso antes evita um beco sem saída silencioso.
+ */
+export function checkLoginPort(): Promise<{ free: boolean; port: number }> {
+  return new Promise((resolve) => {
+    const server = createServer()
+    server.once('error', () => resolve({ free: false, port: OAUTH_CALLBACK_PORT }))
+    server.once('listening', () => {
+      server.close(() => resolve({ free: true, port: OAUTH_CALLBACK_PORT }))
+    })
+    server.listen(OAUTH_CALLBACK_PORT, '127.0.0.1')
+  })
 }
