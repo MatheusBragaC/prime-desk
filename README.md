@@ -42,7 +42,10 @@ Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agen
 | **Ações da conversa** | menu `⋯` com abrir, fixar, renomear, duplicar, mover, arquivar e excluir |
 | **Explorador** | árvore de arquivos do diretório de trabalho, com filtro (`Ctrl+Shift+F`) |
 | **Editor** | abre arquivos com syntax highlight, edita e salva (`Ctrl+S`) |
-| **Barra de contexto** | chips com Local, diretório, branch do git e atalho para os arquivos |
+| **Barra de contexto** | chips com execução, diretório, branch do git e atalho para os arquivos |
+| **Execução remota** | menu do chip permite rodar por SSH, usando a extensão oficial do prime-agent |
+| **Streaming suave** | o texto escorre em ritmo constante em vez de saltar em rajadas |
+| **Copiar código** | botão em cada bloco de código |
 | **Painel de uso** | conversa nova mostra sessões, mensagens, tokens, custo e mapa de atividade |
 | **Painéis redimensionáveis** | arraste os divisores; duplo clique restaura |
 | **Dock à direita** | arquivos e agentes se alternam, para o chat nunca ficar espremido |
@@ -163,6 +166,19 @@ A geração usa um cliente RPC efêmero com um modelo barato, sem ferramentas,
 skills, extensões ou arquivos de contexto. Leva ~4 s e roda em segundo plano.
 Falhou? A sidebar cai no título heurístico (primeira frase do prompt, sem
 saudação, cortada em limite de palavra).
+
+## Onde o agente executa
+
+O primeiro chip acima do composer abre o menu de execução:
+
+- **Local** — padrão, no seu computador.
+- **SSH** — informe `usuário@host` ou `usuário@host:/caminho`. Usa a extensão
+  `examples/extensions/ssh.ts` do próprio prime-agent, que passa `bash` e `edit`
+  para a máquina remota. Exige autenticação por chave; um pedido de senha
+  travaria o agente.
+
+Não há modo em nuvem: o prime-agent não tem essa capacidade, e um botão que não
+faz nada seria pior que a ausência dele.
 
 ## Painel de uso
 

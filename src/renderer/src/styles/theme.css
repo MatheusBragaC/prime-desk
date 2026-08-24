@@ -197,3 +197,14 @@ button { font-family: inherit; }
 }
 
 button:focus:not(:focus-visible) { outline: none; }
+
+/*
+ * Campos de texto já sinalizam foco pela borda do próprio container
+ * (`focus-within`). O outline global desenhava um segundo anel por fora da
+ * caixa arredondada, desalinhado dela.
+ */
+input:focus-visible,
+textarea:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
+}

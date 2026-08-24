@@ -193,6 +193,30 @@ export function App() {
     pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90
   }
 
+  /** Reinicia a ponte no destino escolhido (local ou SSH). */
+  async function setExecution(ssh: string | null) {
+    const store = useAgent.getState()
+    store.setStatus('starting')
+    store.reset()
+    await window.prime.stopBridge()
+
+    const r = await window.prime.startBridge({ cwd: store.cwd, ssh: ssh ?? undefined })
+    if (!r?.ok) {
+      store.setStatus('error')
+      store.notify('error', r?.error ?? 'Não foi possível iniciar nesse destino.')
+      await window.prime.startBridge({ cwd: store.cwd })
+      return
+    }
+
+    for (let i = 0; i < 30; i++) {
+      await new Promise((res) => setTimeout(res, 700))
+      await refreshState()
+      if (useAgent.getState().state) break
+    }
+    store.setStatus('ready')
+    store.notify('info', ssh ? `Executando em ${ssh}` : 'Executando localmente')
+  }
+
   async function pickCwd() {
     const r = await window.prime.pickDirectory()
     if (!r?.ok) return
@@ -262,6 +286,7 @@ export function App() {
             onOpenPalette={() => setPalette(true)}
             onPickCwd={() => void pickCwd()}
             onToggleFiles={() => setDock((d) => (d === 'files' ? null : 'files'))}
+            onSetExecution={(ssh) => void setExecution(ssh)}
             home={home}
             draft={fileDraft}
             onDraftConsumed={() => setFileDraft(undefined)}

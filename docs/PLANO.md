@@ -97,6 +97,10 @@ Motivo: qualquer lógica de agente duplicada na GUI divergiria a cada
 | 18 | Título via RPC efêmero, não `-p` | O modo print não retorna quando lançado do main do Electron |
 | 19 | Título gravado com `set_session_name` | Vive na sessão do agente e aparece no TUI, em vez de virar rótulo só da GUI |
 | 20 | Cores do tema com canais RGB | Sem isso o modificador de opacidade do Tailwind é descartado em silêncio |
+| 21 | Revelação suave do texto | Medido 60fps sem jank: o solavanco vinha da rajada do modelo, não do render |
+| 22 | Highlight só ao terminar o bloco | Destacar a cada quadro do streaming é trabalho descartado |
+| 23 | Botão de copiar sempre visível | Depender de hover esconde a ação de trackpad, toque e de quem não sabe que existe |
+| 24 | Sem "Cloud"/"Remote Control" | Não existem no prime-agent; só Local e SSH são reais |
 
 ## Segurança
 

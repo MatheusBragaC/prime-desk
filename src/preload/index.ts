@@ -5,7 +5,9 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
  * Credenciais do prime-agent (~/.prime/agent/auth.json) nunca transitam por aqui.
  */
 const api = {
-  startBridge: (args: { cwd?: string; model?: string }) => ipcRenderer.invoke('bridge:start', args),
+  startBridge: (args: { cwd?: string; model?: string; ssh?: string }) =>
+    ipcRenderer.invoke('bridge:start', args),
+  execution: () => ipcRenderer.invoke('bridge:execution'),
   stopBridge: () => ipcRenderer.invoke('bridge:stop'),
   send: (type: string, payload?: Record<string, unknown>) =>
     ipcRenderer.invoke('bridge:send', { type, payload }),

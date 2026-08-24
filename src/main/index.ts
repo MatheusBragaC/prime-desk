@@ -11,6 +11,7 @@ import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
 import { generateTitle } from './titles.js'
+import { resolveSshExtension, isValidSshTarget } from './ssh.js'
 import type { FolderState } from '../shared/protocol.js'
 import type { AgentEvent, RpcResponse } from '../shared/protocol.js'
 
@@ -38,8 +39,8 @@ function pushToRenderer(channel: string, payload: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
 
-function createRpc(cwd: string, model?: string): RpcClient {
-  const client = new RpcClient({ cwd, model })
+function createRpc(cwd: string, model?: string, extraArgs?: string[]): RpcClient {
+  const client = new RpcClient({ cwd, model, extraArgs })
 
   client.on('event', (ev: AgentEvent) => pushToRenderer('agent:event', ev))
   client.on('response', (res: RpcResponse) => pushToRenderer('agent:response', res))
@@ -129,16 +130,42 @@ function createWindow(): void {
 /** Raiz do explorador de arquivos = cwd onde o agente está executando. */
 let workspaceRoot = homedir()
 
-ipcMain.handle('bridge:start', (_e, args: { cwd?: string; model?: string }) => {
+let executionTarget: { kind: 'local' | 'ssh'; target?: string } = { kind: 'local' }
+
+ipcMain.handle('bridge:start', async (_e, args: { cwd?: string; model?: string; ssh?: string }) => {
   // Se a ponte já roda, o diretório dela é a verdade. Aceitar um cwd novo aqui
   // faria o explorador apontar para uma pasta onde o agente NÃO está executando.
-  if (rpc?.running) return { ok: true, alreadyRunning: true, cwd: workspaceRoot }
+  if (rpc?.running) {
+    return { ok: true, alreadyRunning: true, cwd: workspaceRoot, execution: executionTarget }
+  }
 
   const cwd = args?.cwd || homedir()
+  const extraArgs: string[] = []
+
+  if (args?.ssh) {
+    const target = args.ssh.trim()
+    if (!isValidSshTarget(target)) {
+      return { ok: false, error: 'Alvo SSH inválido. Use usuário@host ou usuário@host:/caminho.' }
+    }
+    const ext = await resolveSshExtension()
+    if (!ext) {
+      return {
+        ok: false,
+        error: 'Extensão SSH do prime-agent não encontrada (examples/extensions/ssh.ts).'
+      }
+    }
+    extraArgs.push('-e', ext, '--ssh', target)
+    executionTarget = { kind: 'ssh', target }
+  } else {
+    executionTarget = { kind: 'local' }
+  }
+
   workspaceRoot = cwd
-  rpc = createRpc(cwd, args?.model)
-  return { ok: true, cwd }
+  rpc = createRpc(cwd, args?.model, extraArgs)
+  return { ok: true, cwd, execution: executionTarget }
 })
+
+ipcMain.handle('bridge:execution', () => ({ ok: true, execution: executionTarget }))
 
 ipcMain.handle('bridge:stop', () => {
   rpc?.stop()

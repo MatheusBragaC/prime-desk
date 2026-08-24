@@ -365,3 +365,60 @@ separados para o Tailwind:
 ```js
 primary: 'rgb(var(--p-primary-rgb) / <alpha-value>)'
 ```
+
+## 18. "Travamento" no streaming não era travamento
+
+Relato: as respostas pareciam travar em vez de escorrer.
+
+Medição durante um turno real, com `PerformanceObserver` e amostragem de
+`requestAnimationFrame`:
+
+| Métrica | Valor |
+|---|---|
+| Quadros amostrados | 1801 |
+| p50 / p95 / p99 | 17 / 17 / 17 ms |
+| Pior quadro | 33 ms |
+| Quadros acima de 50 ms | 0 |
+| Longtasks (>50 ms) | 0 |
+
+Ou seja: 60fps estáveis, sem bloqueio de thread. O problema não era desempenho —
+era **o texto chegando do modelo em rajadas** e sendo pintado de uma vez, o que
+lê como solavanco.
+
+**Correção:** `useSmoothText` revela o texto por quadro, com passo proporcional
+ao atraso acumulado (`max(2, backlog/5)`). Medindo o crescimento do texto a cada
+100 ms depois da mudança:
+
+- incremento mediano: 36 caracteres
+- maior incremento: 100 caracteres
+- rajadas acima de 200 caracteres: **0**
+
+Junto disso, o *syntax highlight* passou a rodar só quando o bloco termina —
+destacar a cada quadro é trabalho jogado fora.
+
+## 19. Execução remota existe, mas via extensão
+
+O prime-agent **não** tem modo remoto embutido (nenhuma flag de SSH, nuvem ou
+host no `--help`). O que existe é a extensão de exemplo
+`examples/extensions/ssh.ts`, que troca as operações das ferramentas `bash` e
+`edit` por execução sobre SSH:
+
+```bash
+prime-agent -e <caminho>/examples/extensions/ssh.ts --ssh user@host[:/caminho]
+```
+
+Requer autenticação por chave — pedido de senha travaria o agente.
+
+Por isso o menu do chip de execução oferece **Local** e **SSH**, e nada além:
+"Cloud" e "Remote Control" não têm contrapartida no prime-agent.
+
+## 20. Capturas de tela do Electron podem vir obsoletas
+
+`Page.captureScreenshot` devolveu quadros pretos/desatualizados enquanto a janela
+estava atrás de outra: o compositor não repinta janela ocluída. O DOM, medido por
+`getBoundingClientRect` e `getComputedStyle`, mostrava o elemento correto.
+
+Use `fromSurface: false` para capturar a partir do renderer em vez da superfície
+do compositor. Vale para qualquer diagnóstico visual com a janela em segundo
+plano — sem isso, dá para concluir que um elemento "não existe" quando ele está
+lá.

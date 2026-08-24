@@ -1,24 +1,125 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft, FolderOpen
+  Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft,
+  FolderOpen, Check, Terminal, ChevronRight
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 
 interface Attachment { path: string; data: string; mimeType: string }
 
+/**
+ * Menu de contexto de execução.
+ *
+ * Só existem duas opções reais: local (padrão) e SSH, esta última fornecida pela
+ * extensão `examples/extensions/ssh.ts` do próprio prime-agent, que troca as
+ * operações de `bash` e `edit` por execução remota. Não há modo "Cloud" nem
+ * "Remote Control" no prime-agent — não seriam botões, seriam enfeite.
+ */
+function ExecutionMenu({
+  execution,
+  onLocal,
+  onSsh,
+  onClose
+}: {
+  execution: { kind: 'local' | 'ssh'; target?: string }
+  onLocal: () => void
+  onSsh: (target: string) => void
+  onClose: () => void
+}) {
+  const [sshMode, setSshMode] = useState(false)
+  const [target, setTarget] = useState(execution.target ?? '')
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [onClose])
+
+  const item =
+    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.3px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+
+  return (
+    <div
+      ref={ref}
+      className="absolute bottom-full left-0 z-50 mb-2 w-[268px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+    >
+      <button className={item} onClick={onLocal}>
+        <Monitor size={12} />
+        <span className="flex-1">Local</span>
+        {execution.kind === 'local' && <Check size={12} className="text-primarySoft" />}
+      </button>
+
+      {sshMode ? (
+        <div className="px-2 py-1.5">
+          <input
+            autoFocus
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && target.trim()) onSsh(target.trim())
+              if (e.key === 'Escape') setSshMode(false)
+            }}
+            placeholder="usuário@host ou usuário@host:/caminho"
+            className="w-full rounded border border-primary/45 bg-black/40 px-2 py-1 text-[11.5px] text-fg outline-none placeholder:text-dim"
+          />
+          <div className="mt-1.5 text-[10.5px] leading-snug text-dim">
+            Exige autenticação por chave: um pedido de senha travaria o agente.
+            Roda <span className="font-mono">bash</span> e{' '}
+            <span className="font-mono">edit</span> na máquina remota.
+          </div>
+        </div>
+      ) : (
+        <button className={item} onClick={() => setSshMode(true)}>
+          <Terminal size={12} />
+          <span className="flex-1">
+            SSH
+            {execution.kind === 'ssh' && (
+              <span className="ml-1.5 text-[10.5px] text-dim">{execution.target}</span>
+            )}
+          </span>
+          {execution.kind === 'ssh' ? (
+            <Check size={12} className="text-primarySoft" />
+          ) : (
+            <ChevronRight size={11} className="text-dim" />
+          )}
+        </button>
+      )}
+
+      <div className="mt-1 border-t border-white/[0.07] px-2 pb-1 pt-1.5 text-[10.5px] leading-snug text-dim">
+        O prime-agent executa localmente ou por SSH. Não há modo em nuvem.
+      </div>
+    </div>
+  )
+}
+
 /** Barra de contexto: onde o agente está executando. */
 function ContextChips({
   home,
   onPickCwd,
-  onToggleFiles
+  onToggleFiles,
+  onSetExecution
 }: {
   home: string
   onPickCwd: () => void
   onToggleFiles: () => void
+  onSetExecution: (ssh: string | null) => void
 }) {
   const cwd = useAgent((s) => s.cwd)
   const [branch, setBranch] = useState<string | null>(null)
+  const [menu, setMenu] = useState(false)
+  const [execution, setExecution] = useState<{ kind: 'local' | 'ssh'; target?: string }>({
+    kind: 'local'
+  })
+
+  useEffect(() => {
+    void window.prime.execution().then((r) => {
+      if (r?.ok) setExecution(r.execution as { kind: 'local' | 'ssh'; target?: string })
+    })
+  }, [cwd])
 
   useEffect(() => {
     let alive = true
@@ -41,10 +142,30 @@ function ContextChips({
 
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1.5">
-      <span className={chip + ' text-dim'} title="Execução local, no seu computador">
-        <Monitor size={11} />
-        Local
-      </span>
+      <div className="relative">
+        <button
+          onClick={() => setMenu((v) => !v)}
+          className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
+          title="Onde o agente executa"
+        >
+          {execution.kind === 'ssh' ? <Terminal size={11} /> : <Monitor size={11} />}
+          {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : 'Local'}
+        </button>
+        {menu && (
+          <ExecutionMenu
+            execution={execution}
+            onLocal={() => {
+              setMenu(false)
+              onSetExecution(null)
+            }}
+            onSsh={(t) => {
+              setMenu(false)
+              onSetExecution(t)
+            }}
+            onClose={() => setMenu(false)}
+          />
+        )}
+      </div>
 
       <button
         onClick={onPickCwd}
@@ -86,6 +207,7 @@ export function Composer({
   onOpenPalette,
   onPickCwd,
   onToggleFiles,
+  onSetExecution,
   home,
   draft,
   onDraftConsumed
@@ -93,6 +215,7 @@ export function Composer({
   onOpenPalette: () => void
   onPickCwd: () => void
   onToggleFiles: () => void
+  onSetExecution: (ssh: string | null) => void
   home: string
   draft?: string
   onDraftConsumed?: () => void
@@ -147,7 +270,12 @@ export function Composer({
     <div className="relative shrink-0 px-6 pb-4 pt-1">
       <div className="pointer-events-none absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[var(--p-bg)] to-transparent" />
 
-      <ContextChips home={home} onPickCwd={onPickCwd} onToggleFiles={onToggleFiles} />
+      <ContextChips
+        home={home}
+        onPickCwd={onPickCwd}
+        onToggleFiles={onToggleFiles}
+        onSetExecution={onSetExecution}
+      />
 
       {queued > 0 && (
         <div className="mb-2 flex items-center gap-2 text-[11.5px] text-warn">

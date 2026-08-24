@@ -6,6 +6,19 @@ import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
 import { Butterfly } from './Butterfly'
 import { fmtTokens } from '../lib/format'
+import { useSmoothText } from '../lib/useSmoothText'
+
+/** Bloco de texto do assistente, com revelação suave enquanto transmite. */
+function StreamingText({ text, live }: { text: string; live: boolean }) {
+  const shown = useSmoothText(text, live)
+  const catchingUp = live && shown.length < text.length
+  return (
+    <div className="mb-1">
+      <Markdown text={shown} highlight={!live} />
+      {(live || catchingUp) && <Caret />}
+    </div>
+  )
+}
 
 function Caret() {
   return (
@@ -74,12 +87,7 @@ export const Message = memo(function Message({
             }
             if (block.type === 'text') {
               const live = msg.streaming && i === lastIdx
-              return (
-                <div key={i} className="mb-1">
-                  <Markdown text={block.text} />
-                  {live && <Caret />}
-                </div>
-              )
+              return <StreamingText key={i} text={block.text} live={live} />
             }
             if (block.type === 'toolCall') {
               return <ToolCard key={block.id || i} exec={tools[block.id]} pendingName={block.name} />
