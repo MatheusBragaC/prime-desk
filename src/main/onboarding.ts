@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { createServer } from 'node:net'
 import { readFile, writeFile } from 'node:fs/promises'
+import { watch, type FSWatcher } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 
@@ -231,4 +232,82 @@ export function checkLoginPort(): Promise<{ free: boolean; port: number }> {
     })
     server.listen(OAUTH_CALLBACK_PORT, '127.0.0.1')
   })
+}
+
+
+// ------------------------------------------------------- observação do ambiente
+
+/**
+ * Leitura leve: só credenciais, sem tocar em `which` nem `--version`.
+ * É o que roda em laço, então precisa ser barato.
+ */
+async function readAuthOnly(): Promise<EnvStatus['auth']> {
+  let providers: string[] = []
+  try {
+    const raw = await readFile(join(homedir(), '.prime', 'agent', 'auth.json'), 'utf-8')
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    providers = Object.keys(parsed).filter((k) => parsed[k] && typeof parsed[k] === 'object')
+  } catch {
+    providers = []
+  }
+  const envKeys = ENV_KEYS.filter((k) => (process.env[k] ?? '').trim().length > 0)
+  return { ok: providers.length > 0 || envKeys.length > 0, providers, envKeys }
+}
+
+let watcher: FSWatcher | null = null
+let poll: NodeJS.Timeout | null = null
+let debounce: NodeJS.Timeout | null = null
+let lastSignature = ''
+
+/**
+ * Avisa quando o ambiente muda — em especial, quando o `/login` termina.
+ *
+ * Combina duas fontes porque nenhuma sozinha é confiável: `fs.watch` no
+ * diretório (o arquivo é regravado, não editado no lugar, então observar o
+ * arquivo direto perde o evento) e um laço lento como rede de segurança, já que
+ * `fs.watch` não é garantido em todo sistema de arquivos.
+ *
+ * Só emite quando o estado realmente muda, para não inundar o renderer.
+ */
+export function startEnvWatch(onChange: (status: EnvStatus) => void): void {
+  stopEnvWatch()
+
+  const emit = async (): Promise<void> => {
+    const auth = await readAuthOnly()
+    const signature = `${auth.ok}|${auth.providers.join(',')}|${auth.envKeys.join(',')}`
+    if (signature === lastSignature) return
+    lastSignature = signature
+
+    // Estado completo (inclui versão do binário) só quando algo mudou de fato.
+    onChange(await checkEnvironment())
+  }
+
+  const schedule = (): void => {
+    if (debounce) clearTimeout(debounce)
+    debounce = setTimeout(() => void emit(), 400)
+  }
+
+  try {
+    watcher = watch(join(homedir(), '.prime', 'agent'), { persistent: false }, (_event, file) => {
+      if (!file || String(file).startsWith('auth.json')) schedule()
+    })
+    watcher.on('error', () => {
+      /* o laço abaixo cobre */
+    })
+  } catch {
+    watcher = null
+  }
+
+  poll = setInterval(() => void emit(), 3000)
+  void emit()
+}
+
+export function stopEnvWatch(): void {
+  watcher?.close()
+  watcher = null
+  if (poll) clearInterval(poll)
+  poll = null
+  if (debounce) clearTimeout(debounce)
+  debounce = null
+  lastSignature = ''
 }

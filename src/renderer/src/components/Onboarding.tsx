@@ -53,6 +53,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   const [opening, setOpening] = useState(false)
   const [termOpened, setTermOpened] = useState(false)
   const [portBusy, setPortBusy] = useState<number | null>(null)
+  const [auto, setAuto] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -77,10 +78,29 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
     const off = window.prime.on('onboarding:output', (chunk) => {
       setOutput((o) => (o + String(chunk)).slice(-6000))
     })
+
+    /*
+      O login acontece fora do app, num terminal. Em vez de exigir um clique em
+      "já autentiquei", o main observa o diretório do agente e avisa quando as
+      credenciais aparecem — aí a tela avança sozinha.
+    */
+    const offEnv = window.prime.on('onboarding:env', (payload) => {
+      const s = payload as EnvStatus
+      setStatus(s)
+      if (!s.agent.installed) setStage('install')
+      else if (!s.auth.ok) setStage('auth')
+      else {
+        setAuto(true)
+        setStage('ready')
+      }
+    })
+    void window.prime.watchEnvironment()
     // Pequena espera antes da primeira checagem: a tela não deve piscar.
     const t = setTimeout(() => void check(), 450)
     return () => {
       off()
+      offEnv()
+      void window.prime.unwatchEnvironment()
       clearTimeout(t)
     }
   }, [check])
@@ -327,6 +347,10 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                     <span>{t('onb.step3', { label: t('onb.recheck') })}</span>
                   </li>
                 </ol>
+                <div className="mt-2 flex items-center gap-1.5 border-t border-white/[0.07] pt-2 text-[11px] text-dim">
+                  <Loader2 size={11} className="animate-spin" />
+                  {t('onb.waiting')}
+                </div>
               </div>
             )}
 
@@ -377,7 +401,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         {stage === 'ready' && (
           <div className="animate-fade-up mt-4 flex items-center justify-center gap-2 text-[13px] text-ok">
             <CheckCircle2 size={15} />
-            {t('onb.allSet')}
+            {auto ? `${t('onb.detected')} · ${t('onb.allSet')}` : t('onb.allSet')}
           </div>
         )}
       </div>

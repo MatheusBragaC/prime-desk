@@ -550,3 +550,23 @@ sidebar, que eram os únicos lugares com essa propriedade — resultado: janela
 imóvel durante toda a primeira execução.
 
 Corrigido com uma faixa de arraste no topo da própria tela de onboarding.
+
+## 27. Detecção automática do fim do login
+
+O `/login` acontece fora do app, num terminal. Exigir um clique em "já
+autentiquei" é atrito desnecessário: o app consegue perceber sozinho.
+
+`startEnvWatch` combina duas fontes, porque nenhuma é confiável isolada:
+
+- **`fs.watch` no diretório** `~/.prime/agent`, e não no arquivo. O `auth.json` é
+  **regravado**, não editado no lugar, então um watcher preso ao arquivo perde o
+  evento quando o inode é substituído.
+- **Laço de 3 s** como rede de segurança, já que `fs.watch` não é garantido em
+  todo sistema de arquivos nem em todo sistema operacional.
+
+O laço lê **apenas** o `auth.json` e as variáveis de ambiente — nada de `which`
+nem `--version`, que são caros. A verificação completa só roda quando a
+assinatura do estado muda de fato, e o evento só é emitido nessa transição.
+
+Medido num `HOME` isolado: da gravação do arquivo até a tela avançar,
+**1,0 s**.

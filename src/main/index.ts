@@ -11,7 +11,8 @@ import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
-  checkEnvironment, installAgent, openAgentTerminal, logoutProvider, checkLoginPort, INSTALL_COMMAND
+  checkEnvironment, installAgent, openAgentTerminal, logoutProvider, checkLoginPort,
+  startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
 import {
@@ -300,6 +301,16 @@ ipcMain.handle('auth:logout', async (_e, provider: string) => logoutProvider(pro
 
 ipcMain.handle('auth:loginPort', async () => checkLoginPort())
 
+ipcMain.handle('onboarding:watch', () => {
+  startEnvWatch((status) => pushToRenderer('onboarding:env', status))
+  return { ok: true }
+})
+
+ipcMain.handle('onboarding:unwatch', () => {
+  stopEnvWatch()
+  return { ok: true }
+})
+
 ipcMain.handle('title:generate', async (_e, conversation: string) => {
   try {
     return { ok: true, title: await generateTitle(conversation, workspaceRoot) }
@@ -407,4 +418,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => rpc?.stop())
+app.on('before-quit', () => {
+  stopEnvWatch()
+  rpc?.stop()
+})
