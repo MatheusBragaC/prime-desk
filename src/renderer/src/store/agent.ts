@@ -49,6 +49,8 @@ interface AgentStore {
   tools: Record<string, ToolExec>
   totals: Totals
   cwd: string
+  platform: string
+  loadingSession: boolean
   compacting: boolean
   retry: { attempt: number; max: number; message: string } | null
   tree: AgentTreeSnapshot | null
@@ -60,6 +62,8 @@ interface AgentStore {
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
+  setPlatform: (p: string) => void
+  setLoadingSession: (v: boolean) => void
   ingest: (ev: AgentEvent) => void
   loadHistory: (messages: AgentMessage[]) => void
   applyStderr: (chunk: string) => void
@@ -93,6 +97,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
   tools: {},
   totals: { tokens: 0, cost: 0 },
   cwd: '',
+  platform: '',
+  loadingSession: false,
   compacting: false,
   retry: null,
   tree: null,
@@ -104,6 +110,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
+  setPlatform: (platform) => set({ platform }),
+  setLoadingSession: (loadingSession) => set({ loadingSession }),
   setFatal: (m) => set({ fatal: m, status: m ? 'error' : get().status }),
   setState: (s) => set({ state: s }),
   setModels: (models) => set({ models }),
@@ -302,6 +310,18 @@ export async function newSession(): Promise<void> {
  */
 export async function openSession(sessionPath: string): Promise<void> {
   const store = useAgent.getState()
+  store.setLoadingSession(true)
+  try {
+    await switchAndLoad(sessionPath, store)
+  } finally {
+    useAgent.getState().setLoadingSession(false)
+  }
+}
+
+async function switchAndLoad(
+  sessionPath: string,
+  store: ReturnType<typeof useAgent.getState>
+): Promise<void> {
   const out = await rpcCall<{ cancelled?: boolean }>('switch_session', { sessionPath })
 
   if (!out.ok) {
@@ -341,8 +361,24 @@ export async function openSession(sessionPath: string): Promise<void> {
   }
 
   store.reset()
-  const data = await rpc<{ messages: AgentMessage[] }>('get_messages')
-  if (data?.messages) store.loadHistory(data.messages)
+
+  /*
+    Histórico vem do arquivo, não de `get_messages`: medido numa sessão de 13 MB,
+    o RPC levava 6 s e trafegava 12,5 MB para devolver a conversa inteira. Aqui
+    lemos só a cauda, que é o que a tela mostra. O RPC continua como reserva.
+  */
+  const tail = await bridge().transcript(sessionPath, 400)
+  if (tail?.ok) {
+    const entries = tail.entries as { type?: string; message?: AgentMessage }[]
+    const messages = entries
+      .filter((e) => e.type === 'message' && e.message)
+      .map((e) => e.message as AgentMessage)
+    store.loadHistory(messages)
+  } else {
+    const data = await rpc<{ messages: AgentMessage[] }>('get_messages')
+    if (data?.messages) store.loadHistory(data.messages)
+  }
+
   await refreshState()
   void refreshSessions()
 }

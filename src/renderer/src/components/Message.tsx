@@ -30,10 +30,13 @@ function Caret() {
 
 export const Message = memo(function Message({
   msg,
-  tools
+  tools,
+  continuation = false
 }: {
   msg: UiMessage
   tools: Record<string, ToolExec>
+  /** Segue outra mensagem do mesmo autor: dispensa avatar e respiro grande. */
+  continuation?: boolean
 }) {
   if (msg.role === 'user') {
     const text = msg.content
@@ -45,7 +48,7 @@ export const Message = memo(function Message({
     )
 
     return (
-      <div className="animate-fade-up flex justify-end px-6 py-3">
+      <div className={'animate-fade-up flex justify-end px-6 ' + (continuation ? 'pb-1.5 pt-0.5' : 'py-2.5')}>
         <div className="max-w-[76%] rounded-[var(--p-radius)] rounded-br-[5px] border border-white/[0.07] bg-[var(--p-user-bg)] px-4 py-2.5">
           {images.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
@@ -67,13 +70,33 @@ export const Message = memo(function Message({
 
   const lastIdx = msg.content.length - 1
 
+  /*
+    Blocos vazios existem no começo do turno: o `thinking` chega antes de ter
+    texto e o `ThinkingBlock` não desenha nada. Sem esta saída, a mensagem
+    renderizava só o avatar e ele ficava empilhado com o da bolha de atividade —
+    dois avatares seguidos, um deles sem conteúdo nenhum ao lado.
+  */
+  const hasVisibleContent = msg.content.some(
+    (b) =>
+      (b.type === 'text' && b.text.trim().length > 0) ||
+      (b.type === 'thinking' && b.thinking.trim().length > 0) ||
+      b.type === 'toolCall'
+  )
+  if (!hasVisibleContent) return null
+
   return (
-    <div className="animate-fade-up group px-6 py-3">
+    <div className={'animate-fade-up group px-6 ' + (continuation ? 'py-0.5' : 'pb-1.5 pt-2.5')}>
       <div className="flex gap-3.5">
-        <div className="mt-0.5 shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-surface">
-            <Butterfly size={17} className={msg.streaming ? 'animate-pulse-soft' : ''} />
-          </div>
+        {/*
+          Sequência do mesmo autor mantém o recuo, mas sem repetir o avatar: o
+          bloco continua alinhado e a conversa deixa de parecer picotada.
+        */}
+        <div className="mt-0.5 w-7 shrink-0">
+          {!continuation && (
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-surface">
+              <Butterfly size={17} className={msg.streaming ? 'animate-pulse-soft' : ''} />
+            </div>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -92,7 +115,14 @@ export const Message = memo(function Message({
               return <StreamingText key={i} text={block.text} live={live} />
             }
             if (block.type === 'toolCall') {
-              return <ToolCard key={block.id || i} exec={tools[block.id]} pendingName={block.name} />
+              return (
+                <ToolCard
+                  key={block.id || i}
+                  exec={tools[block.id]}
+                  pendingName={block.name}
+                  live={msg.streaming}
+                />
+              )
             }
             return null
           })}

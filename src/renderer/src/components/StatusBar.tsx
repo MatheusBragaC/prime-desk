@@ -1,10 +1,12 @@
-import { Activity, Coins, Layers, Target, AlertTriangle, Minimize2 } from 'lucide-react'
+import { Activity, Coins, Layers, Target, AlertTriangle, Minimize2, PanelLeft } from 'lucide-react'
 import { useAgent, compactNow } from '../store/agent'
+import { useIsMac, WIN_CONTROLS_WIDTH } from '../lib/platform'
 import { fmtCost, fmtTokens } from '../lib/format'
 import { useT } from '../i18n'
 
-export function StatusBar() {
+export function StatusBar({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
   const { t } = useT()
+  const isMac = useIsMac()
   const state = useAgent((s) => s.state)
   const totals = useAgent((s) => s.totals)
   const status = useAgent((s) => s.status)
@@ -20,8 +22,25 @@ export function StatusBar() {
     : 'bg-warn animate-pulse-soft'
 
   return (
-    // pr-[150px]: reserva espaço para os controles nativos da janela (titleBarOverlay)
-    <div className="drag-region flex h-[var(--p-titlebar)] shrink-0 items-center gap-4 border-b border-white/[0.06] pl-5 pr-[150px]">
+    /*
+      Reserva à direita só onde os botões de janela são desenhados no conteúdo
+      (Windows/Linux). No macOS eles estão à esquerda, na sidebar, e esse vão
+      seria espaço morto.
+    */
+    <div
+      className="drag-region flex h-[var(--p-titlebar)] shrink-0 items-center gap-4 border-b border-white/[0.06] pl-5"
+      style={{ paddingRight: isMac ? 16 : WIN_CONTROLS_WIDTH }}
+    >
+      {onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          className="no-drag -ml-1 rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+          title={t('sidebar.toggle')}
+        >
+          <PanelLeft size={15} />
+        </button>
+      )}
+
       <div className="no-drag flex items-center gap-2">
         <span className={`h-[7px] w-[7px] rounded-full ${dot}`} />
         <span className="text-[12px] text-muted">

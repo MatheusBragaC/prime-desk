@@ -4,7 +4,7 @@ import {
 import { basename, join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, stat, open } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
@@ -177,8 +177,14 @@ function createWindow(): void {
     backgroundColor: '#050506',
     ...(icon ? { icon } : {}),
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 },
-    trafficLightPosition: { x: 14, y: 14 },
+    /*
+      `titleBarOverlay` desenha os botões de janela dentro do conteúdo e existe
+      só em Windows e Linux. No macOS os controles são os semáforos nativos, à
+      esquerda — passar o overlay lá não faz nada e confunde a leitura do código.
+    */
+    ...(process.platform === 'darwin'
+      ? { trafficLightPosition: { x: 14, y: 16 } }
+      : { titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 } }),
     webPreferences: {
       // Preload em CommonJS (.cjs): renderer sandboxed não carrega preload ESM.
       preload: join(__dirname, '../preload/index.cjs'),
@@ -398,7 +404,7 @@ handle('folders:save', async (_e, state: FolderState) => ({
   state: await saveFolders(state)
 }))
 
-handle('sessions:transcript', async (_e, path: string) => {
+handle('sessions:transcript', async (_e, path: string, limit = 400) => {
   /**
    * Leitura restrita ao diretório do agente: evita virar um leitor de arquivos
    * genérico.
@@ -415,9 +421,42 @@ handle('sessions:transcript', async (_e, path: string) => {
     return { ok: false, error: 'Caminho fora do diretório do agente.' }
   }
   try {
-    const raw = await readFile(target, 'utf-8')
+    /*
+      Lê só o fim do arquivo, não ele inteiro.
+
+      `get_messages` devolve a conversa completa pelo RPC: numa sessão de 13 MB
+      isso levou 6 s e trafegou 12,5 MB, o grosso do tempo de troca de conversa.
+      O arquivo tem a mesma informação — e como só a cauda é exibida, nem ele
+      precisa entrar em memória por completo.
+    */
+    const TAIL_BYTES = 4 * 1024 * 1024
+    const info = await stat(target)
+    const start = Math.max(0, info.size - TAIL_BYTES)
+
+    const fh = await open(target, 'r')
+    let raw: string
+    try {
+      const length = info.size - start
+      const buf = Buffer.alloc(length)
+      await fh.read(buf, 0, length, start)
+      raw = buf.toString('utf-8')
+    } finally {
+      await fh.close()
+    }
+
+    // Começando no meio do arquivo, a primeira linha vem cortada.
+    if (start > 0) raw = raw.slice(raw.indexOf('\n') + 1)
+
     const lines = raw.split('\n').filter((l) => l.trim().length > 0)
-    return { ok: true, entries: lines.slice(-400).map((l) => JSON.parse(l)) }
+    const entries: unknown[] = []
+    for (const line of lines.slice(-limit)) {
+      try {
+        entries.push(JSON.parse(line))
+      } catch {
+        // Linha corrompida não deve impedir a leitura do restante.
+      }
+    }
+    return { ok: true, entries }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }

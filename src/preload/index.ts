@@ -36,7 +36,8 @@ const api = {
   unwatchEnvironment: () => ipcRenderer.invoke('onboarding:unwatch'),
   generateTitle: (conversation: string) => ipcRenderer.invoke('title:generate', conversation),
   setZoom: (level: number) => ipcRenderer.invoke('view:zoom', level),
-  transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),
+  transcript: (path: string, limit?: number) =>
+    ipcRenderer.invoke('sessions:transcript', path, limit),
 
   agentTree: () => ipcRenderer.invoke('agents:tree'),
   refreshAgentTree: () => ipcRenderer.invoke('agents:refresh'),
