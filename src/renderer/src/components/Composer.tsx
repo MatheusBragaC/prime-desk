@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft,
   FolderOpen, Check, Terminal, Trash2
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
+import { SlashMenu } from './SlashMenu'
+import { useT } from '../i18n'
 
 export interface SshConnection {
   id: string
@@ -42,6 +44,7 @@ function ExecutionMenu({
   onAdd: () => void
   onClose: () => void
 }) {
+  const { t } = useT()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,14 +65,14 @@ function ExecutionMenu({
     >
       <button className={item} onClick={onLocal}>
         <Monitor size={12} />
-        <span className="flex-1">Local</span>
+        <span className="flex-1">{t('exec.local')}</span>
         {execution.kind === 'local' && <Check size={12} className="text-primarySoft" />}
       </button>
 
       {connections.length > 0 && (
         <>
           <div className="mt-1 px-2 py-1 text-[10px] uppercase tracking-wider text-dim">
-            Conexões SSH
+            {t('exec.connections')}
           </div>
           {connections.map((c) => {
             const active = execution.kind === 'ssh' && execution.target === c.host
@@ -88,7 +91,7 @@ function ExecutionMenu({
                 </button>
                 <button
                   onClick={() => onRemove(c.id)}
-                  title="Remover conexão"
+                  title={t('exec.removeConn')}
                   className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/conn:opacity-100"
                 >
                   <Trash2 size={11} />
@@ -102,12 +105,12 @@ function ExecutionMenu({
       <div className="mt-1 border-t border-white/[0.07] pt-1">
         <button className={item} onClick={onAdd}>
           <Plus size={12} />
-          Adicionar conexão SSH
+          {t('exec.addSsh')}
         </button>
       </div>
 
       <div className="px-2 pb-1 pt-1 text-[10.5px] leading-snug text-dim">
-        O prime-agent executa localmente ou por SSH. Não há modo em nuvem.
+        {t('exec.note')}
       </div>
     </div>
   )
@@ -131,6 +134,7 @@ function ContextChips({
   onOpenSshModal: () => void
   onRemoveConnection: (id: string) => void
 }) {
+  const { t } = useT()
   const cwd = useAgent((s) => s.cwd)
   const [branch, setBranch] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
@@ -169,10 +173,10 @@ function ContextChips({
         <button
           onClick={() => setMenu((v) => !v)}
           className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
-          title="Onde o agente executa"
+          title={t('chips.execTitle')}
         >
           {execution.kind === 'ssh' ? <Terminal size={11} /> : <Monitor size={11} />}
-          {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : 'Local'}
+          {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : t('exec.local')}
         </button>
         {menu && (
           <ExecutionMenu
@@ -206,7 +210,7 @@ function ContextChips({
       </button>
 
       {branch && (
-        <span className={chip + ' text-muted'} title="Branch atual">
+        <span className={chip + ' text-muted'} title={t('chips.branch')}>
           <GitBranch size={11} className="text-dim" />
           <span className="max-w-[180px] truncate">{branch}</span>
         </span>
@@ -215,16 +219,16 @@ function ContextChips({
       <button
         onClick={onToggleFiles}
         className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
-        title="Explorador de arquivos (Ctrl+Shift+F)"
+        title={t('chips.filesTitle')}
       >
         <FolderTree size={11} />
-        Arquivos
+        {t('chips.files')}
       </button>
 
       <button
         onClick={onPickCwd}
         className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-[var(--p-surface)] px-2 py-1 text-dim transition-colors hover:border-primary/40 hover:text-fg"
-        title="Escolher outro diretório de trabalho"
+        title={t('chips.pickDir')}
       >
         <FolderOpen size={12} />
       </button>
@@ -255,9 +259,13 @@ export function Composer({
   draft?: string
   onDraftConsumed?: () => void
 }) {
+  const { t } = useT()
   const [value, setValue] = useState('')
   const [atts, setAtts] = useState<Attachment[]>([])
+  const [slash, setSlash] = useState<{ query: string; start: number } | null>(null)
+  const [slashCursor, setSlashCursor] = useState(0)
   const ta = useRef<HTMLTextAreaElement>(null)
+  const commands = useAgent((s) => s.commands)
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const queued = useAgent((s) => s.state?.sessionActions?.queuedCount ?? 0)
   const ready = useAgent((s) => s.status === 'ready')
@@ -281,6 +289,62 @@ export function Composer({
     onDraftConsumed?.()
   }, [draft, onDraftConsumed])
 
+  /**
+   * Detecta o token `/algo` imediatamente antes do cursor.
+   * Só dispara no começo da linha ou após espaço, para não atrapalhar caminhos
+   * de arquivo e URLs que contêm barra.
+   */
+  function detectSlash(el: HTMLTextAreaElement): { query: string; start: number } | null {
+    const pos = el.selectionStart ?? 0
+    const before = el.value.slice(0, pos)
+    const m = before.match(/(?:^|\s)\/([A-Za-z0-9:_.-]*)$/)
+    if (!m) return null
+    return { query: m[1], start: pos - m[1].length - 1 }
+  }
+
+  function syncSlash() {
+    const el = ta.current
+    if (!el) return
+    const next = detectSlash(el)
+    setSlash((prev) => {
+      // Reposicionar a seleção só faz sentido quando o texto buscado muda.
+      // Resetar a cada tecla anulava a navegação com as setas.
+      if (prev?.query !== next?.query) setSlashCursor(0)
+      if (prev?.query === next?.query && prev?.start === next?.start) return prev
+      return next
+    })
+  }
+
+  const slashItems = useMemo(() => {
+    if (!slash) return []
+    const q = slash.query.toLowerCase()
+    const scored = commands
+      .filter((c) => !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q))
+      .sort((a, b) => {
+        // Quem começa com o que foi digitado vem primeiro.
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1
+        if (aStarts !== bStarts) return aStarts - bStarts
+        return a.name.localeCompare(b.name)
+      })
+    return scored.slice(0, 40)
+  }, [commands, slash])
+
+  function applyCommand(item: { name: string }) {
+    const el = ta.current
+    if (!el || !slash) return
+    const caret = el.selectionStart ?? value.length
+    const next = value.slice(0, slash.start) + '/' + item.name + ' ' + value.slice(caret)
+    setValue(next)
+    setSlash(null)
+    // Cursor logo após o comando inserido.
+    const at = slash.start + item.name.length + 2
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(at, at)
+    })
+  }
+
   async function submit() {
     const text = value.trim()
     if (!text || !ready) return
@@ -290,6 +354,30 @@ export function Composer({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Com o menu de comandos aberto, as setas e o Enter pertencem a ele.
+    if (slash && slashItems.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSlashCursor((i) => (i + 1) % slashItems.length)
+        return
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSlashCursor((i) => (i - 1 + slashItems.length) % slashItems.length)
+        return
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        applyCommand(slashItems[slashCursor])
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setSlash(null)
+        return
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
       e.preventDefault()
       void submit()
@@ -318,7 +406,7 @@ export function Composer({
       {queued > 0 && (
         <div className="mb-2 flex items-center gap-2 text-[11.5px] text-warn">
           <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-warn" />
-          {queued} mensagem(ns) na fila
+          {t('composer.queued', { n: queued })}
         </div>
       )}
 
@@ -344,19 +432,37 @@ export function Composer({
 
       {/* Caixa de entrada: o envio fica dentro dela, à direita. */}
       <div className="relative rounded-[12px] border border-white/[0.09] bg-[var(--p-surface)] transition-colors focus-within:border-primary/40">
+        {slash && (
+          <SlashMenu
+            items={slashItems}
+            cursor={slashCursor}
+            onPick={applyCommand}
+            onHover={setSlashCursor}
+          />
+        )}
         <textarea
           ref={ta}
           rows={1}
           value={value}
           disabled={!ready}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value)
+            syncSlash()
+          }}
+          onKeyUp={(e) => {
+            // Teclas de navegação pertencem ao menu; não recalculam o token.
+            if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) return
+            syncSlash()
+          }}
+          onClick={syncSlash}
+          onBlur={() => setSlash(null)}
           onKeyDown={onKeyDown}
           placeholder={
             ready
               ? streaming
-                ? 'Interromper com uma nova instrução (steer)…'
-                : 'Descreva uma tarefa ou faça uma pergunta'
-              : 'Conectando ao agente…'
+                ? t('composer.steerPlaceholder')
+                : t('composer.placeholder')
+              : t('composer.connecting')
           }
           className="max-h-[260px] w-full resize-none bg-transparent py-3 pl-3.5 pr-11 text-[14px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50"
         />
@@ -365,7 +471,7 @@ export function Composer({
           <button
             onClick={() => void abortTurn()}
             className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg border border-err/30 bg-err/15 text-err transition-colors hover:bg-err/25"
-            title="Interromper (Esc)"
+            title={t('composer.stop')}
           >
             <Square size={11} fill="currentColor" />
           </button>
@@ -374,7 +480,7 @@ export function Composer({
             onClick={() => void submit()}
             disabled={!value.trim() || !ready}
             className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg text-dim transition-colors hover:bg-white/[0.07] hover:text-fg disabled:pointer-events-none disabled:opacity-35"
-            title="Enviar (Enter)"
+            title={t('composer.send')}
           >
             <CornerDownLeft size={14} />
           </button>
@@ -387,14 +493,14 @@ export function Composer({
           onClick={() => void attach()}
           disabled={!ready}
           className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted disabled:opacity-40"
-          title="Anexar imagem"
+          title={t('composer.attach')}
         >
           <Plus size={15} />
         </button>
         <button
           onClick={onOpenPalette}
           className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
-          title="Comandos e skills (Ctrl+K)"
+          title={t('composer.commands')}
         >
           <Command size={14} />
         </button>
@@ -408,7 +514,7 @@ export function Composer({
             'ml-1.5 h-2 w-2 rounded-full transition-colors ' +
             (streaming ? 'animate-pulse-soft bg-primary' : ready ? 'bg-ok/70' : 'bg-warn')
           }
-          title={streaming ? 'Executando' : ready ? 'Pronto' : 'Conectando'}
+          title={streaming ? t('app.running') : ready ? t('app.ready') : t('app.starting')}
         />
       </div>
     </div>

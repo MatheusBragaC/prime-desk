@@ -11,6 +11,8 @@ import { Notice } from './components/Notice'
 import type { SshConnection } from './components/Composer'
 import { SshModal, type SshForm } from './components/SshModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { Onboarding } from './components/Onboarding'
+import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { FileViewer } from './components/FileViewer'
 import {
@@ -20,6 +22,8 @@ import {
 import type { AgentEvent, AgentTreeSnapshot } from '../../shared/protocol'
 
 export function App() {
+  const { t } = useT()
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null)
   const [palette, setPalette] = useState(false)
   // Dock único à direita: dois painéis simultâneos espremiam a conversa a ponto
   // de o composer ficar inutilizável em janela normal.
@@ -100,8 +104,7 @@ export function App() {
         store.setStatus('stopped')
       } else {
         store.setFatal(
-          `O agente encerrou inesperadamente (código ${info?.code ?? '?'}).\n` +
-            (info?.stderr ?? '').slice(-600)
+          t('bridge.exited', { code: info?.code ?? '?' }) + '\n' + (info?.stderr ?? '').slice(-600)
         )
       }
     })
@@ -111,9 +114,15 @@ export function App() {
       const info = await window.prime.appInfo()
       setHome(info.home)
 
+      // Ambiente incompleto: onboarding assume a tela antes de tentar a ponte.
+      const env = await window.prime.checkEnvironment()
+      const ready = env?.ok && env.status.agent.installed && env.status.auth.ok
+      setNeedsSetup(!ready)
+      if (!ready) return
+
       const r = await window.prime.startBridge({ cwd: info.home })
       if (!r?.ok) {
-        store.setFatal('Não foi possível iniciar o prime-agent.')
+        store.setFatal(t('bridge.cantStart'))
         return
       }
       // O cwd efetivo vem do main, não do que pedimos: se a ponte já estava de
@@ -127,7 +136,7 @@ export function App() {
         if (useAgent.getState().state) break
       }
       if (!useAgent.getState().state) {
-        store.setFatal('O agente iniciou mas não respondeu a get_state.')
+        store.setFatal(t('bridge.noState'))
         return
       }
 
@@ -248,7 +257,7 @@ export function App() {
       if (useAgent.getState().state) break
     }
     store.setStatus('ready')
-    store.notify('info', conn ? `Executando em ${conn.name}` : 'Executando localmente')
+    store.notify('info', conn ? t('exec.runningOn', { name: conn.name }) : t('exec.runningLocal'))
   }
 
   async function pickCwd() {
@@ -269,9 +278,22 @@ export function App() {
     void refreshSessions()
   }
 
+  if (needsSetup) {
+    return (
+      <Onboarding
+        onReady={() => {
+          setNeedsSetup(false)
+          // Recarrega para refazer o boot completo com o ambiente já pronto.
+          window.location.reload()
+        }}
+      />
+    )
+  }
+
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
       <Sidebar
+        onSignedOut={() => setNeedsSetup(true)}
         home={home}
         onPickCwd={() => void pickCwd()}
         onToggleTree={() => setDock((d) => (d === 'agents' ? null : 'agents'))}
@@ -286,14 +308,11 @@ export function App() {
         {fatal ? (
           <div className="flex flex-1 items-center justify-center p-10">
             <div className="max-w-[560px] rounded-xl border border-err/30 bg-err/[0.07] p-5">
-              <div className="text-[14px] font-semibold text-err">Falha na ponte com o agente</div>
+              <div className="text-[14px] font-semibold text-err">{t('bridge.fatalTitle')}</div>
               <pre className="mt-2.5 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[12px] text-muted">
                 {fatal}
               </pre>
-              <div className="mt-3 text-[12.5px] text-dim">
-                Verifique se <span className="font-mono">prime-agent</span> está no PATH e
-                autenticado (<span className="font-mono">prime-agent</span> no terminal).
-              </div>
+              <div className="mt-3 text-[12.5px] text-dim">{t('bridge.fatalHint')}</div>
             </div>
           </div>
         ) : (

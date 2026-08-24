@@ -8,9 +8,11 @@ import { Butterfly } from './Butterfly'
 import { shortPath } from '../lib/format'
 import { groupSessions, withTitles, type Group } from '../lib/grouping'
 import { SessionMenu } from './SessionMenu'
+import { AccountBadge } from './AccountBadge'
 import { useResizable } from '../lib/useResizable'
 import { ResizeHandle } from './ResizeHandle'
 import type { SessionSummary } from '../../../shared/protocol'
+import { useT } from '../i18n'
 
 function SessionRow({
   s,
@@ -25,6 +27,7 @@ function SessionRow({
   onOpen: () => void
   groups: Group[]
 }) {
+  const { t } = useT()
   const [menu, setMenu] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const folders = useAgent((st) => st.folders)
@@ -95,7 +98,7 @@ function SessionRow({
           'absolute right-1 top-1.5 rounded p-0.5 transition-opacity hover:text-fg ' +
           (menu ? 'text-fg opacity-100' : 'text-dim opacity-0 group-hover:opacity-100')
         }
-        title="Ações"
+        title={t('menu.actions')}
       >
         <MoreHorizontal size={13} />
       </button>
@@ -130,6 +133,7 @@ function GroupHeader({
   collapsed: boolean
   onToggle: () => void
 }) {
+  const { t } = useT()
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(group.label)
 
@@ -196,7 +200,7 @@ function GroupHeader({
       <button
         onClick={() => void newHere()}
         className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
-        title="Nova conversa aqui"
+        title={t('sidebar.newChat')}
       >
         <Plus size={12} />
       </button>
@@ -209,14 +213,14 @@ function GroupHeader({
               setRenaming(true)
             }}
             className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
-            title="Renomear"
+            title={t('menu.rename')}
           >
             <Pencil size={11} />
           </button>
           <button
             onClick={() => void removeFolder()}
             className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/h:opacity-100"
-            title="Excluir pasta"
+            title={t('menu.delete')}
           >
             <Trash2 size={11} />
           </button>
@@ -230,18 +234,21 @@ export function Sidebar({
   home,
   onPickCwd,
   onToggleTree,
-  treeOpen
+  treeOpen,
+  onSignedOut
 }: {
   home: string
   onPickCwd: () => void
   onToggleTree: () => void
   treeOpen: boolean
+  onSignedOut: () => void
 }) {
   const sessions = useAgent((s) => s.sessions)
   const state = useAgent((s) => s.state)
   const cwd = useAgent((s) => s.cwd)
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
+  const { t } = useT()
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
@@ -315,7 +322,7 @@ export function Sidebar({
             'no-drag relative rounded-md p-1 transition-colors ' +
             (treeOpen ? 'bg-primary/15 text-primarySoft' : 'text-dim hover:text-muted')
           }
-          title="Árvore de agentes"
+          title={t('sidebar.agentTree')}
         >
           <GitBranch size={14} />
           {(tree?.subagents ?? 0) > 0 && (
@@ -332,12 +339,12 @@ export function Sidebar({
           className="no-drag flex flex-1 items-center gap-2 rounded-[10px] border border-primary/25 bg-primary/[0.11] px-3 py-2 text-[13px] font-medium text-fg transition-colors hover:border-primary/45 hover:bg-primary/[0.18]"
         >
           <Plus size={15} className="text-primarySoft" />
-          Nova conversa
+          {t('sidebar.newChat')}
         </button>
         <button
           onClick={() => setCreating(true)}
           className="no-drag flex items-center justify-center rounded-[10px] border border-white/[0.08] px-2.5 text-dim transition-colors hover:border-primary/35 hover:text-primarySoft"
-          title="Nova pasta"
+          title={t('sidebar.newFolder')}
         >
           <FolderPlus size={15} />
         </button>
@@ -349,7 +356,7 @@ export function Sidebar({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar sessões"
+            placeholder={t('sidebar.search')}
             className="w-full bg-transparent text-[12.5px] text-fg outline-none placeholder:text-dim"
           />
         </div>
@@ -357,13 +364,13 @@ export function Sidebar({
 
       <div className="flex items-center justify-between px-4 pb-0.5 pt-2">
         <span className="text-[10.5px] uppercase tracking-wider text-dim">
-          {filtered.length} conversas
+          {filtered.length} {t('sidebar.conversations')}
         </span>
         {archivedCount > 0 && (
           <button
             onClick={() => setShowArchived((v) => !v)}
             className="text-dim transition-colors hover:text-muted"
-            title={showArchived ? 'Ocultar arquivadas' : `Mostrar ${archivedCount} arquivada(s)`}
+            title={showArchived ? t('sidebar.hideArchived') : t('sidebar.showArchived')}
           >
             {showArchived ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
@@ -371,7 +378,7 @@ export function Sidebar({
         <button
           onClick={() => void refreshSessions()}
           className="text-dim transition-colors hover:text-muted"
-          title="Recarregar"
+          title={t('sidebar.reload')}
         >
           <RefreshCw size={12} />
         </button>
@@ -382,7 +389,7 @@ export function Sidebar({
           <div className="px-2 pb-1 pt-2">
             <input
               autoFocus
-              placeholder="Nome da pasta"
+              placeholder={t('sidebar.folderName')}
               onBlur={(e) => void createFolder(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') void createFolder(e.currentTarget.value)
@@ -393,7 +400,7 @@ export function Sidebar({
           </div>
         )}
         {groups.length === 0 && !creating && (
-          <div className="px-2 py-6 text-center text-[12.5px] text-dim">Nenhuma sessão.</div>
+          <div className="px-2 py-6 text-center text-[12.5px] text-dim">{t('sidebar.empty')}</div>
         )}
         {groups.map((g) => {
           const collapsed = folders.collapsed[g.key] ?? false
@@ -416,14 +423,16 @@ export function Sidebar({
         })}
       </div>
 
+      <AccountBadge onSignedOut={onSignedOut} />
+
       <button
         onClick={onPickCwd}
-        className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
-        title="Trocar diretório de trabalho (reinicia o agente)"
+        className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2 text-left transition-colors hover:bg-white/[0.03]"
+        title={t('sidebar.pickCwd')}
       >
         <FolderOpen size={13} className="shrink-0 text-dim" />
         <span className="truncate font-mono text-[11.5px] text-muted">
-          {shortPath(cwd, home) || 'selecionar diretório'}
+          {shortPath(cwd, home) || t('sidebar.pickCwdEmpty')}
         </span>
       </button>
     </aside>

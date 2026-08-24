@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { ChevronRight, Sparkles } from 'lucide-react'
+import { useT } from '../i18n'
 
 export function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
   if (!text.trim()) return null
 
@@ -17,7 +19,7 @@ export function ThinkingBlock({ text, streaming }: { text: string; streaming: bo
         />
         <Sparkles size={12} className={streaming ? 'animate-pulse-soft text-primary' : 'text-dim'} />
         <span className={streaming ? 'animate-pulse-soft' : ''}>
-          {streaming ? 'Raciocinando…' : 'Raciocínio'}
+          {streaming ? t('thinking.streaming') : t('thinking.label')}
         </span>
       </button>
 

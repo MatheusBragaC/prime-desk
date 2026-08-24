@@ -9,6 +9,7 @@ import { Butterfly } from './Butterfly'
 import { relTime } from '../lib/format'
 import { useResizable } from '../lib/useResizable'
 import { ResizeHandle } from './ResizeHandle'
+import { useT } from '../i18n'
 
 function StatusDot({ node }: { node: AgentNode }) {
   if (node.status === 'working') {
@@ -24,26 +25,28 @@ function StatusDot({ node }: { node: AgentNode }) {
 }
 
 function TaskBadge({ node }: { node: AgentNode }) {
+  const { t } = useT()
   if (node.status === 'working') {
-    return <span className="shrink-0 rounded bg-primary/15 px-1.5 py-[1px] text-[10px] text-primarySoft">ativo</span>
+    return <span className="shrink-0 rounded bg-primary/15 px-1.5 py-[1px] text-[10px] text-primarySoft">{t('tree.active')}</span>
   }
   if (node.taskState === 'needs_input') {
-    return <span className="shrink-0 rounded bg-warn/12 px-1.5 py-[1px] text-[10px] text-warn">aguarda</span>
+    return <span className="shrink-0 rounded bg-warn/12 px-1.5 py-[1px] text-[10px] text-warn">{t('tree.waiting')}</span>
   }
   if (node.kind === 'subagent' && node.replied) {
-    return <span className="shrink-0 rounded bg-ok/12 px-1.5 py-[1px] text-[10px] text-ok">respondeu</span>
+    return <span className="shrink-0 rounded bg-ok/12 px-1.5 py-[1px] text-[10px] text-ok">{t('tree.replied')}</span>
   }
   return null
 }
 
 function Node({ node, level }: { node: AgentNode; level: number }) {
+  const { t } = useT()
   const [open, setOpen] = useState(level < 2)
   const [showCode, setShowCode] = useState(false)
   const hasChildren = node.children.length > 0
   const watching = useAgent((s) => Boolean(s.observed[node.activeSessionId]))
 
   const label =
-    node.name || (node.kind === 'root' ? 'Sessão principal' : node.rlmChildId || 'subagente')
+    node.name || (node.kind === 'root' ? t('tree.rootName') : node.rlmChildId || 'subagent')
 
   return (
     <div>
@@ -76,13 +79,13 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             {watching ? (
               <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-ok">
                 <Radio size={9} className="animate-pulse-soft" />
-                observando
+                {t('tree.watching')}
               </span>
             ) : (
               <button
                 onClick={() => void observeSession(node.activeSessionId, label)}
                 className="ml-auto shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
-                title="Acompanhar ao vivo"
+                title={t('tree.watch')}
               >
                 <Eye size={12} />
               </button>
@@ -112,7 +115,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
                 className="mt-1 flex items-center gap-1 text-[10.5px] text-dim transition-colors hover:text-muted"
               >
                 <Code2 size={10} />
-                {showCode ? 'ocultar spawn' : 'ver spawn'}
+                {showCode ? t('tree.hideSpawn') : t('tree.showSpawn')}
               </button>
               {showCode && (
                 <pre className="mt-1 max-h-32 animate-fade-up overflow-auto rounded-md border border-white/[0.07] bg-[#08080a] p-2 font-mono text-[10.5px] leading-relaxed text-mint">
@@ -136,6 +139,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
 }
 
 export function AgentTree({ onClose }: { onClose: () => void }) {
+  const { t } = useT()
   const tree = useAgent((s) => s.tree)
   const error = useAgent((s) => s.treeError)
   const size = useResizable('agent-tree', 310, 240, 680, 'left')
@@ -153,11 +157,11 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
       />
       <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-white/[0.06] px-4">
         <GitBranch size={14} className="text-primarySoft" />
-        <span className="flex-1 text-[12.5px] font-semibold">Agentes</span>
+        <span className="flex-1 text-[12.5px] font-semibold">{t('tree.title')}</span>
         <button
           onClick={() => void window.prime.refreshAgentTree()}
           className="no-drag text-dim transition-colors hover:text-muted"
-          title="Atualizar"
+          title={t('common.refresh')}
         >
           <RefreshCw size={12} />
         </button>
@@ -168,14 +172,9 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
 
       <div className="border-b border-white/[0.06] px-4 py-2 text-[11px] text-dim">
         {tree ? (
-          <>
-            {tree.total} sessão(ões) ativa(s) ·{' '}
-            <span className={tree.subagents > 0 ? 'text-primarySoft' : ''}>
-              {tree.subagents} subagente(s)
-            </span>
-          </>
+          t('tree.summary', { total: tree.total, subs: tree.subagents })
         ) : (
-          'carregando…'
+          t('common.loading')
         )}
       </div>
 
@@ -187,7 +186,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         )}
         {tree?.roots.length === 0 && !error && (
           <div className="px-4 py-8 text-center text-[12px] text-dim">
-            Nenhum agente ativo.
+            {t('tree.none')}
           </div>
         )}
         {tree?.roots.map((r) => (
@@ -196,9 +195,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="border-t border-white/[0.06] px-4 py-2.5 text-[10.5px] leading-snug text-dim">
-        Subagentes são criados pelo agente com{' '}
-        <span className="font-mono text-muted">await rlm(...)</span> e executam no mesmo
-        worker do daemon.
+        {t('tree.note')}
       </div>
     </aside>
   )

@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, Brain, Cpu } from 'lucide-react'
 import { useAgent, setModel, setThinking } from '../store/agent'
 import { THINKING_LEVELS, type ThinkingLevel } from '../../../shared/protocol'
+import { t, useT } from '../i18n'
 
-const THINKING_LABEL: Record<ThinkingLevel, string> = {
-  off: 'desligado', minimal: 'mínimo', low: 'baixo', medium: 'médio',
-  high: 'alto', xhigh: 'muito alto', max: 'máximo'
-}
+const thinkingLabel = (l: ThinkingLevel): string => t(`thinking.${l}`)
 
 const THINKING_COLOR: Record<ThinkingLevel, string> = {
   off: 'text-muted', minimal: 'text-muted', low: 'text-info',
@@ -26,6 +24,7 @@ function useOutside(onClose: () => void) {
 }
 
 export function ModelPicker() {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
   const models = useAgent((s) => s.models)
   const state = useAgent((s) => s.state)
@@ -45,7 +44,7 @@ export function ModelPicker() {
       {open && (
         <div className="absolute bottom-full right-0 z-40 mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-white/[0.09] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
           <div className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-dim">
-            Modelo
+            {t('model.label')}
           </div>
           {models.map((m) => {
             const active = state?.model?.id === m.id
@@ -65,11 +64,11 @@ export function ModelPicker() {
                   <div className="truncate text-[12.8px] text-fg">{m.name}</div>
                   <div className="truncate font-mono text-[10.5px] text-dim">
                     {m.provider}/{m.id}
-                    {m.cost ? ` · $${m.cost.input}/$${m.cost.output} por Mtok` : ''}
+                    {m.cost ? ` · $${m.cost.input}/$${m.cost.output} ${t('model.perMtok')}` : ''}
                   </div>
                 </div>
                 {m.reasoning && (
-                  <span className="shrink-0" title="Suporta reasoning">
+                  <span className="shrink-0" title={t('model.reasoning')}>
                     <Brain size={11.5} className="text-dim" />
                   </span>
                 )}
@@ -84,6 +83,7 @@ export function ModelPicker() {
 }
 
 export function ThinkingPicker() {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
   const state = useAgent((s) => s.state)
   const ref = useOutside(() => setOpen(false))
@@ -96,14 +96,14 @@ export function ThinkingPicker() {
         className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
       >
         <Brain size={12.5} className={THINKING_COLOR[level]} />
-        <span>{THINKING_LABEL[level]}</span>
+        <span>{thinkingLabel(level)}</span>
         <ChevronDown size={11} className="text-dim" />
       </button>
 
       {open && (
         <div className="absolute bottom-full right-0 z-40 mb-2 w-[190px] animate-fade-up rounded-xl border border-white/[0.09] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
           <div className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-dim">
-            Raciocínio
+            {t('thinking.label')}
           </div>
           {THINKING_LEVELS.map((l) => (
             <button
@@ -118,7 +118,7 @@ export function ThinkingPicker() {
               }
             >
               <Brain size={11.5} className={THINKING_COLOR[l]} />
-              <span className="flex-1">{THINKING_LABEL[l]}</span>
+              <span className="flex-1">{thinkingLabel(l)}</span>
               {l === level && <Check size={12.5} className="text-primarySoft" />}
             </button>
           ))}

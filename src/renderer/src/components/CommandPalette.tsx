@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Sparkles, Zap } from 'lucide-react'
 import { useAgent, sendPrompt, newSession, compactNow } from '../store/agent'
+import { useT } from '../i18n'
 
 interface Item {
   id: string
@@ -10,6 +11,7 @@ interface Item {
 }
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useT()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -25,8 +27,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   const items = useMemo<Item[]>(() => {
     const builtin: Item[] = [
-      { id: 'new', label: 'Nova conversa', hint: 'sessão', run: () => newSession() },
-      { id: 'compact', label: 'Compactar contexto', hint: 'contexto', run: () => compactNow() }
+      { id: 'new', label: t('palette.newChat'), hint: t('palette.session'), run: () => newSession() },
+      { id: 'compact', label: t('palette.compact'), hint: t('palette.context'), run: () => compactNow() }
     ]
     const skills: Item[] = commands.map((c) => ({
       id: c.name,
@@ -82,14 +84,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar comando ou skill…"
+            placeholder={t('palette.search')}
             className="w-full bg-transparent text-[14px] text-fg outline-none placeholder:text-dim"
           />
         </div>
 
         <div className="max-h-[380px] overflow-y-auto p-1.5">
           {items.length === 0 && (
-            <div className="px-3 py-6 text-center text-[13px] text-dim">Nada encontrado.</div>
+            <div className="px-3 py-6 text-center text-[13px] text-dim">{t('palette.nothing')}</div>
           )}
           {items.map((item, i) => (
             <button

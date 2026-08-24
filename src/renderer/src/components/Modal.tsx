@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { useT } from '../i18n'
 
 /**
  * Modal padrão do Prime Desk.
@@ -32,6 +33,7 @@ export function Modal({
   // cada render do pai. Guardar em ref mantém o efeito preso apenas a `open`:
   // sem isso, cada re-render do app refazia listeners e devolvia o foco, o que
   // deixava o diálogo instável enquanto o poller de agentes rodava.
+  const { t } = useT()
   const closeRef = useRef(onClose)
   closeRef.current = onClose
 
@@ -118,7 +120,7 @@ export function Modal({
           <button
             onClick={onClose}
             className="rounded-md p-1 text-dim transition-colors hover:bg-white/[0.07] hover:text-fg"
-            aria-label="Fechar"
+            aria-label={t('common.close')}
           >
             <X size={16} />
           </button>

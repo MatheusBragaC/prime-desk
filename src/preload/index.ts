@@ -25,6 +25,12 @@ const api = {
 
   listSessions: () => ipcRenderer.invoke('sessions:list'),
   usageStats: () => ipcRenderer.invoke('usage:stats'),
+
+  checkEnvironment: () => ipcRenderer.invoke('onboarding:check'),
+  installCommand: () => ipcRenderer.invoke('onboarding:command'),
+  installAgent: () => ipcRenderer.invoke('onboarding:install'),
+  openAgentTerminal: () => ipcRenderer.invoke('onboarding:terminal'),
+  logoutProvider: (provider: string) => ipcRenderer.invoke('auth:logout', provider),
   generateTitle: (conversation: string) => ipcRenderer.invoke('title:generate', conversation),
   setZoom: (level: number) => ipcRenderer.invoke('view:zoom', level),
   transcript: (path: string) => ipcRenderer.invoke('sessions:transcript', path),
@@ -50,7 +56,7 @@ const api = {
   on: (channel: string, listener: (payload: unknown) => void) => {
     const allowed = [
       'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
-      'agents:tree', 'agents:tree-error'
+      'agents:tree', 'agents:tree-error', 'onboarding:output'
     ]
     if (!allowed.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
     const wrapped = (_e: IpcRendererEvent, payload: unknown) => listener(payload)

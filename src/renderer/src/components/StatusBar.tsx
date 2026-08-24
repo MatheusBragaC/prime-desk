@@ -1,8 +1,10 @@
 import { Activity, Coins, Layers, Target, AlertTriangle, Minimize2 } from 'lucide-react'
 import { useAgent, compactNow } from '../store/agent'
 import { fmtCost, fmtTokens } from '../lib/format'
+import { useT } from '../i18n'
 
 export function StatusBar() {
+  const { t } = useT()
   const state = useAgent((s) => s.state)
   const totals = useAgent((s) => s.totals)
   const status = useAgent((s) => s.status)
@@ -24,44 +26,48 @@ export function StatusBar() {
         <span className={`h-[7px] w-[7px] rounded-full ${dot}`} />
         <span className="text-[12px] text-muted">
           {status === 'ready'
-            ? state?.isStreaming ? 'Executando' : 'Pronto'
-            : status === 'starting' ? 'Iniciando'
-            : status === 'error' ? 'Erro'
-            : 'Desconectado'}
+            ? state?.isStreaming
+              ? t('app.running')
+              : t('app.ready')
+            : status === 'starting'
+              ? t('app.starting')
+              : status === 'error'
+                ? t('app.error')
+                : t('app.disconnected')}
         </span>
       </div>
 
       {retry && (
         <div className="no-drag flex items-center gap-1.5 text-[11.5px] text-warn">
           <AlertTriangle size={12} />
-          Retry {retry.attempt}/{retry.max}
+          {t('app.retry')} {retry.attempt}/{retry.max}
         </div>
       )}
 
       {compacting && (
         <div className="no-drag flex items-center gap-1.5 text-[11.5px] text-info">
           <Minimize2 size={12} className="animate-pulse-soft" />
-          Compactando contexto
+          {t('app.compacting')}
         </div>
       )}
 
       <div className="flex-1" />
 
       {state?.goal?.active && (
-        <div className="no-drag flex items-center gap-1.5 text-[11.5px] text-primarySoft" title="Goal ativo">
+        <div className="no-drag flex items-center gap-1.5 text-[11.5px] text-primarySoft" title={t('app.goalActive')}>
           <Target size={12} />
           {state.goal.status}
         </div>
       )}
 
-      <div className="no-drag flex items-center gap-1.5 font-mono text-[11.5px] text-dim" title="Tokens do turno acumulados">
+      <div className="no-drag flex items-center gap-1.5 font-mono text-[11.5px] text-dim" title={t('app.tokensTitle')}>
         <Activity size={12} />
         {fmtTokens(totals.tokens)}
         {ctx ? <span className="text-grid">/ {fmtTokens(ctx)}</span> : null}
       </div>
 
       {ctx > 0 && (
-        <div className="no-drag h-1 w-16 overflow-hidden rounded-full bg-white/[0.08]" title={`${pct}% da janela`}>
+        <div className="no-drag h-1 w-16 overflow-hidden rounded-full bg-white/[0.08]" title={`${pct}% ${t('app.contextWindow')}`}>
           <div
             className={'h-full rounded-full transition-all ' + (pct > 80 ? 'bg-err' : pct > 55 ? 'bg-warn' : 'bg-primary')}
             style={{ width: `${pct}%` }}
@@ -69,7 +75,7 @@ export function StatusBar() {
         </div>
       )}
 
-      <div className="no-drag flex items-center gap-1.5 font-mono text-[11.5px] text-dim" title="Custo acumulado da sessão">
+      <div className="no-drag flex items-center gap-1.5 font-mono text-[11.5px] text-dim" title={t('app.costTitle')}>
         <Coins size={12} />
         {fmtCost(totals.cost)}
       </div>
@@ -78,10 +84,10 @@ export function StatusBar() {
         onClick={() => void compactNow()}
         disabled={compacting}
         className="no-drag flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] text-dim transition-colors hover:bg-white/[0.06] hover:text-muted disabled:opacity-40"
-        title="Compactar contexto agora"
+        title={t('app.compactTitle')}
       >
         <Layers size={12} />
-        Compactar
+        {t('app.compact')}
       </button>
     </div>
   )

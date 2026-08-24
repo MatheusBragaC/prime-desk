@@ -10,6 +10,9 @@ import { getAgentTree } from './agent-tree.js'
 import { loadFolders, saveFolders } from './folders.js'
 import { listDir, gitBranch, insideRoot, readFileSafe, writeFileSafe, deleteSessionFile } from './files.js'
 import { getUsageStats } from './usage.js'
+import {
+  checkEnvironment, installAgent, openAgentTerminal, logoutProvider, INSTALL_COMMAND
+} from './onboarding.js'
 import { generateTitle } from './titles.js'
 import {
   resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
@@ -275,6 +278,25 @@ ipcMain.handle('sessions:transcript', async (_e, path: string) => {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
 })
+
+ipcMain.handle('onboarding:check', async () => {
+  try {
+    return { ok: true, status: await checkEnvironment() }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+})
+
+ipcMain.handle('onboarding:command', () => ({ ok: true, command: INSTALL_COMMAND }))
+
+ipcMain.handle('onboarding:install', async () => {
+  const result = await installAgent((chunk) => pushToRenderer('onboarding:output', chunk))
+  return result
+})
+
+ipcMain.handle('onboarding:terminal', async () => openAgentTerminal())
+
+ipcMain.handle('auth:logout', async (_e, provider: string) => logoutProvider(provider))
 
 ipcMain.handle('title:generate', async (_e, conversation: string) => {
   try {

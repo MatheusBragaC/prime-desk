@@ -6,6 +6,7 @@ import type {
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
 } from './transcript'
+import { t } from '../i18n'
 
 export type { UiMessage, ToolExec } from './transcript'
 
@@ -305,16 +306,11 @@ export async function openSession(sessionPath: string): Promise<void> {
 
   if (!out.ok) {
     const already = /already active/i.test(out.error ?? '')
-    store.notify(
-      'error',
-      already
-        ? 'Esta conversa já está aberta em outro agente ativo. Encerre-o antes de abri-la aqui.'
-        : out.error ?? 'Não foi possível abrir esta conversa.'
-    )
+    store.notify('error', already ? t('session.alreadyOpen') : (out.error ?? t('session.openFailed')))
     return
   }
   if (out.data?.cancelled) {
-    store.notify('info', 'A troca de sessão foi cancelada por uma extensão.')
+    store.notify('info', t('session.switchCancelled'))
     return
   }
 
@@ -344,11 +340,11 @@ export async function deleteSession(sessionId: string, path: string): Promise<bo
 
   const r = await bridge().deleteSession(path)
   if (!r?.ok) {
-    store.notify('error', r?.error ?? 'Não foi possível excluir a conversa.')
+    store.notify('error', r?.error ?? t('delete.failed'))
     return false
   }
 
-  store.notify('info', 'Conversa excluída.')
+  store.notify('info', t('delete.done'))
   void refreshSessions()
   return true
 }
@@ -417,7 +413,7 @@ export async function observeSession(activeSessionId: string, name: string): Pro
   if (!data) {
     store.upsertObserved(activeSessionId, {
       status: 'error',
-      error: 'Não foi possível observar esta sessão. Ela pode já ter encerrado.'
+      error: t('observed.failed')
     })
     return
   }

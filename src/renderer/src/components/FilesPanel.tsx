@@ -6,6 +6,7 @@ import {
 import type { DirEntry } from '../../../shared/protocol'
 import { useResizable } from '../lib/useResizable'
 import { ResizeHandle } from './ResizeHandle'
+import { useT } from '../i18n'
 
 const CODE = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'rb', 'go', 'rs', 'java', 'kt', 'c', 'h', 'cpp', 'cs', 'php', 'sh', 'bash', 'sql', 'css', 'scss', 'html', 'vue', 'svelte'])
 const DATA = new Set(['json', 'yml', 'yaml', 'toml', 'ini', 'env', 'lock'])
@@ -34,6 +35,7 @@ interface NodeProps {
 }
 
 function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
   const [children, setChildren] = useState<DirEntry[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -87,7 +89,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
             <span className="w-[11px] shrink-0" />
             <button
               onClick={() => onOpen(entry)}
-              title={`${entry.path} · ${fmtSize(entry.size)} — abrir no editor`}
+              title={`${entry.path} · ${fmtSize(entry.size)} — ${t('files.openEditor')}`}
               className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
             >
               <FileIcon name={entry.name} />
@@ -95,14 +97,14 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
             </button>
             <button
               onClick={() => onQuote(entry)}
-              title="Citar no prompt"
+              title={t('files.quote')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
             >
               <AtSign size={10.5} />
             </button>
             <button
               onClick={() => void window.prime.revealFile(entry.path)}
-              title="Abrir no aplicativo padrão"
+              title={t('files.openExternal')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
             >
               <ExternalLink size={10.5} />
@@ -125,7 +127,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
           ))}
           {children !== null && visibleChildren.length === 0 && (
             <div className="py-[3px] text-[11px] italic text-dim" style={{ paddingLeft: 19 + level * 13 }}>
-              vazio
+              {t('files.empty')}
             </div>
           )}
         </div>
@@ -143,6 +145,7 @@ export function FilesPanel({
   onOpenFile: (path: string) => void
   onQuote: (path: string) => void
 }) {
+  const { t } = useT()
   const [root, setRoot] = useState('')
   const [entries, setEntries] = useState<DirEntry[]>([])
   const [filter, setFilter] = useState('')
@@ -160,7 +163,7 @@ export function FilesPanel({
       setEntries(r.entries as DirEntry[])
       setError(null)
     } else {
-      setError(r?.error ?? 'Não foi possível listar o diretório.')
+      setError(r?.error ?? t('files.nothing'))
     }
     setLoading(false)
   }, [])
@@ -197,7 +200,7 @@ export function FilesPanel({
         <button
           onClick={() => void reload()}
           className="no-drag text-dim transition-colors hover:text-muted"
-          title="Recarregar"
+          title={t('common.refresh')}
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -212,7 +215,7 @@ export function FilesPanel({
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filtrar arquivos"
+            placeholder={t('files.filter')}
             className="w-full bg-transparent text-[12.3px] text-fg outline-none placeholder:text-dim"
           />
           {filter && (
@@ -230,7 +233,7 @@ export function FilesPanel({
           </div>
         )}
         {!error && visible.length === 0 && !loading && (
-          <div className="px-3 py-8 text-center text-[12px] text-dim">Nada encontrado.</div>
+          <div className="px-3 py-8 text-center text-[12px] text-dim">{t('files.nothing')}</div>
         )}
         {visible.map((e) => (
           <Node
@@ -245,8 +248,7 @@ export function FilesPanel({
       </div>
 
       <div className="border-t border-white/[0.06] px-4 py-2 text-[10.5px] leading-snug text-dim">
-        Clique para abrir no editor · <span className="font-mono">@</span> cita no prompt.
-        O explorador não sai do diretório de trabalho.
+        {t('files.hint')}
       </div>
     </aside>
   )

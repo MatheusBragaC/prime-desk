@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { memo, useRef, useState, type ReactNode } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { useT } from '../i18n'
 
 function openExternal(e: React.MouseEvent<HTMLAnchorElement>) {
   e.preventDefault()
@@ -12,6 +13,7 @@ function openExternal(e: React.MouseEvent<HTMLAnchorElement>) {
 
 /** Bloco de código com botão de copiar. */
 function CodeBlock({ children }: { children?: ReactNode }) {
+  const { t } = useT()
   const ref = useRef<HTMLPreElement>(null)
   const [copied, setCopied] = useState(false)
 
@@ -29,7 +31,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
       <pre ref={ref}>{children}</pre>
       <button
         onClick={() => void copy()}
-        title={copied ? 'Copiado' : 'Copiar código'}
+        title={copied ? t('common.copied') : t('common.copyCode')}
         className={
           'absolute right-2 top-2 flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10.5px] transition-all ' +
           // Sempre visível, discreto: depender de hover esconde a ação de quem
@@ -40,7 +42,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         }
       >
         {copied ? <Check size={11} /> : <Copy size={11} />}
-        {copied ? 'copiado' : 'copiar'}
+        {copied ? t('common.copied') : t('common.copy').toLowerCase()}
       </button>
     </div>
   )

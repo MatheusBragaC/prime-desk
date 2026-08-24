@@ -3,6 +3,7 @@ import hljs from 'highlight.js'
 import {
   X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
 } from 'lucide-react'
+import { useT } from '../i18n'
 
 const LANG_BY_EXT: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
@@ -28,6 +29,7 @@ function fmtSize(n: number): string {
 }
 
 export function FileViewer({ path, onClose }: { path: string; onClose: () => void }) {
+  const { t } = useT()
   const [content, setContent] = useState('')
   const [original, setOriginal] = useState('')
   const [meta, setMeta] = useState<{ size: number; truncated?: boolean; binary?: boolean }>({ size: 0 })
@@ -43,7 +45,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
     setEditing(false)
     const r = await window.prime.readFile(path)
     if (!r?.ok) {
-      setError(r?.error ?? 'Não foi possível ler o arquivo.')
+      setError(r?.error ?? t('viewer.readFailed'))
       setState('error')
       return
     }
@@ -63,7 +65,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
     const r = await window.prime.writeFile(path, content)
     setSaving(false)
     if (!r?.ok) {
-      setError(r?.error ?? 'Falha ao salvar.')
+      setError(r?.error ?? t('viewer.saveFailed'))
       return
     }
     setOriginal(content)
@@ -107,7 +109,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
           </div>
           <div className="truncate font-mono text-[10.5px] text-dim" title={path}>
             {path} · {fmtSize(meta.size)}
-            {lineCount > 0 && ` · ${lineCount} linhas`}
+            {lineCount > 0 && ` · ${lineCount} ${t('viewer.lines')}`}
           </div>
         </div>
 
@@ -116,7 +118,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
             <button
               onClick={() => void navigator.clipboard.writeText(content)}
               className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
-              title="Copiar conteúdo"
+              title={t('viewer.copyContent')}
             >
               <Copy size={14} />
             </button>
@@ -127,19 +129,19 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
                 'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] transition-colors disabled:opacity-40 ' +
                 (editing ? 'bg-primary/15 text-primarySoft' : 'text-muted hover:bg-white/[0.06] hover:text-fg')
               }
-              title={meta.truncated ? 'Arquivo truncado: edição desabilitada' : 'Alternar edição'}
+              title={meta.truncated ? t('viewer.truncatedTitle') : t('viewer.edit')}
             >
               {editing ? <Eye size={13} /> : <Pencil size={13} />}
-              {editing ? 'Visualizar' : 'Editar'}
+              {editing ? t('viewer.view') : t('viewer.edit')}
             </button>
             <button
               onClick={() => void save()}
               disabled={!dirty || saving}
               className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/15 px-2.5 py-1.5 text-[12px] text-fg transition-colors hover:bg-primary/25 disabled:border-white/[0.07] disabled:bg-transparent disabled:text-dim"
-              title="Salvar (Ctrl+S)"
+              title={t('viewer.saveTitle')}
             >
               {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-              Salvar
+              {t('viewer.save')}
             </button>
           </>
         )}
@@ -147,7 +149,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
         <button
           onClick={() => void window.prime.revealFile(path)}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
-          title="Abrir no aplicativo padrão"
+          title={t('files.openExternal')}
         >
           <ExternalLink size={14} />
         </button>
@@ -168,8 +170,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
 
       {meta.truncated && (
         <div className="mx-5 mt-3 rounded-xl border border-warn/25 bg-warn/[0.06] p-2.5 text-[12px] text-warn">
-          Arquivo maior que 1 MB: exibindo apenas o início. Edição desabilitada para
-          não truncar o conteúdo no disco.
+          {t('viewer.truncated')}
         </div>
       )}
 
@@ -177,19 +178,19 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
         {state === 'loading' && (
           <div className="flex h-full items-center justify-center text-[13px] text-dim">
             <Loader2 size={15} className="mr-2 animate-spin" />
-            Carregando…
+            {t('common.loading')}
           </div>
         )}
 
         {state === 'ready' && meta.binary && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-dim">
             <FileWarning size={26} />
-            <span className="text-[13px]">Arquivo binário — não exibido.</span>
+            <span className="text-[13px]">{t('viewer.binary')}</span>
             <button
               onClick={() => void window.prime.revealFile(path)}
               className="mt-1 rounded-lg border border-white/[0.1] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-primary/40 hover:text-fg"
             >
-              Abrir no aplicativo padrão
+              {t('files.openExternal')}
             </button>
           </div>
         )}
@@ -214,9 +215,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
       </div>
 
       <div className="shrink-0 border-t border-white/[0.07] px-5 py-2 text-[11px] text-dim">
-        {editing
-          ? 'Ctrl+S salva. Sem histórico de desfazer entre sessões — versione antes de mexer em arquivo importante.'
-          : 'Somente leitura. Use Editar para alterar o arquivo no disco.'}
+        {editing ? t('viewer.editHint') : t('viewer.readHint')}
       </div>
     </div>
   )

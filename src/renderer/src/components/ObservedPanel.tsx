@@ -3,6 +3,7 @@ import { X, Radio, AlertTriangle, CircleOff, Loader2 } from 'lucide-react'
 import { useAgent, unobserveSession } from '../store/agent'
 import { Message } from './Message'
 import { fmtTokens } from '../lib/format'
+import { useT } from '../i18n'
 
 /**
  * Transcript ao vivo de outra sessão (normalmente um subagente).
@@ -12,6 +13,7 @@ import { fmtTokens } from '../lib/format'
  * manter fora do escopo deste painel.
  */
 export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) {
+  const { t } = useT()
   const obs = useAgent((s) => s.observed[activeSessionId])
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
@@ -49,12 +51,12 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
           <div className="font-mono text-[10.5px] text-dim">
             {activeSessionId} ·{' '}
             {status === 'loading'
-              ? 'conectando'
+              ? t('observed.connecting')
               : live
-                ? 'ao vivo'
+                ? t('observed.live')
                 : status === 'closed'
-                  ? 'encerrada'
-                  : 'erro'}
+                  ? t('observed.closed')
+                  : t('app.error').toLowerCase()}
             {transcript.totals.tokens > 0 && ` · ${fmtTokens(transcript.totals.tokens)} tokens`}
           </div>
         </div>
@@ -63,7 +65,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
           onClick={() => void unobserveSession(activeSessionId)}
           className="rounded-lg px-2.5 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
-          Parar de observar
+          {t('observed.stop')}
         </button>
         <button
           onClick={() => void unobserveSession(activeSessionId)}
@@ -81,7 +83,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
 
       {status === 'closed' && (
         <div className="mx-5 mt-4 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-[12.5px] text-muted">
-          A sessão observada encerrou. O transcript abaixo é o último estado recebido.
+          {t('observed.closedNote')}
         </div>
       )}
 
@@ -91,7 +93,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
       }} className="min-h-0 flex-1 overflow-y-auto">
         {transcript.messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-[13px] text-dim">
-            {status === 'loading' ? 'Carregando transcript…' : 'Nenhuma mensagem ainda.'}
+            {status === 'loading' ? t('observed.loadingTranscript') : t('observed.empty')}
           </div>
         ) : (
           <div className="mx-auto max-w-[860px] py-4">
@@ -104,7 +106,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
       </div>
 
       <div className="shrink-0 border-t border-white/[0.07] px-5 py-2.5 text-[11px] text-dim">
-        Somente leitura — este painel observa a sessão, não interfere nela.
+        {t('observed.readOnly')}
       </div>
     </div>
   )

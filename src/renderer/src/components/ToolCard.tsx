@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw } from 'lucide-react'
 import type { ToolExec } from '../store/agent'
 import { fmtDuration } from '../lib/format'
+import { useT } from '../i18n'
 
 const MAX_PREVIEW = 4000
 
@@ -31,13 +32,14 @@ function summary(name: string, args: Record<string, unknown>): string {
 }
 
 export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?: string }) {
+  const { t } = useT()
   const [open, setOpen] = useState(false)
 
   if (!exec) {
     return (
       <div className="my-2.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
         <Loader2 size={13} className="animate-spin text-primary" />
-        <span>Preparando {pendingName ?? 'ferramenta'}…</span>
+        <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
       </div>
     )
   }
@@ -53,7 +55,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
       : 'bg-[var(--p-tool-success)] border-white/[0.07]'
 
   const body = exec.text.length > MAX_PREVIEW
-    ? exec.text.slice(0, MAX_PREVIEW) + `\n… (${exec.text.length - MAX_PREVIEW} caracteres omitidos)`
+    ? exec.text.slice(0, MAX_PREVIEW) + '\n' + t('tool.omitted', { n: exec.text.length - MAX_PREVIEW })
     : exec.text
 
   return (
@@ -72,7 +74,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
         </span>
 
         {exec.kernelRestarted && (
-          <span className="shrink-0" title="Kernel reiniciado">
+          <span className="shrink-0" title={t('tool.kernelRestarted')}>
             <RotateCcw size={12} className="text-warn" />
           </span>
         )}
@@ -97,7 +99,7 @@ export function ToolCard({ exec, pendingName }: { exec?: ToolExec; pendingName?:
             </pre>
           ) : (
             <div className="px-3.5 py-2.5 text-[12.2px] italic text-dim">
-              {running ? 'Executando…' : 'Sem saída.'}
+              {running ? t('tool.running') : t('tool.noOutput')}
             </div>
           )}
           {exec.stderr && (

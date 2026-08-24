@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Butterfly } from './Butterfly'
 import type { UsageStats } from '../../../shared/protocol'
 import { fmtCost, fmtTokens } from '../lib/format'
+import { t, useT } from '../i18n'
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+// Iniciais dos dias mudam por idioma.
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -31,6 +32,7 @@ function level(count: number, max: number): string {
 }
 
 function Heatmap({ days }: { days: UsageStats['days'] }) {
+  const WEEKDAYS = t('usage.weekdays').split(',')
   if (days.length === 0) return null
   const max = Math.max(...days.map((d) => d.count))
 
@@ -58,7 +60,7 @@ function Heatmap({ days }: { days: UsageStats['days'] }) {
               return (
                 <div
                   key={di}
-                  title={`${cell.day}: ${cell.count} mensagem(ns)`}
+                  title={`${cell.day}: ${t('usage.dayMessages', { n: cell.count })}`}
                   className={`h-[11px] w-[11px] rounded-[2px] ${level(cell.count, max)}`}
                 />
               )
@@ -71,6 +73,7 @@ function Heatmap({ days }: { days: UsageStats['days'] }) {
 }
 
 export function Welcome() {
+  const { t } = useT()
   const [stats, setStats] = useState<UsageStats | null>(null)
 
   useEffect(() => {
@@ -89,7 +92,7 @@ export function Welcome() {
         <Butterfly size={44} />
         <h1 className="mt-3 text-[21px] font-semibold tracking-tight">Prime Desk</h1>
         <p className="mt-1 text-[12.5px] text-muted">
-          Interface gráfica para o <span className="font-mono text-primarySoft">prime-agent</span>
+          {t('usage.subtitle')}
         </p>
       </div>
 
@@ -99,12 +102,12 @@ export function Welcome() {
           style={{ animationDelay: '80ms' }}
         >
           <div className="mb-3 grid grid-cols-3 gap-2">
-            <Stat label="Sessões" value={String(stats.sessions)} />
-            <Stat label="Mensagens" value={stats.messages.toLocaleString('pt-BR')} />
-            <Stat label="Tokens" value={fmtTokens(stats.tokens)} accent />
-            <Stat label="Custo total" value={fmtCost(stats.cost)} />
-            <Stat label="Dias ativos" value={String(stats.activeDays)} />
-            <Stat label="Sequência" value={`${stats.currentStreak} d`} />
+            <Stat label={t('usage.sessions')} value={String(stats.sessions)} />
+            <Stat label={t('usage.messages')} value={stats.messages.toLocaleString()} />
+            <Stat label={t('usage.tokens')} value={fmtTokens(stats.tokens)} accent />
+            <Stat label={t('usage.cost')} value={fmtCost(stats.cost)} />
+            <Stat label={t('usage.activeDays')} value={String(stats.activeDays)} />
+            <Stat label={t('usage.streak')} value={`${stats.currentStreak} d`} />
           </div>
 
           <Heatmap days={stats.days} />
@@ -112,24 +115,24 @@ export function Welcome() {
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-dim">
             {stats.favoriteModel && (
               <span>
-                Modelo mais usado <span className="text-muted">{stats.favoriteModel}</span>
+                {t('usage.favoriteModel')} <span className="text-muted">{stats.favoriteModel}</span>
               </span>
             )}
             {stats.peakHour >= 0 && (
               <span>
-                Pico às{' '}
+                {t('usage.peak')}{' '}
                 <span className="text-muted">{String(stats.peakHour).padStart(2, '0')}h</span>
               </span>
             )}
             <span>
-              Maior sequência <span className="text-muted">{stats.longestStreak} d</span>
+              {t('usage.longest')} <span className="text-muted">{stats.longestStreak} d</span>
             </span>
           </div>
         </div>
       )}
 
       {stats && stats.sessions === 0 && (
-        <p className="mt-6 text-[13px] text-dim">Nenhuma conversa ainda. Comece abaixo.</p>
+        <p className="mt-6 text-[13px] text-dim">{t('usage.noneYet')}</p>
       )}
     </div>
   )

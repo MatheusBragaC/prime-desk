@@ -6,6 +6,7 @@ import {
 import type { SessionSummary } from '../../../shared/protocol'
 import { useAgent, mutateFolders, refreshSessions, rpc, deleteSession } from '../store/agent'
 import type { Group } from '../lib/grouping'
+import { useT } from '../i18n'
 
 interface Props {
   session: SessionSummary
@@ -22,6 +23,7 @@ const item =
 export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename }: Props) {
   const folders = useAgent((s) => s.folders)
   const notify = useAgent((s) => s.notify)
+  const { t } = useT()
   const [submenu, setSubmenu] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const ref = useRef<HTMLDivElement>(null)
@@ -103,12 +105,10 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
   function askRemove() {
     onClose()
     requestConfirm({
-      title: 'Excluir conversa',
-      message: isActive
-        ? 'Esta é a conversa aberta. Ela será fechada e o arquivo apagado do disco. Não há como desfazer.'
-        : 'O arquivo desta conversa será apagado do disco. Não há como desfazer.',
+      title: t('delete.title'),
+      message: isActive ? t('delete.activeMsg') : t('delete.msg'),
       detail: session.title,
-      confirmLabel: 'Excluir',
+      confirmLabel: t('menu.delete'),
       danger: true,
       onConfirm: async () => {
         const ok = await deleteSession(session.id, session.path)
@@ -126,26 +126,26 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
     >
       <button className={item} onClick={onOpen}>
         <ExternalLink size={12} />
-        Abrir
+        {t('menu.open')}
       </button>
 
       <button className={item} onClick={() => void togglePin()}>
         {pinned ? <PinOff size={12} /> : <Pin size={12} />}
-        {pinned ? 'Desfixar' : 'Fixar no topo'}
+        {pinned ? t('menu.unpin') : t('menu.pin')}
       </button>
 
       <button className={item} onClick={onRename}>
         <Pencil size={12} />
-        Renomear
+        {t('menu.rename')}
       </button>
 
       <button
         className={item + (isActive ? '' : ' pointer-events-none opacity-40')}
         onClick={() => void duplicate()}
-        title={isActive ? 'Duplica o ramo atual' : 'Disponível só para a conversa aberta'}
+        title={isActive ? t('menu.duplicateHint') : t('menu.duplicateOnlyActive')}
       >
         <Copy size={12} />
-        Duplicar
+        {t('menu.duplicate')}
       </button>
 
       <div className="my-1 border-t border-white/[0.07]" />
@@ -153,13 +153,13 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       <div className="relative">
         <button className={item} onClick={() => setSubmenu((v) => !v)}>
           <FolderInput size={12} />
-          <span className="flex-1">Mover para pasta</span>
+          <span className="flex-1">{t('menu.moveToFolder')}</span>
           <ChevronRight size={11} className={submenu ? 'rotate-90' : ''} />
         </button>
         {submenu && (
           <div className="mt-0.5 pl-2">
             {folderGroups.length === 0 && (
-              <div className="px-2 py-1 text-[11.5px] italic text-dim">Nenhuma pasta criada.</div>
+              <div className="px-2 py-1 text-[11.5px] italic text-dim">{t('menu.noFolders')}</div>
             )}
             {folderGroups.map((g) => (
               <button key={g.key} className={item} onClick={() => void moveTo(g.folderId!)}>
@@ -169,7 +169,7 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
             ))}
             <button className={item} onClick={() => void moveTo(null)}>
               <Trash2 size={11} />
-              Remover da pasta
+              {t('menu.removeFromFolder')}
             </button>
           </div>
         )}
@@ -177,14 +177,14 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
 
       <button className={item} onClick={() => void toggleArchive()}>
         {archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
-        {archived ? 'Desarquivar' : 'Arquivar'}
+        {archived ? t('menu.unarchive') : t('menu.archive')}
       </button>
 
       <div className="my-1 border-t border-white/[0.07]" />
 
       <button className={item + ' text-err hover:text-err'} onClick={askRemove}>
         <Trash2 size={12} />
-        Excluir
+        {t('menu.delete')}
       </button>
     </div>
   )

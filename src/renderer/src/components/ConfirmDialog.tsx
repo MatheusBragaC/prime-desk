@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Modal, Button } from './Modal'
 import { useAgent } from '../store/agent'
+import { useT } from '../i18n'
 
 /**
  * Diálogo de confirmação único do app.
@@ -11,6 +12,7 @@ import { useAgent } from '../store/agent'
  * a mesma cara e o mesmo comportamento de teclado.
  */
 export function ConfirmDialog() {
+  const { t } = useT()
   const confirm = useAgent((s) => s.confirm)
   const close = useAgent((s) => s.closeConfirm)
   const [busy, setBusy] = useState(false)
@@ -37,7 +39,7 @@ export function ConfirmDialog() {
       footer={
         <>
           <Button onClick={close} disabled={busy}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button
             variant={confirm.danger ? 'ghost' : 'primary'}
@@ -52,10 +54,10 @@ export function ConfirmDialog() {
             {busy ? (
               <span className="flex items-center gap-1.5">
                 <Loader2 size={12} className="animate-spin" />
-                Processando
+                {t('common.processing')}
               </span>
             ) : (
-              (confirm.confirmLabel ?? 'Confirmar')
+              (confirm.confirmLabel ?? t('common.confirm'))
             )}
           </Button>
         </>

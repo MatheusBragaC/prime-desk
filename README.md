@@ -2,335 +2,318 @@
 
 # Prime Desk
 
-**Interface gráfica desktop para o [`prime-agent`](https://github.com/PrimeIntellect-ai/prime-agent)**
+**Desktop GUI for [`prime-agent`](https://github.com/PrimeIntellect-ai/prime-agent)**
 
-Acabamento no padrão Claude Desktop, identidade visual oficial do Prime.
+Claude-Desktop-grade polish, with the official Prime visual identity.
+
+[Português](README.pt-BR.md)
 
 </div>
 
 ---
 
-## O que é
+## What it is
 
-Um cliente desktop para o `prime-agent`. A GUI **não reimplementa o agente**:
-ela conversa com o binário oficial pelo modo RPC e apenas renderiza. Contexto,
-compactação, skills, subagentes e o kernel IPython continuam inteiramente no
-`prime-agent`.
+A desktop client for `prime-agent`. The GUI **does not reimplement the agent**:
+it talks to the official binary over RPC and only renders. Context, compaction,
+skills, subagents and the IPython kernel all stay inside `prime-agent`.
 
 ```
-Renderer (React) ─ IPC ─ Electron Main ─ stdin/stdout JSONL ─ prime-agent --mode rpc
+Renderer (React) ─ IPC ─ Electron main ─ stdin/stdout JSONL ─ prime-agent --mode rpc
 ```
 
-## Funcionalidades
+## Features
 
 | | |
 |---|---|
-| **Streaming** | texto, raciocínio e tool calls em tempo real |
-| **Tool cards** | código executado, stdout/stderr, duração, status, aviso de restart de kernel |
-| **Raciocínio** | blocos de thinking colapsáveis |
-| **Markdown** | GFM completo, tabelas e syntax highlight na paleta oficial |
-| **Modelos** | troca em tempo real, com custo por Mtok e indicador de reasoning |
-| **Thinking** | sete níveis, de `off` a `max` |
-| **Sessões** | sidebar com busca, lida direto de `~/.prime/agent/sessions` |
-| **Título automático** | a conversa ganha um nome curto após o primeiro turno |
-| **HUD** | tokens, ocupação da janela de contexto, custo acumulado, goal ativo |
-| **Controle** | abort (`Esc`), steer durante streaming, compactação manual |
-| **Paleta** | `Ctrl+K` com skills descobertas via `get_commands` |
-| **Imagens** | anexo para modelos multimodais |
-| **Árvore de agentes** | hierarquia RLM pai→filho em tempo real, com status, profundidade e o código que originou cada subagente (`Ctrl+B`) |
-| **Pastas** | conversas organizadas em pastas manuais e em grupos automáticos por projeto |
-| **Ações da conversa** | menu `⋯` com abrir, fixar, renomear, duplicar, mover, arquivar e excluir |
-| **Explorador** | árvore de arquivos do diretório de trabalho, com filtro (`Ctrl+Shift+F`) |
-| **Editor** | abre arquivos com syntax highlight, edita e salva (`Ctrl+S`) |
-| **Barra de contexto** | chips com execução, diretório, branch do git e atalho para os arquivos |
-| **Execução remota** | menu do chip permite rodar por SSH, usando a extensão oficial do prime-agent |
-| **Streaming suave** | o texto escorre em ritmo constante em vez de saltar em rajadas |
-| **Copiar código** | botão em cada bloco de código |
-| **Painel de uso** | conversa nova mostra sessões, mensagens, tokens, custo e mapa de atividade |
-| **Painéis redimensionáveis** | arraste os divisores; duplo clique restaura |
-| **Dock à direita** | arquivos e agentes se alternam, para o chat nunca ficar espremido |
+| **Streaming** | text, reasoning and tool calls in real time, revealed at a steady pace |
+| **Tool cards** | executed code, stdout/stderr, duration, status, kernel-restart warning |
+| **Reasoning** | collapsible thinking blocks |
+| **Markdown** | full GFM, tables, syntax highlighting in the official palette, copy button on code blocks |
+| **Models** | switch on the fly, with per-Mtok cost and a reasoning indicator |
+| **Thinking** | seven levels, `off` to `max` |
+| **Sessions** | searchable sidebar, read straight from `~/.prime/agent/sessions` |
+| **Auto title** | each chat gets a short generated name after the first turn |
+| **Folders** | manual folders plus automatic grouping by project |
+| **Chat actions** | `⋯` menu: open, pin, rename, duplicate, move, archive, delete |
+| **Agent tree** | live RLM parent→child hierarchy, with status, depth and the code that spawned each subagent (`Ctrl+B`) |
+| **Live watch** | follow a subagent's transcript as it runs |
+| **File explorer** | working-directory tree with filter (`Ctrl+Shift+F`) |
+| **Editor** | open files with syntax highlighting, edit and save (`Ctrl+S`) |
+| **Usage panel** | a new chat shows sessions, messages, tokens, cost and an activity map |
+| **Context bar** | chips for execution target, directory, git branch and files |
+| **Remote execution** | run over SSH using the official prime-agent extension |
+| **HUD** | tokens, context-window usage, accumulated cost, active goal |
+| **Control** | abort (`Esc`), steer while streaming, manual compaction |
+| **Command palette** | `Ctrl+K`, and `/` inline autocomplete in the composer |
+| **Images** | attachments for multimodal models |
+| **Languages** | English, Portuguese and Spanish |
+| **Resizable panels** | drag the dividers; double-click restores |
 
-## Organização de conversas
+## Requirements
 
-A sidebar agrupa em dois níveis:
+- Node.js 20+ (validated on v22.22.2)
+- `prime-agent` installed, on your `PATH` and **authenticated**
+- Linux (validated on Ubuntu 24.04). macOS and Windows should work, untested.
 
-- **Grupos automáticos** — derivados do diretório de trabalho da sessão, o que na
-  prática equivale ao projeto. Zero configuração.
-- **Pastas manuais** — criadas com o botão de pasta, renomeáveis, com `+` para já
-  criar a conversa dentro dela. O menu `⋯` de cada conversa move entre pastas.
+### First-run authentication
 
-A atribuição manual tem precedência sobre o agrupamento automático. Tudo isso vive
-em `<userData>/folders.json` e guarda **apenas** ids de sessão e nomes de pasta —
-nenhum conteúdo de conversa é duplicado.
+Prime Desk has **no account of its own** and never asks you to sign up. It uses
+whatever credentials `prime-agent` already holds. On a fresh machine the app
+walks you through it: it detects a missing binary, offers to run the official
+installer, and then points you at authentication.
 
-## Árvore de subagentes
+Neither path requires a Prime Intellect account:
 
-`Ctrl+B` abre o painel de agentes: a hierarquia completa de descendentes RLM, com
-status (ativo / aguarda / respondeu), profundidade, contagem de mensagens, modelo
-e o `spawnCode` — o código Python exato que criou cada subagente.
-
-Os dados vêm de `prime-agent list --json`, a única superfície que expõe
-`parentActiveSessionId`. O poller roda a cada 3 s e **pausa** quando a janela não
-está visível.
-
-### Acompanhar um subagente ao vivo
-
-O ícone de olho em qualquer nó da árvore abre o **transcript ao vivo** daquela
-sessão: raciocínio, texto e execução de ferramentas em tempo real, com o mesmo
-tratamento visual da conversa principal.
-
-Usa `observe` / `unobserve` do RPC. O agente bufferiza os eventos até entregar o
-histórico, então não existe janela de perda entre o que já aconteceu e o que
-chega depois.
-
-O painel é **somente leitura** — por decisão de projeto. Injetar prompt ali
-exigiria `send_message` e transformaria "observar" em "interferir", o que merece
-uma interação explícita e não um efeito colateral de abrir um painel.
-
-## Empacotamento
-
-| Alvo | Comando | Onde compila |
-|---|---|---|
-| `.deb` + AppImage | `npm run dist:linux` | qualquer host Linux |
-| macOS `.zip` (x64 + arm64) | `npm run dist:mac` | **qualquer host**, inclusive Linux |
-| macOS `.dmg` | `npm run dist:mac:dmg` | **só em macOS** |
-
-O `.dmg` não compila fora do macOS: o `dmg-license` é dependência darwin-only e o
-empacotamento usa `hdiutil`. Para gerar dmg assinado e notarizado use o workflow
-`.github/workflows/release.yml`, que roda num runner `macos-14`.
-
-> Builds macOS sem certificado Apple saem **não assinados**. O Gatekeeper vai
-> bloquear na primeira execução; o usuário precisa liberar manualmente em
-> Ajustes → Privacidade e Segurança. Para distribuir de verdade, preencha os
-> segredos de assinatura no CI.
-
-### Ícone no desktop
-
-No Linux a barra de tarefas **não** usa o ícone da janela: ela casa o `WM_CLASS`
-com um arquivo `.desktop` instalado. Por isso, sem esse arquivo, o shell mostra
-uma engrenagem genérica mesmo com o ícone correto na janela.
-
-| Situação | O que fazer |
+| Path | What it covers |
 |---|---|
-| Instalou o `.deb` | Nada. O pacote já instala `.desktop` e os ícones em `/usr/share` |
-| Desenvolvimento ou AppImage | `npm run desktop:install` (grava em `~/.local/share`, sem sudo) |
-| Desfazer | `npm run desktop:remove` |
-| macOS | O `.app` empacotado já carrega o `.icns`; em desenvolvimento aparece o ícone do Electron |
+| **Subscription** (`/login`) | Claude Pro/Max, ChatGPT Plus/Pro (Codex), GitHub Copilot |
+| **API key** | environment variable (e.g. `ANTHROPIC_API_KEY`) or `/login`, stored in `~/.prime/agent/auth.json` |
 
-O script instala oito tamanhos em `hicolor` e um `.desktop` com
-`StartupWMClass=prime-desk`, que é exatamente o `WM_CLASS` que a janela publica.
-Se a barra não atualizar na hora, faça logout/login da sessão gráfica.
+> **Cost warning for subscriptions.** The prime-agent documentation is explicit:
+> Claude Pro/Max used through a third-party harness is billed **per token as
+> "extra usage"**, and does not draw from your plan limits. The subscription
+> authenticates you; the consumption is billed separately. Prime Desk's usage
+> panel shows that accumulated cost.
 
-Ícones: `npm run icon` rasteriza `resources/brand/prime-butterfly.svg` em todos os
-tamanhos usando o próprio Electron — sem depender de Inkscape ou ImageMagick.
+The signed-in provider appears at the bottom-left of the sidebar, where you can
+switch accounts or sign out.
 
-## Requisitos
-
-- Node.js 20+ (validado em v22.22.2)
-- `prime-agent` instalado, no `PATH` e **autenticado**
-- Linux (validado em Ubuntu 24.04). macOS e Windows devem funcionar, sem teste.
-
-### Autenticação: o que é preciso na primeira vez
-
-O Prime Desk **não** tem login próprio e não pede conta em lugar nenhum. Ele usa
-as credenciais que o `prime-agent` já guarda. Quem instala do zero precisa
-autenticar o agente uma vez, no terminal:
-
-```bash
-prime-agent
-# dentro da sessão:
-/login
-```
-
-Há dois caminhos, e **nenhum deles exige conta na Prime Intellect**:
-
-| Caminho | O que serve |
-|---|---|
-| **Assinatura** (`/login`) | Claude Pro/Max, ChatGPT Plus/Pro (Codex), GitHub Copilot |
-| **Chave de API** | variável de ambiente (ex.: `ANTHROPIC_API_KEY`) ou `/login` gravando em `~/.prime/agent/auth.json` |
-
-> **Atenção ao custo com assinatura.** A documentação do prime-agent é explícita:
-> uso do Claude Pro/Max em ferramenta de terceiro é cobrado **por token, como
-> "extra usage"**, e não abate do limite do plano. Ou seja, a assinatura
-> autentica, mas o consumo é faturado à parte. O painel de uso do Prime Desk
-> mostra esse custo acumulado.
-
-A GUI nunca lê nem replica o `auth.json` — as credenciais ficam sob
-responsabilidade exclusiva do `prime-agent`.
-
-## Instalação
+## Install
 
 ```bash
 npm install
 ```
 
-### Sandbox do Chromium no Linux
+### Chromium sandbox on Linux
 
-O Ubuntu 24.04 restringe user namespaces sem privilégio
-(`kernel.apparmor_restrict_unprivileged_userns=1`), então o Chromium exige o
-helper setuid com owner `root`. Faça isso **uma vez**:
+Ubuntu 24.04 restricts unprivileged user namespaces
+(`kernel.apparmor_restrict_unprivileged_userns=1`), so Chromium needs its setuid
+helper owned by `root`. Do this **once**:
 
 ```bash
-npm run fix-sandbox    # sudo chown root:root + chmod 4755 no chrome-sandbox
+npm run fix-sandbox    # sudo chown root:root + chmod 4755 on chrome-sandbox
 ```
 
-Se você não tem `sudo`, existe um escape **apenas para desenvolvimento**:
+If you have no `sudo`, there is a **development-only** escape hatch:
 
 ```bash
 npm run dev:nosandbox
 ```
 
-Ele desliga o sandbox do Chromium — é opt-in explícito, nunca aplicado em
-silêncio. Não use assim em uso rotineiro.
+It disables the Chromium sandbox. It is opt-in and never applied silently. Do
+not use it for day-to-day work.
 
-## Uso
+## Usage
 
 ```bash
-npm run dev      # desenvolvimento com HMR
-npm run build    # compila para out/
-npm start        # roda o build
+npm run dev      # development with HMR
+npm run build    # compile to out/
+npm start        # run the build
 npm run typecheck
 ```
 
-## Título automático
+## Shortcuts
 
-Depois do primeiro turno, a conversa recebe um título curto gerado a partir da
-pergunta e da resposta. Ele é gravado com `set_session_name`, ou seja, vive na
-própria sessão do agente (entrada `session_info`) e aparece também no TUI — não
-é um rótulo paralelo da GUI.
+| Key | Action |
+|---|---|
+| `Enter` | send |
+| `Shift+Enter` | new line |
+| `/` | command autocomplete |
+| `Ctrl+K` | command palette |
+| `Ctrl+B` | agent tree |
+| `Ctrl+Shift+F` | file explorer |
+| `Ctrl+S` | save file in the editor |
+| `Ctrl` `+` / `-` | zoom in and out |
+| `Ctrl+0` | reset zoom |
+| `Esc` | abort the current turn |
 
-A geração usa um cliente RPC efêmero com um modelo barato, sem ferramentas,
-skills, extensões ou arquivos de contexto. Leva ~4 s e roda em segundo plano.
-Falhou? A sidebar cai no título heurístico (primeira frase do prompt, sem
-saudação, cortada em limite de palavra).
+## Where the agent runs
 
-## Onde o agente executa
+The first chip above the composer opens the execution menu:
 
-O primeiro chip acima do composer abre o menu de execução:
+- **Local** — default, on your machine.
+- **SSH** — a dialog asks for name, host, port, private key and remote
+  directory, with **Test connection** before saving. Connections are stored and
+  listed in the menu.
 
-- **Local** — padrão, no seu computador.
-- **SSH** — o diálogo pede nome, host, porta, chave privada e diretório remoto,
-  com **Testar conexão** antes de salvar. As conexões ficam guardadas e aparecem
-  no próprio menu.
-
-Por baixo, o SSH usa a extensão `examples/extensions/ssh.ts` do próprio
-prime-agent, que passa `bash` e `edit` para a máquina remota. Como essa extensão
-só aceita `user@host`, porta e chave entram por um `ssh` próprio colocado à
-frente do `PATH` **apenas do processo do agente** — nada é escrito no seu
+Under the hood SSH uses prime-agent's own `examples/extensions/ssh.ts`, which
+moves `bash` and `edit` to the remote machine. Because that extension only takes
+`user@host`, port and key are injected through a private `ssh` shim placed ahead
+of the `PATH` **of the agent process only** — nothing is written to your
 `~/.ssh/config`.
 
-Exige autenticação por chave: o teste usa `BatchMode`, então falha em vez de
-pedir senha (um prompt interativo travaria o agente).
+Key-based authentication is required: the test uses `BatchMode`, so it fails
+instead of prompting (an interactive prompt would hang the agent).
 
-Não há modo em nuvem: o prime-agent não tem essa capacidade, e um botão que não
-faz nada seria pior que a ausência dele.
+There is no cloud mode: prime-agent has no such capability, and a button that
+does nothing is worse than no button.
 
-## Painel de uso
+## Usage panel
 
-Em uma conversa nova, o centro mostra o consumo agregado de todas as sessões
-locais: sessões, mensagens, tokens, custo, dias ativos, sequência atual, modelo
-mais usado, horário de pico e um mapa de atividade de 19 semanas.
+A new chat shows aggregate consumption across all local sessions: sessions,
+messages, tokens, cost, active days, current streak, most used model, peak hour
+and a 19-week activity map.
 
-Os números vêm da varredura dos `.jsonl` em `~/.prime/agent/sessions`, com cache
-por `mtime` — só relê o que mudou. O uso atribuído a subagentes
-(`child_usage_attributed`) entra no total; sem isso a conta ficaria subestimada.
+Numbers come from scanning the `.jsonl` files in `~/.prime/agent/sessions`, with
+an `mtime` cache — only changed files are re-read. Usage attributed to subagents
+(`child_usage_attributed`) is included; leaving it out would understate the total.
 
-## Explorador e editor de arquivos
+## Chats and folders
 
-A barra acima do composer mostra onde o agente está executando: **Local**, o
-**diretório de trabalho** (clique para trocar), a **branch** do git e o botão de
-arquivos.
+The sidebar groups on two levels:
 
-O painel de arquivos (`Ctrl+Shift+F`) lista a árvore do diretório de trabalho.
-Clicar num arquivo abre o editor embutido — syntax highlight para ~30 linguagens,
-edição e gravação com `Ctrl+S`. O `@` ao lado de cada arquivo cita o caminho no
-prompt em vez de abrir.
+- **Automatic groups** — derived from each session's working directory, which in
+  practice means the project. Zero configuration.
+- **Manual folders** — created from the folder button, renameable, with `+` to
+  start a chat directly inside one. The `⋯` menu on a chat moves it between
+  folders.
 
-**Limites deliberados:**
+Manual assignment wins over automatic grouping. All of this lives in
+`<userData>/folders.json` and stores **only** session ids and folder names — no
+conversation content is duplicated.
 
-- Tudo é resolvido contra a raiz do workspace. `..`, caminho absoluto e symlink
-  que aponte para fora são recusados — é um explorador do projeto, não um leitor
-  de disco.
-- Arquivos acima de 1 MB são exibidos truncados e com edição desabilitada, para
-  não gravar um arquivo cortado por cima do original.
-- Binários não são renderizados; abrem no aplicativo padrão do sistema.
-- O editor não tem histórico de desfazer entre sessões. Versione antes de mexer
-  em arquivo importante.
+Pin, archive and rename are **GUI state**: they do not alter the agent's session.
+Delete is real and removes the `.jsonl` from disk, with confirmation.
 
-## Ações da conversa
+## Agent tree
 
-O menu `⋯` de cada conversa: **Abrir**, **Fixar no topo**, **Renomear**,
-**Duplicar** (só na conversa aberta — usa `clone` do RPC, que age sobre a sessão
-ativa), **Mover para pasta**, **Arquivar** e **Excluir**.
+`Ctrl+B` opens the agents panel: the full hierarchy of RLM descendants, with
+status (active / waiting / replied), depth, message count, model and `spawnCode`
+— the exact Python that created each subagent.
 
-Fixar, arquivar e renomear são estado **da GUI** (`folders.json`): não alteram a
-sessão do agente. Excluir é real e apaga o `.jsonl` do disco, com confirmação e
-bloqueado para a conversa aberta.
+Data comes from `prime-agent list --json`, the only surface that exposes
+`parentActiveSessionId`. The poller runs every 3 s and **pauses** when the window
+is not visible.
 
-## Atalhos
+### Watching a subagent live
 
-| Tecla | Ação |
+The eye icon on any node opens that session's **live transcript**: reasoning,
+text and tool execution in real time, with the same rendering as the main chat.
+
+It uses the RPC `observe` / `unobserve`. The agent buffers events until the
+history is delivered, so there is no gap between what already happened and what
+arrives next.
+
+The panel is **read-only** by design. Injecting a prompt there would require
+`send_message` and would turn "watching" into "interfering" — that deserves an
+explicit action, not a side effect of opening a panel.
+
+## File explorer and editor
+
+The bar above the composer shows where the agent is running: **Local**, the
+**working directory** (click to change), the git **branch**, and the files button.
+
+The file panel (`Ctrl+Shift+F`) lists the working-directory tree. Clicking a file
+opens the built-in editor — syntax highlighting for ~30 languages, editing and
+saving with `Ctrl+S`. The `@` next to each file quotes its path into the prompt
+instead of opening it.
+
+**Deliberate limits:**
+
+- Everything resolves against the workspace root. `..`, absolute paths and
+  symlinks pointing outside are refused — this is a project explorer, not a disk
+  browser.
+- Files above 1 MB are shown truncated with editing disabled, so a truncated file
+  is never written over the original.
+- Binaries are not rendered; they open in the system's default application.
+- The editor has no cross-session undo history. Version your files before editing
+  anything important.
+
+## Packaging
+
+| Target | Command | Where it builds |
+|---|---|---|
+| `.deb` + AppImage | `npm run dist:linux` | any Linux host |
+| macOS `.zip` (x64 + arm64) | `npm run dist:mac` | **any host**, Linux included |
+| macOS `.dmg` | `npm run dist:mac:dmg` | **macOS only** |
+
+`.dmg` cannot be produced off macOS: `dmg-license` is a darwin-only dependency
+and packaging uses `hdiutil`. For a signed and notarized dmg use
+`.github/workflows/release.yml`, which runs on a `macos-14` runner.
+
+> macOS builds without an Apple certificate are **unsigned**. Gatekeeper will
+> block the first launch and the user must allow it under Settings → Privacy &
+> Security. Fill in the signing secrets in CI for real distribution.
+
+### Desktop icon
+
+On Linux the taskbar does **not** use the window icon: it matches `WM_CLASS`
+against an installed `.desktop` file. Without it the shell shows a generic gear
+even though the window icon is correct.
+
+| Situation | What to do |
 |---|---|
-| `Enter` | enviar |
-| `Shift+Enter` | nova linha |
-| `Ctrl+K` | paleta de comandos |
-| `Ctrl+B` | árvore de agentes |
-| `Ctrl+Shift+F` | explorador de arquivos |
-| `Ctrl+S` | salvar arquivo no editor |
-| `Ctrl` `+` / `-` | aumentar e diminuir a interface |
-| `Ctrl+0` | voltar ao zoom padrão |
-| `Esc` | interromper o turno |
+| Installed the `.deb` | Nothing. The package installs `.desktop` and icons under `/usr/share` |
+| Development or AppImage | `npm run desktop:install` (writes to `~/.local/share`, no sudo) |
+| Undo | `npm run desktop:remove` |
+| macOS | The packaged `.app` already carries the `.icns`; development shows the Electron icon |
 
-## Arquitetura
+Icons: `npm run icon` rasterizes `resources/brand/prime-butterfly.svg` at every
+size using Electron itself — no Inkscape or ImageMagick required.
+
+## Architecture
 
 ```
 src/
-├─ shared/protocol.ts      tipos do protocolo RPC (fonte única)
+├─ shared/protocol.ts      RPC protocol types (single source)
 ├─ main/
-│  ├─ index.ts             janela, IPC, ciclo de vida
-│  ├─ rpc-client.ts        spawn + framing JSONL + correlação de requisições
-│  ├─ session-catalog.ts   leitura das sessões em disco
-│  ├─ agent-tree.ts        árvore RLM via `prime-agent list --json`
-│  ├─ files.ts             explorador/leitura/escrita com escopo na raiz
-│  └─ folders.ts           persistência das pastas
-├─ preload/index.ts        contextBridge (superfície mínima)
+│  ├─ index.ts             window, IPC, lifecycle
+│  ├─ rpc-client.ts        spawn + JSONL framing + request correlation
+│  ├─ session-catalog.ts   reads sessions from disk
+│  ├─ agent-tree.ts        RLM tree via `prime-agent list --json`
+│  ├─ usage.ts             aggregate usage with mtime cache
+│  ├─ files.ts             explorer/read/write scoped to the workspace root
+│  ├─ titles.ts            auto title via an ephemeral RPC client
+│  ├─ onboarding.ts        environment check, installer, terminal, logout
+│  ├─ ssh.ts               connections, test, PATH shim
+│  └─ folders.ts           folder persistence
+├─ preload/index.ts        contextBridge (minimal surface)
 └─ renderer/src/
-   ├─ store/transcript.ts  reducer puro (própria sessão e observadas)
-   ├─ store/agent.ts       estado de UI, comandos RPC, observações
-   ├─ styles/theme.css     paleta oficial como CSS custom properties
+   ├─ i18n/                en · pt-BR · es dictionaries
+   ├─ store/transcript.ts  pure reducer (own and observed sessions)
+   ├─ store/agent.ts       UI state, RPC commands, observations
+   ├─ styles/theme.css     official palette as CSS custom properties
    └─ components/          Sidebar, StatusBar, Composer, Message, ToolCard, …
 ```
 
-### Três decisões que importam
+### Decisions that matter
 
-**1. RPC, não ACP.** ACP é padrão aberto mas expõe só cinco métodos e não permite
-trocar modelo, ajustar thinking nem compactar. Todo o acoplamento está em
-`rpc-client.ts`; migrar para ACP é mexer em um arquivo.
+**1. RPC, not ACP.** ACP is an open standard but exposes only five methods and
+cannot switch models, adjust thinking or compact. All coupling lives in
+`rpc-client.ts`; moving to ACP means touching one file.
 
-**2. Snapshot, não delta.** O evento `message_update` carrega o conteúdo
-**completo** da mensagem além do delta. O renderer usa o snapshot e ignora os
-deltas — renderização idempotente, sem bugs de remontagem.
+**2. Snapshot, not delta.** The `message_update` event carries the **full**
+message content alongside the delta. The renderer uses the snapshot and ignores
+deltas — idempotent rendering, no reassembly bugs.
 
-**3. Parser LF próprio.** O protocolo usa `\n` como único delimitador. O
-`readline` do Node **não** é compatível: ele também quebra em `U+2028`/`U+2029`,
-que são válidos dentro de strings JSON.
+**3. Custom LF parser.** The protocol uses `\n` as its only delimiter. Node's
+`readline` is **not** compliant: it also splits on `U+2028`/`U+2029`, which are
+valid inside JSON strings.
 
-Mapeamento técnico completo: [`docs/MAPEAMENTO.md`](docs/MAPEAMENTO.md).
-Plano e fases: [`docs/PLANO.md`](docs/PLANO.md).
+**4. Smoothing, not optimization.** Measured 60fps with zero long tasks during
+streaming. The stutter came from the model's bursts, not from rendering — so the
+fix was a steady reveal, not a render optimization.
 
-## Segurança
+Full technical mapping: [`docs/MAPEAMENTO.md`](docs/MAPEAMENTO.md).
+Plan and phases: [`docs/PLANO.md`](docs/PLANO.md).
+
+## Security
 
 - `contextIsolation: true`, `nodeIntegration: false`
-- A GUI **não lê nem replica** `~/.prime/agent/auth.json`. Credenciais ficam sob
-  responsabilidade exclusiva do `prime-agent`.
-- Navegação interna bloqueada; links abrem no navegador do sistema.
-- CSP restritiva no documento do renderer.
-- Sem telemetria própria.
+- The GUI **never reads** `~/.prime/agent/auth.json` credential values. It reads
+  provider **names** only, to show who is signed in. The single write is the
+  explicit sign-out, which removes that provider's entry — the same effect as the
+  agent's `/logout`.
+- File access is confined to the working directory.
+- Internal navigation is blocked; links open in the system browser.
+- Restrictive CSP on the renderer document.
+- No telemetry of its own.
 
-> **Antes de distribuir internamente:** o histórico de conversas fica em disco e
-> pode conter dados de cliente. Defina retenção e criptografia em repouso, e
-> valide com a área de Segurança da Informação frente a LGPD / ISO 27001.
+> **Before internal distribution:** conversation history is stored on disk and may
+> contain customer data. Define retention and encryption at rest, and review with
+> your security team against GDPR/LGPD and ISO 27001.
 
-## Licença
+## License
 
 MIT

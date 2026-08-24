@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Loader2, CheckCircle2, AlertTriangle, Plug } from 'lucide-react'
 import { Modal, Field, Button, inputClass } from './Modal'
+import { useT } from '../i18n'
 
 export interface SshForm {
   name: string
@@ -21,6 +22,7 @@ export function SshModal({
   onClose: () => void
   onSubmit: (form: SshForm) => void
 }) {
+  const { t } = useT()
   const [form, setForm] = useState<SshForm>(EMPTY)
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
@@ -53,46 +55,39 @@ export function SshModal({
   return (
     <Modal
       open={open}
-      title="Adicionar conexão SSH"
-      description={
-        <>
-          Conecte a uma máquina remota para executar o{' '}
-          <span className="font-mono text-primarySoft">prime-agent</span>. As ferramentas{' '}
-          <span className="font-mono">bash</span> e <span className="font-mono">edit</span> passam a
-          rodar lá.
-        </>
-      }
+      title={t('ssh.title')}
+      description={t('ssh.desc')}
       onClose={onClose}
       width={480}
       footer={
         <>
-          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={onClose}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={submit} disabled={!hostOk}>
-            Adicionar conexão
+            {t('ssh.add')}
           </Button>
         </>
       }
     >
-      <Field label="Nome" hint="Um apelido para identificar esta conexão">
+      <Field label={t('ssh.name')} hint={t('ssh.nameHint')}>
         <input
           className={inputClass}
           value={form.name}
           onChange={(e) => set('name', e.target.value)}
-          placeholder="Meu servidor"
+          placeholder={t('ssh.namePh')}
         />
       </Field>
 
-      <Field label="Host SSH" hint="usuario@servidor.com, ou um host do seu ~/.ssh/config">
+      <Field label={t('ssh.host')} hint={t('ssh.hostHint')}>
         <input
           className={inputClass}
           value={form.host}
           onChange={(e) => set('host', e.target.value)}
-          placeholder="usuario@servidor"
+          placeholder={t('ssh.hostPh')}
           spellCheck={false}
         />
       </Field>
 
-      <Field label="Porta" hint="Vazio usa a padrão (22) ou o que estiver no ~/.ssh/config">
+      <Field label={t('ssh.port')} hint={t('ssh.portHint')}>
         <input
           className={inputClass}
           value={form.port}
@@ -102,7 +97,7 @@ export function SshModal({
         />
       </Field>
 
-      <Field label="Chave privada" hint="Vazio usa a chave padrão ou o ~/.ssh/config">
+      <Field label={t('ssh.identity')} hint={t('ssh.identityHint')}>
         <input
           className={inputClass}
           value={form.identity}
@@ -112,7 +107,7 @@ export function SshModal({
         />
       </Field>
 
-      <Field label="Diretório remoto" hint="Opcional. Vazio usa o diretório inicial do usuário">
+      <Field label={t('ssh.remotePath')} hint={t('ssh.remotePathHint')}>
         <input
           className={inputClass}
           value={form.remotePath}
@@ -127,12 +122,12 @@ export function SshModal({
           {testing ? (
             <span className="flex items-center gap-1.5">
               <Loader2 size={12} className="animate-spin" />
-              Testando
+              {t('ssh.testing')}
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
               <Plug size={12} />
-              Testar conexão
+              {t('ssh.test')}
             </span>
           )}
         </Button>
@@ -155,9 +150,7 @@ export function SshModal({
       </div>
 
       <p className="mt-3 rounded-lg border border-white/[0.07] bg-black/20 p-2.5 text-[11px] leading-relaxed text-dim">
-        A conexão precisa funcionar por chave, sem pedir senha — um prompt interativo travaria o
-        agente. O teste usa <span className="font-mono">BatchMode</span>, então falha em vez de
-        perguntar.
+        {t('ssh.keyNote')}
       </p>
     </Modal>
   )
