@@ -1,4 +1,3 @@
-import { Butterfly } from './Butterfly'
 import { useT } from '../i18n'
 
 /**
@@ -12,15 +11,10 @@ export function PendingBubble({ label }: { label?: string }) {
   const { t } = useT()
 
   return (
-    <div className="animate-fade-up px-6 pb-1.5 pt-2.5">
-      <div className="flex gap-3.5">
-        <div className="mt-0.5 shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-surface">
-            <Butterfly size={17} className="animate-pulse-soft" />
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-1 items-center gap-2 pt-1">
+    <div className="animate-fade-up px-6 pt-[var(--turn-gap)]">
+      {/* Sem avatar, para nascer no mesmo alinhamento da resposta que vai substituí-lo. */}
+      <div className="flex">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="flex items-end gap-[3px]">
             {[0, 1, 2].map((i) => (
               <span
@@ -33,7 +27,7 @@ export function PendingBubble({ label }: { label?: string }) {
               />
             ))}
           </span>
-          <span className="text-[12.5px] text-dim">{label ?? t('chat.thinking')}…</span>
+          <span className="text-sm text-dim">{label ?? t('chat.thinking')}…</span>
         </div>
       </div>
     </div>

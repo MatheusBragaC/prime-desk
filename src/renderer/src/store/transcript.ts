@@ -113,6 +113,27 @@ function upsertMessage(t: Transcript, msg: AgentMessage, finished: boolean, coun
 
   const messages = idx >= 0 ? t.messages.map((m, i) => (i === idx ? next : m)) : [...t.messages, next]
 
+  /*
+    Argumentos da chamada vêm no bloco `toolCall` da mensagem do assistente; o
+    `toolResult` traz só o resultado. Ao carregar uma conversa do disco não há
+    evento `tool_execution_start` nenhum, então sem esta semeadura o card ficava
+    sem o código executado — só com o nome da ferramenta e a saída.
+  */
+  let tools = t.tools
+  for (const b of next.content) {
+    if (b.type !== 'toolCall' || !b.id) continue
+    const prev = tools[b.id]
+    if (prev && Object.keys(prev.args).length > 0) continue
+    const args = b.arguments ?? {}
+    if (!prev && Object.keys(args).length === 0) continue
+    tools = {
+      ...tools,
+      [b.id]: prev
+        ? { ...prev, args }
+        : { id: b.id, name: b.name, args, status: 'running', text: '' }
+    }
+  }
+
   const totals =
     countUsage && msg.usage
       ? {
@@ -121,7 +142,7 @@ function upsertMessage(t: Transcript, msg: AgentMessage, finished: boolean, coun
         }
       : t.totals
 
-  return { ...t, messages, totals }
+  return { ...t, messages, tools, totals }
 }
 
 /** Aplica um evento. Retorna o mesmo objeto se nada mudou. */
