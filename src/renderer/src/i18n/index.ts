@@ -278,6 +278,11 @@ const pt: Record<string, string> = {
   "usage.compare": "Você usou ~{n}× mais tokens que Dom Casmurro inteiro.",
   "usage.compareBasis": "Estimativa: ~89 mil tokens para o livro inteiro.",
   "usage.costFooter": "Custo acumulado",
+  "session.busyRunTitle": "Execução em andamento",
+  "session.busyRunMsg": "Esta conversa está executando agora. Trocar de conversa substitui a sessão no mesmo agente e interrompe o que está rodando.",
+  "session.busyRunDetail": "O histórico é preservado, mas o turno atual não termina.",
+  "session.busyRunConfirm": "Interromper e trocar",
+  "session.newWhileRunning": "Criar uma conversa nova também interrompe o que está rodando aqui.",
 }
 
 const en: Record<string, string> = {
@@ -542,6 +547,11 @@ const en: Record<string, string> = {
   "usage.compare": "You've used ~{n}× more tokens than the whole of Animal Farm.",
   "usage.compareBasis": "Estimate: ~40k tokens for the whole book.",
   "usage.costFooter": "Accumulated cost",
+  "session.busyRunTitle": "Run in progress",
+  "session.busyRunMsg": "This chat is running right now. Switching conversations replaces the session in the same agent and interrupts what is running.",
+  "session.busyRunDetail": "The history is preserved, but the current turn will not finish.",
+  "session.busyRunConfirm": "Interrupt and switch",
+  "session.newWhileRunning": "Creating a new chat also interrupts what is running here.",
 }
 
 const es: Record<string, string> = {
@@ -806,6 +816,11 @@ const es: Record<string, string> = {
   "usage.compare": "Usaste ~{n}× más tokens que Rebelión en la granja completo.",
   "usage.compareBasis": "Estimación: ~40 mil tokens para el libro completo.",
   "usage.costFooter": "Costo acumulado",
+  "session.busyRunTitle": "Ejecución en curso",
+  "session.busyRunMsg": "Esta conversación se está ejecutando ahora. Cambiar de conversación reemplaza la sesión en el mismo agente e interrumpe lo que está corriendo.",
+  "session.busyRunDetail": "El historial se conserva, pero el turno actual no terminará.",
+  "session.busyRunConfirm": "Interrumpir y cambiar",
+  "session.newWhileRunning": "Crear una conversación nueva también interrumpe lo que está corriendo aquí.",
 }
 
 const DICTS: Record<Lang, Record<string, string>> = { pt, en, es }

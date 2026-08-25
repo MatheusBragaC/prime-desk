@@ -912,3 +912,38 @@ subir para reler — o oposto do que o `pinned` existente já protege.
 
 Medido ao abrir a sessão de 14 MB: `scrollTop` 9437 de `scrollHeight` 10068,
 distância do fim **0 px**.
+
+## 41. Sair da conversa interrompia a execução em andamento
+
+Relatado como inaceitável, e com razão. A causa é arquitetural, documentada em
+`docs/daemon.md`:
+
+> Each worker owns one root `AgentSessionRuntime` … New, switch, fork, and import
+> operations **replace the root runtime inside the worker**.
+
+Ou seja: um worker carrega **uma** sessão por vez. Trocar de conversa troca o
+runtime e o turno em voo morre.
+
+Medido com um streaming longo e `switch_session` no meio:
+
+| | Deltas de texto |
+|---|---|
+| Antes da troca | 16 |
+| 12 s depois da troca | 17 |
+
+E, pior, **nenhum `agent_end`** foi emitido. O cliente ficava sem evento de
+fechamento — a interface continuaria achando que transmite.
+
+**Correção nesta camada:** trocar de conversa ou criar conversa nova com execução
+em andamento pede confirmação. Confirmando, o app manda `abort` primeiro, espera
+o estado assentar e só então troca — o fim passa a ser determinístico em vez de
+um corte silencioso.
+
+Verificado: cancelando, a conversa segue e o texto continua crescendo
+(1974 → 2891 caracteres); confirmando, `isStreaming` volta a `false` sem estado
+preso.
+
+**Limite conhecido.** Isto evita a perda acidental, mas não permite deixar uma
+conversa rodando enquanto se lê outra. Para isso seria preciso mais de um worker
+— um por conversa, como o daemon já suporta — o que significa abas com estado
+próprio de transcript, tema para uma próxima etapa.

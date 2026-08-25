@@ -296,6 +296,11 @@ export async function compactNow(): Promise<void> {
 }
 
 export async function newSession(): Promise<void> {
+  if (confirmInterrupt(() => newSessionNow(), t('session.newWhileRunning'))) return
+  await newSessionNow()
+}
+
+async function newSessionNow(): Promise<void> {
   await rpc('new_session')
   useAgent.getState().reset()
   void refreshState()
@@ -308,7 +313,49 @@ export async function newSession(): Promise<void> {
  * `switch_session` recebe **sessionPath**, não sessionId — mandar o campo errado
  * faz o comando falhar em silêncio e a seleção nunca sai do lugar.
  */
+/**
+ * Encerra o turno em andamento antes de mexer na sessão do worker.
+ *
+ * Medido: `switch_session` durante o streaming corta a execução **sem emitir
+ * `agent_end`** — o cliente fica sem fechamento e a interface acha que ainda
+ * está transmitindo. Abortar antes torna o fim determinístico.
+ */
+async function stopRunBeforeSwitch(): Promise<void> {
+  await bridge().fire('abort')
+  await new Promise((r) => setTimeout(r, 700))
+  await refreshState()
+}
+
+/**
+ * Pede confirmação quando há execução em andamento.
+ *
+ * O worker do daemon carrega uma sessão por vez: trocar substitui o runtime e
+ * interrompe o que roda. Isso não pode acontecer por acidente.
+ */
+function confirmInterrupt(onProceed: () => void | Promise<void>, extra?: string): boolean {
+  const store = useAgent.getState()
+  if (!store.state?.isStreaming) return false
+
+  store.requestConfirm({
+    title: t('session.busyRunTitle'),
+    message: t('session.busyRunMsg') + (extra ? ` ${extra}` : ''),
+    detail: t('session.busyRunDetail'),
+    confirmLabel: t('session.busyRunConfirm'),
+    danger: true,
+    onConfirm: async () => {
+      await stopRunBeforeSwitch()
+      await onProceed()
+    }
+  })
+  return true
+}
+
 export async function openSession(sessionPath: string): Promise<void> {
+  if (confirmInterrupt(() => openSessionNow(sessionPath))) return
+  await openSessionNow(sessionPath)
+}
+
+async function openSessionNow(sessionPath: string): Promise<void> {
   const store = useAgent.getState()
   store.setLoadingSession(true)
   try {
