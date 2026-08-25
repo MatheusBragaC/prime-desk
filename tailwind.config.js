@@ -8,6 +8,7 @@ export default {
         bg: 'rgb(var(--p-bg-rgb) / <alpha-value>)',
         surface: 'rgb(var(--p-surface-rgb) / <alpha-value>)',
         panel: 'rgb(var(--p-panel-rgb) / <alpha-value>)',
+        elevated: 'rgb(var(--p-elevated-rgb) / <alpha-value>)',
         fg: 'rgb(var(--p-fg-rgb) / <alpha-value>)',
         muted: 'rgb(var(--p-muted-rgb) / <alpha-value>)',
         dim: 'rgb(var(--p-dim-rgb) / <alpha-value>)',
@@ -20,17 +21,43 @@ export default {
         info: 'rgb(var(--p-info-rgb) / <alpha-value>)',
         mint: 'rgb(var(--p-mint-rgb) / <alpha-value>)'
       },
+      /*
+        Escala de sete degraus. Antes eram 21 tamanhos arbitrários
+        (`text-[12.6px]` e parentes), o que impedia qualquer ritmo vertical.
+      */
+      fontSize: {
+        micro: ['10.5px', { lineHeight: '1.4' }],
+        xs: ['11.5px', { lineHeight: '1.45' }],
+        sm: ['13px', { lineHeight: '1.5' }],
+        base: ['15px', { lineHeight: '1.68' }],
+        lg: ['18px', { lineHeight: '1.4' }],
+        xl: ['24px', { lineHeight: '1.25' }],
+        display: ['30px', { lineHeight: '1.15' }]
+      },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+        display: ['Newsreader Variable', 'Georgia', 'serif'],
+        sans: ['Inter Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono Variable', 'ui-monospace', 'SFMono-Regular', 'monospace']
+      },
+      /*
+        Raios semânticos, somados aos do Tailwind: `card` para blocos de conteúdo,
+        `field` para campos e menus, `composer` para a caixa de entrada.
+      */
+      borderRadius: {
+        card: '12px',
+        field: '16px',
+        composer: '24px'
+      },
+      maxWidth: {
+        col: 'var(--col)'
       },
       keyframes: {
-        'fade-up': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'none' } },
+        'fade-up': { from: { opacity: '0', transform: 'translateY(2px)' }, to: { opacity: '1', transform: 'none' } },
         shimmer: { '0%': { backgroundPosition: '200% 0' }, '100%': { backgroundPosition: '-200% 0' } },
         'pulse-soft': { '0%,100%': { opacity: '0.45' }, '50%': { opacity: '1' } }
       },
       animation: {
-        'fade-up': 'fade-up .28s cubic-bezier(.2,.8,.2,1) both',
+        'fade-up': 'fade-up .16s cubic-bezier(.2,.8,.2,1) both',
         shimmer: 'shimmer 2.4s linear infinite',
         'pulse-soft': 'pulse-soft 1.6s ease-in-out infinite'
       }
