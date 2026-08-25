@@ -4,9 +4,9 @@ import type { CommandInfo } from '../store/agent'
 import { useT } from '../i18n'
 
 function SourceIcon({ source }: { source: string }) {
-  if (source === 'skill') return <Sparkles size={12} className="shrink-0 text-primarySoft" />
-  if (source === 'template') return <FileText size={12} className="shrink-0 text-info" />
-  return <Puzzle size={12} className="shrink-0 text-warn" />
+  if (source === 'skill') return <Sparkles size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+  if (source === 'template') return <FileText size={14} strokeWidth={1.75} className="shrink-0 text-info" />
+  return <Puzzle size={14} strokeWidth={1.75} className="shrink-0 text-warn" />
 }
 
 /**
@@ -60,9 +60,9 @@ export function SlashMenu({
               <SourceIcon source={item.source} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-mono text-[12.3px] text-fg">/{item.name}</span>
+              <span className="block truncate font-mono text-sm text-fg">/{item.name}</span>
               {/* line-clamp define o display; adicionar `block` aqui o anularia. */}
-              <span className="mt-0.5 line-clamp-2 text-[11.3px] leading-snug text-dim">
+              <span className="mt-0.5 line-clamp-2 text-xs leading-snug text-dim">
                 {item.description}
               </span>
             </span>
@@ -70,7 +70,7 @@ export function SlashMenu({
         ))}
       </div>
 
-      <div className="flex items-center gap-3 border-t border-white/[0.07] px-3 py-1.5 text-[10.5px] text-dim">
+      <div className="flex items-center gap-3 border-t border-[var(--p-line)] px-3 py-1.5 text-micro text-dim">
         <span><kbd className="font-mono">↑↓</kbd> {t('slash.navigate')}</span>
         <span><kbd className="font-mono">Tab</kbd> / <kbd className="font-mono">Enter</kbd> {t('slash.insert')}</span>
         <span><kbd className="font-mono">Esc</kbd> {t('slash.dismiss')}</span>

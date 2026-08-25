@@ -28,15 +28,15 @@ function StepRow({
   return (
     <div className="flex items-start gap-2.5 py-1.5">
       {busy ? (
-        <Loader2 size={15} className="mt-[1px] shrink-0 animate-spin text-primary" />
+        <Loader2 size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 animate-spin text-primary" />
       ) : done ? (
-        <CheckCircle2 size={15} className="mt-[1px] shrink-0 text-ok" />
+        <CheckCircle2 size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 text-ok" />
       ) : (
-        <Circle size={15} className="mt-[1px] shrink-0 text-dim" />
+        <Circle size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 text-dim" />
       )}
       <div className="min-w-0">
-        <div className={'text-[13px] ' + (done ? 'text-fg' : 'text-muted')}>{title}</div>
-        {detail && <div className="mt-0.5 truncate font-mono text-[11px] text-dim">{detail}</div>}
+        <div className={'text-sm ' + (done ? 'text-fg' : 'text-muted')}>{title}</div>
+        {detail && <div className="mt-0.5 truncate font-mono text-xs text-dim">{detail}</div>}
       </div>
     </div>
   )
@@ -176,14 +176,14 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
       <div className="relative z-10 w-full max-w-[520px]">
         <div className="animate-fade-up flex flex-col items-center text-center">
           <Butterfly size={46} className={stage === 'checking' ? 'animate-pulse-soft' : ''} />
-          <h1 className="mt-3.5 text-[20px] font-semibold tracking-tight">{t('onb.welcome')}</h1>
-          <p className="mt-1.5 max-w-[400px] text-[12.8px] leading-relaxed text-muted">
+          <h1 className="mt-3.5 text-xl font-semibold tracking-tight">{t('onb.welcome')}</h1>
+          <p className="mt-1.5 max-w-[400px] text-sm leading-relaxed text-muted">
             {t('onb.intro')}
           </p>
         </div>
 
         <div
-          className="animate-fade-up mt-6 rounded-xl border border-white/[0.08] bg-[var(--p-surface)] p-4"
+          className="animate-fade-up mt-6 rounded-xl border border-[var(--p-line)] bg-[var(--p-surface)] p-4"
           style={{ animationDelay: '90ms' }}
         >
           <StepRow
@@ -215,8 +215,8 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         </div>
 
         {error && (
-          <div className="animate-fade-up mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-[12.3px] leading-snug text-err">
-            <AlertTriangle size={14} className="mt-[2px] shrink-0" />
+          <div className="animate-fade-up mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-sm leading-snug text-err">
+            <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
             {error}
           </div>
         )}
@@ -224,16 +224,16 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         {/* ---------------- instalar ---------------- */}
         {(stage === 'install' || stage === 'installing') && (
           <div
-            className="animate-fade-up mt-3 rounded-xl border border-white/[0.08] bg-[var(--p-surface)] p-4"
+            className="animate-fade-up mt-3 rounded-xl border border-[var(--p-line)] bg-[var(--p-surface)] p-4"
             style={{ animationDelay: '150ms' }}
           >
-            <div className="text-[13px] font-medium">{t('onb.installTitle')}</div>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            <div className="text-sm font-medium">{t('onb.installTitle')}</div>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
               {t('onb.installDesc')}
             </p>
 
-            <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-white/[0.08] bg-black/35 p-2.5">
-              <code className="min-w-0 flex-1 break-all font-mono text-[11.5px] text-mint">
+            <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-[var(--p-line)] bg-black/35 p-2.5">
+              <code className="min-w-0 flex-1 break-all font-mono text-xs text-mint">
                 {command}
               </code>
               <button
@@ -241,7 +241,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 className="shrink-0 rounded p-1 text-dim transition-colors hover:text-fg"
                 title={t('common.copy')}
               >
-                {copied ? <Check size={12} className="text-ok" /> : <Copy size={12} />}
+                {copied ? <Check size={14} strokeWidth={1.75} className="text-ok" /> : <Copy size={14} strokeWidth={1.75} />}
               </button>
             </div>
 
@@ -253,16 +253,16 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               >
                 <span className="flex items-center gap-1.5">
                   {stage === 'installing' ? (
-                    <Loader2 size={13} className="animate-spin" />
+                    <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
                   ) : (
-                    <Download size={13} />
+                    <Download size={14} strokeWidth={1.75} />
                   )}
                   {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
                 </span>
               </Button>
               <Button variant="subtle" onClick={() => void check()}>
                 <span className="flex items-center gap-1.5">
-                  <RefreshCw size={12} />
+                  <RefreshCw size={14} strokeWidth={1.75} />
                   {t('onb.alreadyInstalled')}
                 </span>
               </Button>
@@ -271,7 +271,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             {output && (
               <pre
                 ref={logRef}
-                className="mt-3 max-h-[150px] overflow-auto rounded-lg border border-white/[0.07] bg-black/40 p-2.5 font-mono text-[10.8px] leading-snug text-muted"
+                className="mt-3 max-h-[150px] overflow-auto rounded-lg border border-[var(--p-line)] bg-black/40 p-2.5 font-mono text-micro leading-snug text-muted"
               >
                 {output}
               </pre>
@@ -282,39 +282,39 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         {/* ---------------- autenticar ---------------- */}
         {stage === 'auth' && (
           <div
-            className="animate-fade-up mt-3 rounded-xl border border-white/[0.08] bg-[var(--p-surface)] p-4"
+            className="animate-fade-up mt-3 rounded-xl border border-[var(--p-line)] bg-[var(--p-surface)] p-4"
             style={{ animationDelay: '150ms' }}
           >
-            <div className="text-[13px] font-medium">{t('onb.authTitle')}</div>
-            <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            <div className="text-sm font-medium">{t('onb.authTitle')}</div>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
               {t('onb.authDesc')}
             </p>
 
             <button
               onClick={() => void openTerminal()}
               disabled={opening}
-              className="mt-3 flex w-full items-start gap-3 rounded-lg border border-white/[0.08] p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
+              className="mt-3 flex w-full items-start gap-3 rounded-lg border border-[var(--p-line)] p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
             >
-              <Terminal size={15} className="mt-[2px] shrink-0 text-primarySoft" />
+              <Terminal size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-primarySoft" />
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.8px] font-medium text-fg">
+                <span className="block text-sm font-medium text-fg">
                   {opening ? t('onb.opening') : t('onb.subTitle')}
                 </span>
-                <span className="mt-0.5 block text-[11.5px] leading-snug text-dim">
+                <span className="mt-0.5 block text-xs leading-snug text-dim">
                   {t('onb.subDesc')}
                 </span>
               </span>
-              <ArrowRight size={13} className="mt-[3px] shrink-0 text-dim" />
+              <ArrowRight size={14} strokeWidth={1.75} className="mt-[3px] shrink-0 text-dim" />
             </button>
 
             {portBusy !== null && (
               <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
-                <div className="flex items-start gap-2 text-[11.8px] leading-snug text-warn">
-                  <AlertTriangle size={13} className="mt-[2px] shrink-0" />
+                <div className="flex items-start gap-2 text-xs leading-snug text-warn">
+                  <AlertTriangle size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
                   <span>
                     {t('onb.portBusy', { port: portBusy })}
                     <span className="mt-1.5 block">{t('onb.portBusyCmd')}</span>
-                    <code className="mt-1 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-[10.8px] text-mint">
+                    <code className="mt-1 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-micro text-mint">
                       pkill -f &quot;bash -lc prime-agent&quot;
                     </code>
                   </span>
@@ -324,16 +324,16 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
             {termOpened && !termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-ok/25 bg-ok/[0.06] p-3">
-                <div className="flex items-center gap-1.5 text-[12.3px] font-medium text-ok">
-                  <CheckCircle2 size={13} />
+                <div className="flex items-center gap-1.5 text-sm font-medium text-ok">
+                  <CheckCircle2 size={14} strokeWidth={1.75} />
                   {t('onb.termOpened')}
                 </div>
-                <ol className="mt-2 space-y-1.5 text-[11.8px] leading-snug text-muted">
+                <ol className="mt-2 space-y-1.5 text-xs leading-snug text-muted">
                   <li className="flex gap-2">
                     <span className="text-dim">1.</span>
                     <span>
                       {t('onb.step1', { cmd: '' })}
-                      <code className="ml-1 rounded border border-white/[0.12] bg-black/40 px-1.5 py-0.5 font-mono text-[11px] text-mint">
+                      <code className="ml-1 rounded border border-white/[0.12] bg-black/40 px-1.5 py-0.5 font-mono text-xs text-mint">
                         /login
                       </code>
                     </span>
@@ -347,8 +347,8 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                     <span>{t('onb.step3', { label: t('onb.recheck') })}</span>
                   </li>
                 </ol>
-                <div className="mt-2 flex items-center gap-1.5 border-t border-white/[0.07] pt-2 text-[11px] text-dim">
-                  <Loader2 size={11} className="animate-spin" />
+                <div className="mt-2 flex items-center gap-1.5 border-t border-[var(--p-line)] pt-2 text-xs text-dim">
+                  <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
                   {t('onb.waiting')}
                 </div>
               </div>
@@ -356,41 +356,41 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
             {termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
-                <div className="flex items-start gap-2 text-[11.8px] leading-snug text-warn">
-                  <AlertTriangle size={13} className="mt-[2px] shrink-0" />
+                <div className="flex items-start gap-2 text-xs leading-snug text-warn">
+                  <AlertTriangle size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
                   <span>
                     {t('onb.termFailed')}
-                    <code className="mt-1.5 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-[11px] text-mint">
+                    <code className="mt-1.5 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-xs text-mint">
                       prime-agent
                     </code>
                     <span className="mt-1 block">{t('onb.termThenLogin')}</span>
-                    <span className="mt-1 block font-mono text-[10.5px] opacity-70">{termError}</span>
+                    <span className="mt-1 block font-mono text-micro opacity-70">{termError}</span>
                   </span>
                 </div>
               </div>
             )}
 
-            <div className="mt-2 flex items-start gap-3 rounded-lg border border-white/[0.08] p-3">
-              <KeyRound size={15} className="mt-[2px] shrink-0 text-warn" />
+            <div className="mt-2 flex items-start gap-3 rounded-lg border border-[var(--p-line)] p-3">
+              <KeyRound size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-warn" />
               <div className="min-w-0 flex-1">
-                <div className="text-[12.8px] font-medium text-fg">{t('onb.keyTitle')}</div>
-                <div className="mt-0.5 text-[11.5px] leading-snug text-dim">
+                <div className="text-sm font-medium text-fg">{t('onb.keyTitle')}</div>
+                <div className="mt-0.5 text-xs leading-snug text-dim">
                   {t('onb.keyDesc')}
                 </div>
-                <code className="mt-1.5 block break-all rounded border border-white/[0.07] bg-black/35 p-2 font-mono text-[11px] text-mint">
+                <code className="mt-1.5 block break-all rounded border border-[var(--p-line)] bg-black/35 p-2 font-mono text-xs text-mint">
                   export ANTHROPIC_API_KEY=sk-ant-…
                 </code>
               </div>
             </div>
 
-            <div className="mt-3 rounded-lg border border-warn/25 bg-warn/[0.06] p-2.5 text-[11px] leading-relaxed text-warn">
+            <div className="mt-3 rounded-lg border border-warn/25 bg-warn/[0.06] p-2.5 text-xs leading-relaxed text-warn">
               {t('onb.billing')}
             </div>
 
             <div className="mt-3">
               <Button variant="primary" onClick={() => void check()}>
                 <span className="flex items-center gap-1.5">
-                  <RefreshCw size={12} />
+                  <RefreshCw size={14} strokeWidth={1.75} />
                   {t('onb.recheck')}
                 </span>
               </Button>
@@ -399,8 +399,8 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         )}
 
         {stage === 'ready' && (
-          <div className="animate-fade-up mt-4 flex items-center justify-center gap-2 text-[13px] text-ok">
-            <CheckCircle2 size={15} />
+          <div className="animate-fade-up mt-4 flex items-center justify-center gap-2 text-sm text-ok">
+            <CheckCircle2 size={16} strokeWidth={1.75} />
             {auto ? `${t('onb.detected')} · ${t('onb.allSet')}` : t('onb.allSet')}
           </div>
         )}
