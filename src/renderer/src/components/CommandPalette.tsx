@@ -78,20 +78,20 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="flex items-center gap-2.5 border-b border-white/[0.07] px-4 py-3">
-          <Search size={15} className="text-dim" />
+        <div className="flex items-center gap-2.5 border-b border-[var(--p-line)] px-4 py-3">
+          <Search size={16} strokeWidth={1.75} className="text-dim" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('palette.search')}
-            className="w-full bg-transparent text-[14px] text-fg outline-none placeholder:text-dim"
+            className="w-full bg-transparent text-base text-fg outline-none placeholder:text-dim"
           />
         </div>
 
         <div className="max-h-[380px] overflow-y-auto p-1.5">
           {items.length === 0 && (
-            <div className="px-3 py-6 text-center text-[13px] text-dim">{t('palette.nothing')}</div>
+            <div className="px-3 py-6 text-center text-sm text-dim">{t('palette.nothing')}</div>
           )}
           {items.map((item, i) => (
             <button
@@ -107,12 +107,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               }
             >
               {item.id === 'new' || item.id === 'compact' ? (
-                <Zap size={13} className="shrink-0 text-primarySoft" />
+                <Zap size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
               ) : (
-                <Sparkles size={13} className="shrink-0 text-dim" />
+                <Sparkles size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
               )}
-              <span className="shrink-0 font-mono text-[12.8px] text-fg">{item.label}</span>
-              <span className="truncate text-[11.8px] text-dim">{item.hint}</span>
+              <span className="shrink-0 font-mono text-sm text-fg">{item.label}</span>
+              <span className="truncate text-xs text-dim">{item.hint}</span>
             </button>
           ))}
         </div>

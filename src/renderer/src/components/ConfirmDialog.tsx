@@ -47,13 +47,13 @@ export function ConfirmDialog() {
             disabled={busy}
             className={
               confirm.danger
-                ? 'rounded-lg border border-err/40 bg-err/15 px-3 py-1.5 text-[12.5px] font-medium text-err transition-colors hover:bg-err/25 disabled:opacity-40'
+                ? 'rounded-lg border border-err/40 bg-err/15 px-3 py-1.5 text-sm font-medium text-err transition-colors hover:bg-err/25 disabled:opacity-40'
                 : undefined
             }
           >
             {busy ? (
               <span className="flex items-center gap-1.5">
-                <Loader2 size={12} className="animate-spin" />
+                <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
                 {t('common.processing')}
               </span>
             ) : (
@@ -65,12 +65,12 @@ export function ConfirmDialog() {
     >
       <div className="flex items-start gap-3">
         {confirm.danger && (
-          <AlertTriangle size={18} className="mt-[2px] shrink-0 text-err" />
+          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-err" />
         )}
         <div className="min-w-0">
-          <p className="text-[13px] leading-relaxed text-fg">{confirm.message}</p>
+          <p className="text-sm leading-relaxed text-fg">{confirm.message}</p>
           {confirm.detail && (
-            <p className="mt-2 break-words rounded-lg border border-white/[0.07] bg-black/25 p-2.5 font-mono text-[11.5px] leading-snug text-dim">
+            <p className="mt-2 break-words rounded-lg border border-[var(--p-line)] bg-black/25 p-2.5 font-mono text-xs leading-snug text-dim">
               {confirm.detail}
             </p>
           )}

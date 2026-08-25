@@ -13,27 +13,27 @@ import { useT } from '../i18n'
 
 function StatusDot({ node }: { node: AgentNode }) {
   if (node.status === 'working') {
-    return <Loader2 size={12} className="shrink-0 animate-spin text-primary" />
+    return <Loader2 size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-primary" />
   }
   if (node.kind === 'subagent' && node.replied) {
-    return <CheckCircle2 size={12} className="shrink-0 text-ok" />
+    return <CheckCircle2 size={14} strokeWidth={1.75} className="shrink-0 text-ok" />
   }
   if (node.status === 'idle') {
-    return <Circle size={11} className="shrink-0 text-dim" />
+    return <Circle size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
   }
-  return <Circle size={11} className="shrink-0 text-grid" />
+  return <Circle size={14} strokeWidth={1.75} className="shrink-0 text-grid" />
 }
 
 function TaskBadge({ node }: { node: AgentNode }) {
   const { t } = useT()
   if (node.status === 'working') {
-    return <span className="shrink-0 rounded bg-primary/15 px-1.5 py-[1px] text-[10px] text-primarySoft">{t('tree.active')}</span>
+    return <span className="shrink-0 rounded bg-primary/15 px-1.5 py-[1px] text-micro text-primarySoft">{t('tree.active')}</span>
   }
   if (node.taskState === 'needs_input') {
-    return <span className="shrink-0 rounded bg-warn/12 px-1.5 py-[1px] text-[10px] text-warn">{t('tree.waiting')}</span>
+    return <span className="shrink-0 rounded bg-warn/12 px-1.5 py-[1px] text-micro text-warn">{t('tree.waiting')}</span>
   }
   if (node.kind === 'subagent' && node.replied) {
-    return <span className="shrink-0 rounded bg-ok/12 px-1.5 py-[1px] text-[10px] text-ok">{t('tree.replied')}</span>
+    return <span className="shrink-0 rounded bg-ok/12 px-1.5 py-[1px] text-micro text-ok">{t('tree.replied')}</span>
   }
   return null
 }
@@ -60,7 +60,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
           className="mt-[3px] shrink-0 disabled:opacity-0"
         >
           <ChevronRight
-            size={12}
+            size={14} strokeWidth={1.75}
             className={'text-dim transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
           />
         </button>
@@ -68,17 +68,17 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
         {level === 0 ? (
           <Butterfly size={13} className="mt-[3px] shrink-0" />
         ) : (
-          <CornerDownRight size={12} className="mt-[3px] shrink-0 text-grid" />
+          <CornerDownRight size={14} strokeWidth={1.75} className="mt-[3px] shrink-0 text-grid" />
         )}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <StatusDot node={node} />
-            <span className="truncate text-[12.3px] text-fg">{label}</span>
+            <span className="truncate text-sm text-fg">{label}</span>
             <TaskBadge node={node} />
             {watching ? (
-              <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] text-ok">
-                <Radio size={9} className="animate-pulse-soft" />
+              <span className="ml-auto flex shrink-0 items-center gap-1 text-micro text-ok">
+                <Radio size={12} strokeWidth={1.75} className="animate-pulse-soft" />
                 {t('tree.watching')}
               </span>
             ) : (
@@ -87,15 +87,15 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
                 className="ml-auto shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
                 title={t('tree.watch')}
               >
-                <Eye size={12} />
+                <Eye size={14} strokeWidth={1.75} />
               </button>
             )}
           </div>
 
-          <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-dim">
+          <div className="mt-0.5 flex items-center gap-2 text-micro text-dim">
             {node.depth > 0 && <span className="font-mono">d{node.depth}</span>}
             <span className="flex items-center gap-1">
-              <MessageSquare size={9} />
+              <MessageSquare size={12} strokeWidth={1.75} />
               {node.messageCount}
             </span>
             {node.modelName && <span className="truncate">{node.modelName}</span>}
@@ -103,7 +103,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
           </div>
 
           {node.firstMessage && (
-            <div className="mt-1 line-clamp-2 text-[11px] leading-snug text-dim">
+            <div className="mt-1 line-clamp-2 text-xs leading-snug text-dim">
               {node.firstMessage}
             </div>
           )}
@@ -112,13 +112,13 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             <>
               <button
                 onClick={() => setShowCode((v) => !v)}
-                className="mt-1 flex items-center gap-1 text-[10.5px] text-dim transition-colors hover:text-muted"
+                className="mt-1 flex items-center gap-1 text-micro text-dim transition-colors hover:text-muted"
               >
-                <Code2 size={10} />
+                <Code2 size={12} strokeWidth={1.75} />
                 {showCode ? t('tree.hideSpawn') : t('tree.showSpawn')}
               </button>
               {showCode && (
-                <pre className="mt-1 max-h-32 animate-fade-up overflow-auto rounded-md border border-white/[0.07] bg-[#08080a] p-2 font-mono text-[10.5px] leading-relaxed text-mint">
+                <pre className="mt-1 max-h-32 animate-fade-up overflow-auto rounded-md border border-[var(--p-line)] bg-[#08080a] p-2 font-mono text-micro leading-relaxed text-mint">
                   {node.spawnCode.trim()}
                 </pre>
               )}
@@ -128,7 +128,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
       </div>
 
       {open && hasChildren && (
-        <div className="border-l border-white/[0.05]" style={{ marginLeft: 14 + level * 15 }}>
+        <div className="border-l border-[var(--p-line)]" style={{ marginLeft: 14 + level * 15 }}>
           {node.children.map((c) => (
             <Node key={c.activeSessionId} node={c} level={level + 1} />
           ))}
@@ -147,7 +147,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
   return (
     <aside
       style={{ width: size.width }}
-      className="relative flex shrink-0 flex-col border-l border-white/[0.06] bg-[var(--p-surface)]"
+      className="relative flex shrink-0 flex-col border-l border-[var(--p-line)] bg-[var(--p-surface)]"
     >
       <ResizeHandle
         side="left"
@@ -155,22 +155,22 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         onMouseDown={size.onMouseDown}
         onReset={size.reset}
       />
-      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-white/[0.06] px-4">
-        <GitBranch size={14} className="text-primarySoft" />
-        <span className="flex-1 text-[12.5px] font-semibold">{t('tree.title')}</span>
+      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-[var(--p-line)] px-4">
+        <GitBranch size={16} strokeWidth={1.75} className="text-primarySoft" />
+        <span className="flex-1 text-sm font-semibold">{t('tree.title')}</span>
         <button
           onClick={() => void window.prime.refreshAgentTree()}
           className="no-drag text-dim transition-colors hover:text-muted"
           title={t('common.refresh')}
         >
-          <RefreshCw size={12} />
+          <RefreshCw size={14} strokeWidth={1.75} />
         </button>
         <button onClick={onClose} className="no-drag text-dim transition-colors hover:text-fg">
-          <X size={14} />
+          <X size={16} strokeWidth={1.75} />
         </button>
       </div>
 
-      <div className="border-b border-white/[0.06] px-4 py-2 text-[11px] text-dim">
+      <div className="border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
         {tree ? (
           t('tree.summary', { total: tree.total, subs: tree.subagents })
         ) : (
@@ -180,12 +180,12 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
         {error && (
-          <div className="mx-3 my-2 rounded-lg border border-err/25 bg-err/[0.07] p-2.5 text-[11.5px] text-err">
+          <div className="mx-3 my-2 rounded-lg border border-err/25 bg-err/[0.07] p-2.5 text-xs text-err">
             {error}
           </div>
         )}
         {tree?.roots.length === 0 && !error && (
-          <div className="px-4 py-8 text-center text-[12px] text-dim">
+          <div className="px-4 py-8 text-center text-sm text-dim">
             {t('tree.none')}
           </div>
         )}
@@ -194,7 +194,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         ))}
       </div>
 
-      <div className="border-t border-white/[0.06] px-4 py-2.5 text-[10.5px] leading-snug text-dim">
+      <div className="border-t border-[var(--p-line)] px-4 py-2.5 text-micro leading-snug text-dim">
         {t('tree.note')}
       </div>
     </aside>

@@ -101,13 +101,13 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
 
   return (
     <div className="absolute inset-0 z-40 flex flex-col bg-[var(--p-bg)]">
-      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5">
+      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate text-[13.5px] font-semibold">{name}</span>
+            <span className="truncate text-sm font-semibold">{name}</span>
             {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title="Alterado" />}
           </div>
-          <div className="truncate font-mono text-[10.5px] text-dim" title={path}>
+          <div className="truncate font-mono text-micro text-dim" title={path}>
             {path} · {fmtSize(meta.size)}
             {lineCount > 0 && ` · ${lineCount} ${t('viewer.lines')}`}
           </div>
@@ -120,27 +120,27 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
               className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
               title={t('viewer.copyContent')}
             >
-              <Copy size={14} />
+              <Copy size={16} strokeWidth={1.75} />
             </button>
             <button
               onClick={() => setEditing((v) => !v)}
               disabled={meta.truncated}
               className={
-                'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] transition-colors disabled:opacity-40 ' +
+                'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors disabled:opacity-40 ' +
                 (editing ? 'bg-primary/15 text-primarySoft' : 'text-muted hover:bg-white/[0.06] hover:text-fg')
               }
               title={meta.truncated ? t('viewer.truncatedTitle') : t('viewer.edit')}
             >
-              {editing ? <Eye size={13} /> : <Pencil size={13} />}
+              {editing ? <Eye size={14} strokeWidth={1.75} /> : <Pencil size={14} strokeWidth={1.75} />}
               {editing ? t('viewer.view') : t('viewer.edit')}
             </button>
             <button
               onClick={() => void save()}
               disabled={!dirty || saving}
-              className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/15 px-2.5 py-1.5 text-[12px] text-fg transition-colors hover:bg-primary/25 disabled:border-white/[0.07] disabled:bg-transparent disabled:text-dim"
+              className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/15 px-2.5 py-1.5 text-sm text-fg transition-colors hover:bg-primary/25 disabled:border-[var(--p-line)] disabled:bg-transparent disabled:text-dim"
               title={t('viewer.saveTitle')}
             >
-              {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              {saving ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : <Save size={14} strokeWidth={1.75} />}
               {t('viewer.save')}
             </button>
           </>
@@ -151,44 +151,44 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
           title={t('files.openExternal')}
         >
-          <ExternalLink size={14} />
+          <ExternalLink size={16} strokeWidth={1.75} />
         </button>
         <button
           onClick={onClose}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
-          <X size={15} />
+          <X size={16} strokeWidth={1.75} />
         </button>
       </div>
 
       {error && (
-        <div className="mx-5 mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-[12.5px] text-err">
-          <AlertTriangle size={14} className="mt-[2px] shrink-0" />
+        <div className="mx-5 mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-sm text-err">
+          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
           {error}
         </div>
       )}
 
       {meta.truncated && (
-        <div className="mx-5 mt-3 rounded-xl border border-warn/25 bg-warn/[0.06] p-2.5 text-[12px] text-warn">
+        <div className="mx-5 mt-3 rounded-xl border border-warn/25 bg-warn/[0.06] p-2.5 text-sm text-warn">
           {t('viewer.truncated')}
         </div>
       )}
 
       <div className="min-h-0 flex-1 overflow-auto">
         {state === 'loading' && (
-          <div className="flex h-full items-center justify-center text-[13px] text-dim">
-            <Loader2 size={15} className="mr-2 animate-spin" />
+          <div className="flex h-full items-center justify-center text-sm text-dim">
+            <Loader2 size={16} strokeWidth={1.75} className="mr-2 animate-spin" />
             {t('common.loading')}
           </div>
         )}
 
         {state === 'ready' && meta.binary && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-dim">
-            <FileWarning size={26} />
-            <span className="text-[13px]">{t('viewer.binary')}</span>
+            <FileWarning size={16} strokeWidth={1.75} />
+            <span className="text-sm">{t('viewer.binary')}</span>
             <button
               onClick={() => void window.prime.revealFile(path)}
-              className="mt-1 rounded-lg border border-white/[0.1] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-primary/40 hover:text-fg"
+              className="mt-1 rounded-lg border border-white/[0.1] px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-fg"
             >
               {t('files.openExternal')}
             </button>
@@ -200,12 +200,12 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
             value={content}
             onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
-            className="h-full w-full resize-none bg-[#08080a] px-5 py-4 font-mono text-[12.6px] leading-[1.65] text-[#c9c9d1] outline-none"
+            className="h-full w-full resize-none bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65] text-[#c9c9d1] outline-none"
           />
         )}
 
         {state === 'ready' && !meta.binary && !editing && (
-          <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-[12.6px] leading-[1.65]">
+          <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65]">
             <code
               className="hljs bg-transparent"
               dangerouslySetInnerHTML={{ __html: highlighted ?? '' }}
@@ -214,7 +214,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
         )}
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.07] px-5 py-2 text-[11px] text-dim">
+      <div className="shrink-0 border-t border-[var(--p-line)] px-5 py-2 text-xs text-dim">
         {editing ? t('viewer.editHint') : t('viewer.readHint')}
       </div>
     </div>

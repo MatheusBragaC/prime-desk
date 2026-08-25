@@ -116,24 +116,24 @@ export function Modal({
         className="max-h-full animate-fade-up overflow-y-auto rounded-2xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70"
       >
         <div className="flex items-start gap-3 px-5 pb-1 pt-5">
-          <h2 className="flex-1 text-[16px] font-semibold tracking-tight">{title}</h2>
+          <h2 className="flex-1 text-lg font-semibold tracking-tight">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-dim transition-colors hover:bg-white/[0.07] hover:text-fg"
             aria-label={t('common.close')}
           >
-            <X size={16} />
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
 
         {description && (
-          <p className="px-5 pb-1 pt-1 text-[12.5px] leading-relaxed text-muted">{description}</p>
+          <p className="px-5 pb-1 pt-1 text-sm leading-relaxed text-muted">{description}</p>
         )}
 
         <div className="px-5 py-3">{children}</div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-white/[0.07] px-5 py-3.5">
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--p-line)] px-5 py-3.5">
             {footer}
           </div>
         )}
@@ -154,15 +154,15 @@ export function Field({
 }) {
   return (
     <label className="mb-3.5 block">
-      <span className="mb-1.5 block text-[12.5px] font-medium text-fg">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-fg">{label}</span>
       {children}
-      {hint && <span className="mt-1.5 block text-[11.5px] leading-snug text-dim">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs leading-snug text-dim">{hint}</span>}
     </label>
   )
 }
 
 export const inputClass =
-  'w-full rounded-lg border border-white/[0.09] bg-black/30 px-3 py-2 text-[13px] text-fg outline-none transition-colors placeholder:text-dim focus:border-primary/50'
+  'w-full rounded-lg border border-[var(--p-line)] bg-black/30 px-3 py-2 text-sm text-fg outline-none transition-colors placeholder:text-dim focus:border-primary/50'
 
 export function Button({
   variant = 'ghost',
@@ -172,7 +172,7 @@ export function Button({
   variant?: 'primary' | 'ghost' | 'subtle'
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const base =
-    'rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40'
+    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40'
   const style =
     variant === 'primary'
       ? 'border border-primary/40 bg-primary/20 text-fg hover:bg-primary/30'
