@@ -887,3 +887,63 @@ o horário de pico sai como `5 PM` em inglês e `17h` nos demais.
 
 A linha de comparação usa uma base declarada (~89 mil tokens para um livro
 inteiro) e é apresentada com `~`, para não passar por medição exata.
+
+## 40. Abrir conversa caía no topo
+
+Ao abrir uma conversa com histórico, a tela mostrava o começo em vez da última
+mensagem.
+
+Duas causas somadas:
+
+1. **O container do scroll é remontado.** Enquanto a conversa carrega, ele é
+   substituído pelo indicador de carregamento; ao voltar, monta zerado. Isso foi
+   introduzido junto com o próprio indicador.
+2. **A altura final não existe no primeiro quadro.** Markdown e realce de
+   sintaxe mudam a altura depois da montagem, então um único `scrollTop =
+   scrollHeight` acerta um alvo que ainda vai crescer.
+
+Correção: ao terminar de carregar, o scroll é levado ao fim e o ajuste é
+repetido por alguns quadros, acompanhando o crescimento da altura.
+
+**Guarda contra regressão:** o ajuste roda **uma vez por conversa**, controlado
+por um `ref` com a chave da sessão. Sem isso, cada mensagem nova durante o
+streaming puxaria a tela de volta para baixo e tiraria do usuário a chance de
+subir para reler — o oposto do que o `pinned` existente já protege.
+
+Medido ao abrir a sessão de 14 MB: `scrollTop` 9437 de `scrollHeight` 10068,
+distância do fim **0 px**.
+
+## 41. Sair da conversa interrompia a execução em andamento
+
+Relatado como inaceitável, e com razão. A causa é arquitetural, documentada em
+`docs/daemon.md`:
+
+> Each worker owns one root `AgentSessionRuntime` … New, switch, fork, and import
+> operations **replace the root runtime inside the worker**.
+
+Ou seja: um worker carrega **uma** sessão por vez. Trocar de conversa troca o
+runtime e o turno em voo morre.
+
+Medido com um streaming longo e `switch_session` no meio:
+
+| | Deltas de texto |
+|---|---|
+| Antes da troca | 16 |
+| 12 s depois da troca | 17 |
+
+E, pior, **nenhum `agent_end`** foi emitido. O cliente ficava sem evento de
+fechamento — a interface continuaria achando que transmite.
+
+**Correção nesta camada:** trocar de conversa ou criar conversa nova com execução
+em andamento pede confirmação. Confirmando, o app manda `abort` primeiro, espera
+o estado assentar e só então troca — o fim passa a ser determinístico em vez de
+um corte silencioso.
+
+Verificado: cancelando, a conversa segue e o texto continua crescendo
+(1974 → 2891 caracteres); confirmando, `isStreaming` volta a `false` sem estado
+preso.
+
+**Limite conhecido.** Isto evita a perda acidental, mas não permite deixar uma
+conversa rodando enquanto se lê outra. Para isso seria preciso mais de um worker
+— um por conversa, como o daemon já suporta — o que significa abas com estado
+próprio de transcript, tema para uma próxima etapa.

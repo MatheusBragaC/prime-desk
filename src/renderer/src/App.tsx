@@ -70,10 +70,13 @@ export function App() {
   const fatal = useAgent((s) => s.fatal)
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const loadingSession = useAgent((s) => s.loadingSession)
+  const sessionId = useAgent((s) => s.state?.sessionId)
   const observed = useAgent((s) => s.observed)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
+  /** Conversa cuja abertura já foi posicionada no fim. */
+  const scrolledFor = useRef<string | null>(null)
   const zoomRef = useRef(0)
 
   const applyZoom = useCallback(async (level: number) => {
@@ -255,7 +258,38 @@ export function App() {
   // Ao trocar de conversa a janela volta ao tamanho padrão.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [useAgent.getState().state?.sessionId, loadingSession])
+  }, [sessionId, loadingSession])
+
+  /*
+    Abrir uma conversa deve mostrar o fim dela, não o começo.
+
+    Duas coisas atrapalhavam: enquanto carrega, o container do scroll é
+    substituído pelo indicador e volta a montar zerado; e a altura final só
+    existe depois que markdown e realce de sintaxe são aplicados, o que acontece
+    em quadros seguintes. Por isso o ajuste é repetido por alguns quadros.
+  */
+  useEffect(() => {
+    if (loadingSession || messages.length === 0) return
+
+    // Uma vez por conversa: sem esta guarda, cada mensagem nova durante o
+    // streaming roubaria o scroll de quem subiu para reler algo.
+    const key = sessionId ?? ''
+    if (scrolledFor.current === key) return
+    scrolledFor.current = key
+
+    pinned.current = true
+    let frame = 0
+    let tries = 0
+
+    const toBottom = (): void => {
+      const el = scroller.current
+      if (el) el.scrollTop = el.scrollHeight
+      if (++tries < 6) frame = requestAnimationFrame(toBottom)
+    }
+
+    toBottom()
+    return () => cancelAnimationFrame(frame)
+  }, [sessionId, loadingSession, messages.length])
 
   const hiddenCount = Math.max(0, messages.length - visibleCount)
   const visibleMessages = hiddenCount > 0 ? messages.slice(hiddenCount) : messages
