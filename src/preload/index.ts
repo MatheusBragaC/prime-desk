@@ -18,6 +18,11 @@ const api = {
   saveSshConnections: (list: unknown) => ipcRenderer.invoke('ssh:save', list),
   execution: () => ipcRenderer.invoke('bridge:execution'),
   stopBridge: () => ipcRenderer.invoke('bridge:stop'),
+  parkBridge: () => ipcRenderer.invoke('bridge:park'),
+  adoptBridge: (id: string) => ipcRenderer.invoke('bridge:adopt', id),
+  listParked: () => ipcRenderer.invoke('bridge:parked'),
+  markBridge: (args: { sessionPath?: string; sessionId?: string }) =>
+    ipcRenderer.invoke('bridge:mark', args),
   send: (type: string, payload?: Record<string, unknown>) =>
     ipcRenderer.invoke('bridge:send', { type, payload }),
   fire: (type: string, payload?: Record<string, unknown>) =>
@@ -46,6 +51,8 @@ const api = {
   listFiles: (relPath: string) => ipcRenderer.invoke('files:list', relPath),
   filesRoot: () => ipcRenderer.invoke('files:root'),
   gitBranch: () => ipcRenderer.invoke('files:branch'),
+  gitChanges: () => ipcRenderer.invoke('git:changes'),
+  gitDiff: (relPath?: string) => ipcRenderer.invoke('git:diff', relPath),
   revealFile: (relPath: string) => ipcRenderer.invoke('files:reveal', relPath),
   readFile: (relPath: string) => ipcRenderer.invoke('files:read', relPath),
   writeFile: (path: string, content: string) => ipcRenderer.invoke('files:write', { path, content }),
@@ -61,7 +68,8 @@ const api = {
   on: (channel: string, listener: (payload: unknown) => void) => {
     const allowed = [
       'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
-      'agents:tree', 'agents:tree-error', 'onboarding:output', 'onboarding:env'
+      'agents:tree', 'agents:tree-error', 'onboarding:output', 'onboarding:env',
+      'bridge:parked', 'bridge:run-ended'
     ]
     if (!allowed.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
     const wrapped = (_e: IpcRendererEvent, payload: unknown) => listener(payload)

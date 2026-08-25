@@ -13,7 +13,8 @@ import { execFile } from 'node:child_process'
 import { agentBinary, agentEnv } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
-  listDir, gitBranch, realPathInside, readFileSafe, writeFileSafe, deleteSessionFile
+  listDir, gitBranch, gitChanges, gitDiff, realPathInside, readFileSafe, writeFileSafe,
+  deleteSessionFile
 } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
@@ -46,7 +47,6 @@ if (process.env.PRIME_DESK_NO_SANDBOX === '1') {
 }
 
 let win: BrowserWindow | null = null
-let rpc: RpcClient | null = null
 
 function pushToRenderer(channel: string, payload: unknown): void {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
@@ -137,23 +137,123 @@ const RPC_SEND_ALLOWED = new Set([
 /** `fire` não espera resposta: só o que precisa furar a fila. */
 const RPC_FIRE_ALLOWED = new Set(['abort', 'unobserve'])
 
-function createRpc(
+/**
+ * Uma ponte é um processo `prime-agent --mode rpc` com a sessão que ele carrega.
+ *
+ * O worker do daemon carrega uma sessão por vez, então trocar de conversa dentro
+ * da mesma ponte mata o turno em andamento. Medido nesta base: **dois clientes
+ * RPC coexistem**, cada um com sua sessão. Por isso, em vez de abortar, a ponte
+ * que está executando é *estacionada* e uma nova sobe para a conversa de destino.
+ */
+interface Bridge {
+  id: string
+  client: RpcClient
+  cwd: string
+  execution: { kind: 'local' | 'ssh'; target?: string }
+  /** Turno em andamento, deduzido de `agent_start` / `agent_end`. */
+  running: boolean
+  sessionId?: string
+  sessionPath?: string
+}
+
+let active: Bridge | null = null
+
+/** Pontes que seguem executando enquanto o usuário olha outra conversa. */
+const parked = new Map<string, Bridge>()
+
+/**
+ * Teto de pontes estacionadas. Cada uma é um processo e um worker do daemon;
+ * sem limite, trocar de conversa repetidamente viraria um vazamento.
+ */
+const MAX_PARKED = 3
+
+let bridgeSeq = 0
+
+function parkedSnapshot(): Array<{
+  id: string
+  cwd: string
+  running: boolean
+  sessionId?: string
+  sessionPath?: string
+}> {
+  return [...parked.values()].map((b) => ({
+    id: b.id,
+    cwd: b.cwd,
+    running: b.running,
+    sessionId: b.sessionId,
+    sessionPath: b.sessionPath
+  }))
+}
+
+function announceParked(): void {
+  pushToRenderer('bridge:parked', parkedSnapshot())
+}
+
+/**
+ * O turno de uma ponte estacionada terminou.
+ *
+ * A ponte é encerrada: manter o worker vivo depois do fim só prenderia a sessão
+ * (`already active in <worker>`) sem oferecer nada — reabrir a conversa lê a
+ * transcrição do disco, que a essa altura já está completa.
+ */
+function retireParked(b: Bridge): void {
+  parked.delete(b.id)
+  b.client.stop()
+  pushToRenderer('bridge:run-ended', {
+    id: b.id,
+    sessionId: b.sessionId,
+    sessionPath: b.sessionPath
+  })
+  announceParked()
+}
+
+function createBridge(
   cwd: string,
+  execution: { kind: 'local' | 'ssh'; target?: string },
   model?: string,
   extraArgs?: string[],
   env?: Record<string, string>
-): RpcClient {
+): Bridge {
+  const id = 'b' + ++bridgeSeq
   const client = new RpcClient({ cwd, model, extraArgs, env })
+  const bridge: Bridge = { id, client, cwd, execution, running: false }
 
-  client.on('event', (ev: AgentEvent) => pushToRenderer('agent:event', ev))
-  client.on('response', (res: RpcResponse) => pushToRenderer('agent:response', res))
-  client.on('stderr', (chunk: string) => pushToRenderer('agent:stderr', chunk))
-  client.on('noise', (line: string) => pushToRenderer('agent:stderr', line + '\n'))
-  client.on('fatal', (msg: string) => pushToRenderer('agent:fatal', msg))
-  client.on('exit', (info: unknown) => pushToRenderer('agent:exit', info))
+  client.on('event', (ev: AgentEvent) => {
+    if (ev.type === 'agent_start') bridge.running = true
+    if (ev.type === 'agent_end') {
+      bridge.running = false
+      if (parked.has(id)) {
+        retireParked(bridge)
+        return
+      }
+    }
+    const sid = (ev as { sessionId?: string }).sessionId
+    if (sid) bridge.sessionId = sid
+    // Carimbo de origem: o renderer descarta o que não vem da ponte ativa.
+    pushToRenderer('agent:event', { ...ev, bridgeId: id })
+  })
+
+  // Os demais canais só interessam para a ponte ativa: uma estacionada que
+  // escreve em stderr não deve pintar erro na conversa que está na tela.
+  client.on('response', (res: RpcResponse) => {
+    if (active?.id === id) pushToRenderer('agent:response', res)
+  })
+  client.on('stderr', (chunk: string) => {
+    if (active?.id === id) pushToRenderer('agent:stderr', chunk)
+  })
+  client.on('noise', (line: string) => {
+    if (active?.id === id) pushToRenderer('agent:stderr', line + '\n')
+  })
+  client.on('fatal', (msg: string) => {
+    if (active?.id === id) pushToRenderer('agent:fatal', msg)
+  })
+  client.on('exit', (info: unknown) => {
+    if (active?.id === id) pushToRenderer('agent:exit', info)
+    else if (parked.has(id)) retireParked(bridge)
+  })
 
   client.start()
-  return client
+  return bridge
 }
 
 function resolveIcon(): string | undefined {
@@ -174,7 +274,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    backgroundColor: '#050506',
+    backgroundColor: '#0b0b0f',
     ...(icon ? { icon } : {}),
     titleBarStyle: 'hidden',
     /*
@@ -184,7 +284,7 @@ function createWindow(): void {
     */
     ...(process.platform === 'darwin'
       ? { trafficLightPosition: { x: 14, y: 16 } }
-      : { titleBarOverlay: { color: '#050506', symbolColor: '#a1a1aa', height: 44 } }),
+      : { titleBarOverlay: { color: '#0b0b0f', symbolColor: '#a3a3ae', height: 44 } }),
     webPreferences: {
       // Preload em CommonJS (.cjs): renderer sandboxed não carrega preload ESM.
       preload: join(__dirname, '../preload/index.cjs'),
@@ -258,8 +358,14 @@ handle('bridge:start', async (
 ) => {
   // Se a ponte já roda, o diretório dela é a verdade. Aceitar um cwd novo aqui
   // faria o explorador apontar para uma pasta onde o agente NÃO está executando.
-  if (rpc?.running) {
-    return { ok: true, alreadyRunning: true, cwd: workspaceRoot, execution: executionTarget }
+  if (active?.client.running) {
+    return {
+      ok: true,
+      alreadyRunning: true,
+      cwd: workspaceRoot,
+      execution: executionTarget,
+      bridgeId: active.id
+    }
   }
 
   const cwd = args?.cwd || homedir()
@@ -298,25 +404,77 @@ handle('bridge:start', async (
   }
 
   workspaceRoot = cwd
-  rpc = createRpc(cwd, args?.model, extraArgs, sshEnv)
-  return { ok: true, cwd, execution: executionTarget }
+  active = createBridge(cwd, executionTarget, args?.model, extraArgs, sshEnv)
+  return { ok: true, cwd, execution: executionTarget, bridgeId: active.id }
+})
+
+/**
+ * Estaciona a ponte ativa em vez de encerrá-la.
+ *
+ * Chamado quando o usuário troca de conversa com um turno rodando: o processo
+ * continua, o turno segue até o fim e o renderer é avisado quando terminar.
+ */
+handle('bridge:park', () => {
+  if (!active) return { ok: false, error: 'Nenhuma ponte ativa.' }
+  if (!active.client.running) return { ok: false, error: 'A ponte não está em execução.' }
+
+  const b = active
+  active = null
+  parked.set(b.id, b)
+
+  // Estouro do teto: a estacionada mais antiga que já parou cede o lugar.
+  if (parked.size > MAX_PARKED) {
+    const idle = [...parked.values()].find((x) => !x.running)
+    if (idle) retireParked(idle)
+  }
+
+  announceParked()
+  return { ok: true, parkedId: b.id, sessionId: b.sessionId, sessionPath: b.sessionPath }
+})
+
+/** Volta para uma ponte estacionada, tornando-a a ativa de novo. */
+handle('bridge:adopt', (_e, id: string) => {
+  const b = parked.get(id)
+  if (!b) return { ok: false, error: 'Ponte não está mais estacionada.' }
+
+  parked.delete(id)
+  // A que estava ativa sai de cena; se estivesse rodando, o renderer teria
+  // estacionado antes de chamar aqui.
+  if (active && active.id !== id) active.client.stop()
+
+  active = b
+  workspaceRoot = b.cwd
+  executionTarget = b.execution
+  announceParked()
+  return { ok: true, cwd: b.cwd, execution: b.execution, bridgeId: b.id }
+})
+
+handle('bridge:parked', () => ({ ok: true, parked: parkedSnapshot() }))
+
+/** Registra qual sessão a ponte ativa carrega, para reconhecê-la depois. */
+handle('bridge:mark', (_e, args: { sessionPath?: string; sessionId?: string }) => {
+  if (!active) return { ok: false }
+  if (args?.sessionPath) active.sessionPath = args.sessionPath
+  if (args?.sessionId) active.sessionId = args.sessionId
+  return { ok: true }
 })
 
 handle('bridge:execution', () => ({ ok: true, execution: executionTarget }))
 
 handle('bridge:stop', () => {
-  rpc?.stop()
-  rpc = null
+  // Só a ativa: as estacionadas seguem até o fim do turno delas.
+  active?.client.stop()
+  active = null
   return { ok: true }
 })
 
 handle('bridge:send', async (_e, args: { type: string; payload?: Record<string, unknown> }) => {
-  if (!rpc?.running) return { ok: false, error: 'Agente não está em execução.' }
+  if (!active?.client.running) return { ok: false, error: 'Agente não está em execução.' }
   if (!RPC_SEND_ALLOWED.has(args?.type)) {
     return { ok: false, error: `Comando RPC não permitido: ${args?.type}` }
   }
   try {
-    const res = await rpc.send(args.type, args.payload ?? {})
+    const res = await active.client.send(args.type, args.payload ?? {})
     return { ok: true, res }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -324,11 +482,11 @@ handle('bridge:send', async (_e, args: { type: string; payload?: Record<string, 
 })
 
 handle('bridge:fire', (_e, args: { type: string; payload?: Record<string, unknown> }) => {
-  if (!rpc?.running) return { ok: false }
+  if (!active?.client.running) return { ok: false }
   if (!RPC_FIRE_ALLOWED.has(args?.type)) {
     return { ok: false, error: `Comando RPC não permitido: ${args?.type}` }
   }
-  rpc.fire(args.type, args.payload ?? {})
+  active.client.fire(args.type, args.payload ?? {})
   return { ok: true }
 })
 
@@ -555,6 +713,10 @@ handle('files:root', () => ({ ok: true, root: workspaceRoot }))
 
 handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspaceRoot) }))
 
+handle('git:changes', async () => gitChanges(workspaceRoot))
+
+handle('git:diff', async (_e, relPath?: string) => gitDiff(workspaceRoot, relPath))
+
 handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
 
 handle('files:write', async (_e, args: { path: string; content: string }) =>
@@ -603,13 +765,20 @@ app.whenReady().then(() => {
   })
 })
 
+function stopAllBridges(): void {
+  active?.client.stop()
+  active = null
+  for (const b of parked.values()) b.client.stop()
+  parked.clear()
+}
+
 app.on('window-all-closed', () => {
   stopTreePolling()
-  rpc?.stop()
+  stopAllBridges()
   if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('before-quit', () => {
   stopEnvWatch()
-  rpc?.stop()
+  stopAllBridges()
 })

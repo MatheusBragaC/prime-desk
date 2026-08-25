@@ -58,11 +58,15 @@ export async function generateTitle(conversation: string, cwd: string): Promise<
   try {
     client.start()
 
-    // Espera o worker aceitar comandos.
+    /*
+      Espera o worker aceitar comandos. A sondagem começa quase de imediato e em
+      intervalo curto: com 600ms de espera antes da primeira tentativa, o título
+      pagava meio segundo de pedágio mesmo quando o worker já estava de pé.
+    */
     const deadline = Date.now() + READY_TIMEOUT_MS
     let ready = false
     while (Date.now() < deadline) {
-      await delay(600)
+      await delay(120)
       try {
         const res = await client.send('get_state')
         if (res.success) {

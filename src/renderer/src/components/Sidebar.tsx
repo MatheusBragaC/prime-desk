@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  Plus, Search, FolderOpen, RefreshCw, ChevronRight,
-  FolderPlus, MoreHorizontal, Trash2, Pencil, GitBranch, Pin, Eye, EyeOff
+  Plus, Search, FolderOpen, RefreshCw, ChevronRight, SquarePen,
+  FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff
 } from 'lucide-react'
 import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
@@ -20,6 +20,7 @@ function SessionRow({
   active,
   busy,
   inUse,
+  running,
   onOpen,
   groups
 }: {
@@ -27,6 +28,8 @@ function SessionRow({
   active: boolean
   busy: boolean
   inUse: boolean
+  /** Turno desta conversa seguindo numa ponte estacionada. */
+  running: boolean
   onOpen: () => void
   groups: Group[]
 }) {
@@ -60,7 +63,7 @@ function SessionRow({
             if (e.key === 'Enter') void commitRename()
             if (e.key === 'Escape') setRenaming(false)
           }}
-          className="w-full rounded border border-primary/45 bg-black/40 px-1.5 py-0.5 text-[12.6px] text-fg outline-none"
+          className="w-full rounded border border-primary/45 bg-black/40 px-1.5 py-0.5 text-sm text-fg outline-none"
         />
       </div>
     )
@@ -72,29 +75,30 @@ function SessionRow({
         disabled={busy}
         onClick={onOpen}
         className={
-          'mb-[1px] flex w-full items-center gap-2 rounded-[8px] py-[6px] pl-2.5 pr-7 text-left transition-colors disabled:opacity-50 ' +
-          (active
-            ? 'bg-[var(--p-selected)] text-fg'
-            : 'text-muted hover:bg-white/[0.04] hover:text-fg')
+          'mb-[1px] flex h-8 w-full items-center gap-2 rounded-sm pl-2.5 pr-7 text-left transition-colors disabled:opacity-50 ' +
+          (active ? 'bg-[var(--p-selected)] text-fg' : 'text-muted hover:bg-elevated hover:text-fg')
         }
         title={s.title}
       >
-        {pinned ? (
-          <Pin size={9} className="ml-[1px] mr-[3px] shrink-0 text-primarySoft" />
-        ) : (
+        {/*
+          A linha ativa é marcada pelo fundo, como no Claude Desktop — o ponto de
+          status só aparece quando carrega informação que o fundo não dá: fixada,
+          ou carregada por outro worker do daemon.
+        */}
+        {running ? (
           <span
-            title={inUse ? t('session.inUse') : undefined}
-            className={
-              'ml-[2px] mr-[3px] h-[5px] w-[5px] shrink-0 rounded-full border transition-colors ' +
-              (active
-                ? 'border-primarySoft'
-                : inUse
-                  ? 'border-warn bg-warn/40'
-                  : 'border-grid group-hover:border-muted')
-            }
+            title={t('session.runningElsewhere')}
+            className="h-[6px] w-[6px] shrink-0 animate-pulse-soft rounded-full bg-primary"
           />
-        )}
-        <span className="min-w-0 flex-1 truncate text-[12.8px] leading-snug">{s.title}</span>
+        ) : pinned ? (
+          <Pin size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+        ) : inUse ? (
+          <span
+            title={t('session.inUse')}
+            className="h-[5px] w-[5px] shrink-0 rounded-full border border-warn bg-warn/40"
+          />
+        ) : null}
+        <span className="min-w-0 flex-1 truncate text-sm leading-snug">{s.title}</span>
       </button>
 
       <button
@@ -108,7 +112,7 @@ function SessionRow({
         }
         title={t('menu.actions')}
       >
-        <MoreHorizontal size={13} />
+        <MoreHorizontal size={14} strokeWidth={1.75} />
       </button>
 
       {menu && (
@@ -182,7 +186,7 @@ function GroupHeader({
     <div className="group/h flex items-center gap-1 px-2 pb-1 pt-4">
       <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1 text-left">
         <ChevronRight
-          size={10}
+          size={14} strokeWidth={1.75}
           className={
             'shrink-0 text-dim opacity-0 transition-all duration-200 group-hover/h:opacity-100 ' +
             (collapsed ? '' : 'rotate-90')
@@ -198,10 +202,10 @@ function GroupHeader({
               if (e.key === 'Enter') void commitRename()
               if (e.key === 'Escape') setRenaming(false)
             }}
-            className="min-w-0 flex-1 rounded border border-primary/40 bg-black/40 px-1 text-[11.5px] text-fg outline-none"
+            className="min-w-0 flex-1 rounded border border-primary/40 bg-black/40 px-1 text-xs text-fg outline-none"
           />
         ) : (
-          <span className="truncate text-[11.5px] text-dim">{group.label}</span>
+          <span className="truncate text-xs text-dim">{group.label}</span>
         )}
       </button>
 
@@ -210,7 +214,7 @@ function GroupHeader({
         className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
         title={t('sidebar.newChat')}
       >
-        <Plus size={12} />
+        <Plus size={14} strokeWidth={1.75} />
       </button>
 
       {group.kind === 'folder' && (
@@ -223,14 +227,14 @@ function GroupHeader({
             className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
             title={t('menu.rename')}
           >
-            <Pencil size={11} />
+            <Pencil size={14} strokeWidth={1.75} />
           </button>
           <button
             onClick={() => void removeFolder()}
             className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/h:opacity-100"
             title={t('menu.delete')}
           >
-            <Trash2 size={11} />
+            <Trash2 size={14} strokeWidth={1.75} />
           </button>
         </>
       )}
@@ -241,15 +245,11 @@ function GroupHeader({
 export function Sidebar({
   home,
   onPickCwd,
-  onToggleTree,
-  treeOpen,
   onSignedOut,
   onNavigate
 }: {
   home: string
   onPickCwd: () => void
-  onToggleTree: () => void
-  treeOpen: boolean
   onSignedOut: () => void
   /** Chamado ao abrir uma conversa, para fechar a sobreposição em tela estreita. */
   onNavigate?: () => void
@@ -259,6 +259,7 @@ export function Sidebar({
   const cwd = useAgent((s) => s.cwd)
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
+  const parkedRuns = useAgent((s) => s.parkedRuns)
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
@@ -287,6 +288,12 @@ export function Sidebar({
     if (tree) walk(tree.roots)
     return ids
   }, [tree, state?.sessionId])
+
+  /** Conversas cujo turno continua rodando fora da tela. */
+  const runningPaths = useMemo(
+    () => new Set(parkedRuns.filter((r) => r.running).map((r) => r.sessionPath)),
+    [parkedRuns]
+  )
 
   const filtered = useMemo(() => {
     const named = withTitles(sessions, folders)
@@ -334,7 +341,7 @@ export function Sidebar({
   return (
     <aside
       style={{ width: size.width }}
-      className="relative flex shrink-0 flex-col border-r border-white/[0.06] bg-[var(--p-surface)]"
+      className="relative flex shrink-0 flex-col bg-[var(--p-surface)]"
     >
       <ResizeHandle
         side="right"
@@ -348,73 +355,64 @@ export function Sidebar({
         style={{ paddingLeft: isMac ? MAC_TRAFFIC_LIGHTS_WIDTH : 16 }}
       >
         <Butterfly size={19} />
-        <span className="flex-1 text-[13.5px] font-semibold tracking-tight">Prime Desk</span>
-        <button
-          onClick={onToggleTree}
-          className={
-            'no-drag relative rounded-md p-1 transition-colors ' +
-            (treeOpen ? 'bg-primary/15 text-primarySoft' : 'text-dim hover:text-muted')
-          }
-          title={t('sidebar.agentTree')}
-        >
-          <GitBranch size={14} />
-          {(tree?.subagents ?? 0) > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-white">
-              {tree!.subagents}
-            </span>
+        {/* A árvore de agentes migrou para a barra de ferramentas do topo. */}
+        <span className="flex-1 text-sm font-semibold tracking-tight">Prime Desk</span>
+      </div>
+
+      {/*
+        "Nova conversa" como linha de menu, não como botão preenchido: no Claude
+        Desktop nada na sidebar compete com o conteúdo. As ações secundárias
+        (nova pasta, recarregar, arquivadas) só aparecem no hover do bloco.
+      */}
+      <div className="group/act px-2 pb-1">
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => void newSession()}
+            className="no-drag flex flex-1 items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-sm text-fg transition-colors hover:bg-elevated"
+          >
+            <SquarePen size={16} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+            {t('sidebar.newChat')}
+          </button>
+
+          <button
+            onClick={() => setCreating(true)}
+            className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted group-hover/act:opacity-100"
+            title={t('sidebar.newFolder')}
+          >
+            <FolderPlus size={16} strokeWidth={1.75} />
+          </button>
+          {archivedCount > 0 && (
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              className={
+                'no-drag shrink-0 rounded-sm p-1.5 transition-all hover:bg-elevated hover:text-muted ' +
+                (showArchived ? 'text-muted opacity-100' : 'text-dim opacity-0 group-hover/act:opacity-100')
+              }
+              title={showArchived ? t('sidebar.hideArchived') : t('sidebar.showArchived')}
+            >
+              {showArchived ? <EyeOff size={16} strokeWidth={1.75} /> : <Eye size={16} strokeWidth={1.75} />}
+            </button>
           )}
-        </button>
+          <button
+            onClick={() => void refreshSessions()}
+            className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted group-hover/act:opacity-100"
+            title={t('sidebar.reload')}
+          >
+            <RefreshCw size={16} strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex gap-1.5 px-3 pb-2.5">
-        <button
-          onClick={() => void newSession()}
-          className="no-drag flex flex-1 items-center gap-2 rounded-[10px] border border-primary/25 bg-primary/[0.11] px-3 py-2 text-[13px] font-medium text-fg transition-colors hover:border-primary/45 hover:bg-primary/[0.18]"
-        >
-          <Plus size={15} className="text-primarySoft" />
-          {t('sidebar.newChat')}
-        </button>
-        <button
-          onClick={() => setCreating(true)}
-          className="no-drag flex items-center justify-center rounded-[10px] border border-white/[0.08] px-2.5 text-dim transition-colors hover:border-primary/35 hover:text-primarySoft"
-          title={t('sidebar.newFolder')}
-        >
-          <FolderPlus size={15} />
-        </button>
-      </div>
-
-      <div className="px-3 pb-1">
-        <div className="flex items-center gap-2 rounded-[9px] border border-white/[0.07] bg-black/25 px-2.5 py-1.5 focus-within:border-primary/40">
-          <Search size={13} className="shrink-0 text-dim" />
+      <div className="px-2 pb-1">
+        <div className="flex items-center gap-2 rounded-sm px-2 py-1.5 transition-colors focus-within:bg-elevated hover:bg-elevated">
+          <Search size={16} strokeWidth={1.75} className="shrink-0 text-dim" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('sidebar.search')}
-            className="w-full bg-transparent text-[12.5px] text-fg outline-none placeholder:text-dim"
+            className="w-full bg-transparent text-sm text-fg outline-none placeholder:text-dim"
           />
         </div>
-      </div>
-
-      <div className="flex items-center justify-between px-4 pb-0.5 pt-2">
-        <span className="text-[10.5px] uppercase tracking-wider text-dim">
-          {filtered.length} {t('sidebar.conversations')}
-        </span>
-        {archivedCount > 0 && (
-          <button
-            onClick={() => setShowArchived((v) => !v)}
-            className="text-dim transition-colors hover:text-muted"
-            title={showArchived ? t('sidebar.hideArchived') : t('sidebar.showArchived')}
-          >
-            {showArchived ? <EyeOff size={12} /> : <Eye size={12} />}
-          </button>
-        )}
-        <button
-          onClick={() => void refreshSessions()}
-          className="text-dim transition-colors hover:text-muted"
-          title={t('sidebar.reload')}
-        >
-          <RefreshCw size={12} />
-        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
@@ -428,12 +426,12 @@ export function Sidebar({
                 if (e.key === 'Enter') void createFolder(e.currentTarget.value)
                 if (e.key === 'Escape') setCreating(false)
               }}
-              className="w-full rounded border border-primary/45 bg-black/40 px-2 py-1 text-[12px] text-fg outline-none placeholder:text-dim"
+              className="w-full rounded border border-primary/45 bg-black/40 px-2 py-1 text-sm text-fg outline-none placeholder:text-dim"
             />
           </div>
         )}
         {groups.length === 0 && !creating && (
-          <div className="px-2 py-6 text-center text-[12.5px] text-dim">{t('sidebar.empty')}</div>
+          <div className="px-2 py-6 text-center text-sm text-dim">{t('sidebar.empty')}</div>
         )}
         {groups.map((g) => {
           const collapsed = folders.collapsed[g.key] ?? false
@@ -448,6 +446,7 @@ export function Sidebar({
                     active={state?.sessionId === s.id}
                     busy={busy}
                     inUse={inUseIds.has(s.id)}
+                    running={runningPaths.has(s.path)}
                     onOpen={() => void open(s.path)}
                     groups={groups}
                   />
@@ -461,11 +460,11 @@ export function Sidebar({
 
       <button
         onClick={onPickCwd}
-        className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex items-center gap-2 border-t border-[var(--p-line)] px-4 py-2 text-left transition-colors hover:bg-elevated"
         title={t('sidebar.pickCwd')}
       >
-        <FolderOpen size={13} className="shrink-0 text-dim" />
-        <span className="truncate font-mono text-[11.5px] text-muted">
+        <FolderOpen size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+        <span className="truncate font-mono text-xs text-muted">
           {shortPath(cwd, home) || t('sidebar.pickCwdEmpty')}
         </span>
       </button>
