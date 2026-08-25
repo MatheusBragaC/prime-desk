@@ -1,44 +1,52 @@
 /*
- * Paleta oficial do prime-agent.
- * Fonte: dist/modes/interactive/theme/prime.json (tema default `prime`).
- * Ver docs/MAPEAMENTO.md §6. Não inventar cores aqui.
- */
+  Tema Prime.
+
+  As cores vêm do tema `prime` do próprio prime-agent
+  (`dist/modes/interactive/theme/prime.json`) — não são invenção da GUI. O que
+  esta camada faz é elevar a escada de neutros: o tema do terminal parte de preto
+  puro (#050506), que num app de janela lê como terminal e obriga cada painel a
+  ter borda para se separar do vizinho. Com a escada elevada, a separação vem do
+  tom e as bordas podem desaparecer.
+
+  Cada cor existe em duas formas: hex para uso direto em CSS/SVG e canais RGB
+  para o Tailwind conseguir aplicar opacidade (`bg-primary/15`).
+*/
 :root {
-  --p-bg: #050506;
-  --p-surface: #0d0d10;
-  --p-panel: #151518;
-  --p-fg: #f4f4f5;
-  --p-muted: #a1a1aa;
-  --p-dim: #71717a;
+  /* Neutros */
+  --p-bg: #0b0b0f;
+  --p-surface: #121218;
+  --p-panel: #1a1a21;
+  --p-elevated: #22222a;
+  --p-line: rgba(255, 255, 255, 0.055);
+
+  --p-fg: #f2f2f4;
+  --p-muted: #a3a3ae;
+  --p-dim: #74747f;
   --p-grid: #52525b;
+
+  /* Destaque — um só, usado com parcimônia */
   --p-primary: #7c6faf;
   --p-primary-soft: #8d7fc0;
+
+  /* Semânticas */
   --p-success: #7da876;
   --p-warning: #f59e0b;
   --p-error: #d06f82;
   --p-info: #38bdf8;
   --p-mint: #8ba888;
-  --p-selected: #222226;
-  --p-user-bg: #1a1a1f;
-  --p-tool-pending: #101015;
-  --p-tool-success: #0e1510;
-  --p-tool-error: #1a0d12;
+
+  --p-selected: #22222a;
+  --p-user-bg: #17171d;
   --p-diff-added: #3fb950;
   --p-diff-removed: #f85149;
 
-  /*
-   * Canais separados para o Tailwind.
-   * Modificador de opacidade (`bg-primary/15`) exige a cor como
-   * `rgb(var(--x) / <alpha-value>)`. Com a variável guardando um hex pronto, a
-   * classe é descartada em silêncio e o elemento cai no cinza do preflight —
-   * foi o que deixava a borda do "Nova conversa" branca.
-   */
-  --p-bg-rgb: 5 5 6;
-  --p-surface-rgb: 13 13 16;
-  --p-panel-rgb: 21 21 24;
-  --p-fg-rgb: 244 244 245;
-  --p-muted-rgb: 161 161 170;
-  --p-dim-rgb: 113 113 122;
+  --p-bg-rgb: 11 11 15;
+  --p-surface-rgb: 18 18 24;
+  --p-panel-rgb: 26 26 33;
+  --p-elevated-rgb: 34 34 42;
+  --p-fg-rgb: 242 242 244;
+  --p-muted-rgb: 163 163 174;
+  --p-dim-rgb: 116 116 127;
   --p-grid-rgb: 82 82 91;
   --p-primary-rgb: 124 111 175;
   --p-primary-soft-rgb: 141 127 192;
@@ -48,7 +56,21 @@
   --p-info-rgb: 56 189 248;
   --p-mint-rgb: 139 168 136;
 
-  --p-radius: 14px;
+  /* Tipografia */
+  --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+
+  /* Raio */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+
+  /* Ritmo da conversa */
+  --col: 760px;
+  --turn-gap: 28px;
   --p-titlebar: 44px;
 }
 
@@ -62,85 +84,111 @@ html, body, #root {
 body {
   background: var(--p-bg);
   color: var(--p-fg);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.68;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
 ::selection { background: rgba(124, 111, 175, 0.35); }
 
-/* ---------- scrollbar ---------- */
-::-webkit-scrollbar { width: 10px; height: 10px; }
+/*
+  Scrollbar fina, sem trilho. O polegar só aparece quando o ponteiro está sobre
+  a área rolável — a barra permanente de 10px com borda era o item mais barulhento
+  do cromo.
+*/
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: #2a2a30;
+  background: transparent;
   border-radius: 8px;
-  border: 2px solid var(--p-bg);
+  transition: background 0.15s;
 }
-::-webkit-scrollbar-thumb:hover { background: #3a3a44; }
+:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.11); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+::-webkit-scrollbar-corner { background: transparent; }
 
-/* ---------- brilho ambiente ---------- */
 .aurora::before {
   content: '';
   position: absolute;
   inset: -40% -10% auto -10%;
   height: 60%;
-  background: radial-gradient(60% 60% at 50% 0%, rgba(124, 111, 175, 0.16), transparent 70%);
+  background: radial-gradient(60% 60% at 50% 0%, rgba(124, 111, 175, 0.1), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
 
-.hairline { border-color: rgba(255, 255, 255, 0.06); }
+.hairline { border-color: var(--p-line); }
+
+/*
+  Respeita a preferência do sistema por menos movimento. O app não depende de
+  animação para comunicar nada — o cursor de streaming e o giro de "executando"
+  têm equivalente estático no texto de estado.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
 
-/* ---------- markdown ---------- */
-.md { font-size: 14.5px; line-height: 1.72; overflow-wrap: anywhere; }
+.md { font-size: 15px; line-height: 1.68; overflow-wrap: anywhere; }
 .md > *:first-child { margin-top: 0; }
 .md > *:last-child { margin-bottom: 0; }
-.md p { margin: 0 0 0.85em; }
+.md p { margin: 0 0 0.9em; }
 .md h1, .md h2, .md h3, .md h4 {
-  color: var(--p-primary-soft);
+  color: var(--p-fg);
   font-weight: 600;
   line-height: 1.3;
-  margin: 1.5em 0 0.6em;
+  margin: 1.6em 0 0.6em;
 }
-.md h1 { font-size: 1.4em; }
-.md h2 { font-size: 1.22em; }
-.md h3 { font-size: 1.08em; }
+.md h1 { font-size: 1.38em; }
+.md h2 { font-size: 1.2em; }
+.md h3 { font-size: 1.06em; }
 .md h4 { font-size: 1em; }
-.md a { color: var(--p-info); text-decoration: none; border-bottom: 1px solid rgba(56, 189, 248, 0.3); }
-.md a:hover { border-bottom-color: var(--p-info); }
-.md ul, .md ol { margin: 0 0 0.9em; padding-left: 1.35em; }
-.md li { margin: 0.25em 0; }
-.md ul li::marker { color: var(--p-muted); }
-.md ol li::marker { color: var(--p-muted); }
+.md a { color: var(--p-primary-soft); text-decoration: none; border-bottom: 1px solid rgba(141, 127, 192, 0.32); }
+.md a:hover { border-bottom-color: var(--p-primary-soft); }
+/*
+  `list-style` explícito: o preflight do Tailwind zera `list-style` de toda ul/ol,
+  então as listas do markdown vinham sem marcador nenhum — só indentadas. As
+  regras de `::marker` abaixo existiam desde sempre e nunca tinham efeito.
+*/
+.md ul { list-style: disc; margin: 0 0 0.95em; padding-left: 1.4em; }
+.md ol { list-style: decimal; margin: 0 0 0.95em; padding-left: 1.5em; }
+.md ul ul { list-style: circle; margin-bottom: 0; }
+.md ol ol { list-style: lower-alpha; margin-bottom: 0; }
+.md li { margin: 0.28em 0; }
+.md ul li::marker { color: var(--p-dim); }
+.md ol li::marker { color: var(--p-dim); }
 .md strong { color: #fff; font-weight: 600; }
 .md em { color: var(--p-fg); }
-.md hr { border: none; border-top: 1px solid var(--p-grid); margin: 1.5em 0; opacity: 0.5; }
+.md hr { border: none; border-top: 1px solid var(--p-line); margin: 1.6em 0; }
 .md blockquote {
   margin: 0 0 1em;
   padding: 0.1em 0 0.1em 1em;
-  border-left: 2px solid var(--p-grid);
+  border-left: 2px solid var(--p-elevated);
   color: var(--p-muted);
 }
 .md code {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-  font-size: 0.87em;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
   background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 5px;
+  border: 1px solid var(--p-line);
+  border-radius: var(--r-xs);
   padding: 0.12em 0.4em;
   color: #d4d4d8;
 }
 .md pre {
-  background: #08080a;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  padding: 13px 15px;
+  background: var(--p-surface);
+  border: 1px solid var(--p-line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
   overflow-x: auto;
   margin: 0 0 1em;
 }
@@ -148,27 +196,26 @@ body {
   background: none;
   border: none;
   padding: 0;
-  font-size: 12.6px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.62;
   color: var(--p-mint);
 }
 .md table {
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 1em;
-  font-size: 13.3px;
+  font-size: 13px;
   display: block;
   overflow-x: auto;
 }
 .md th, .md td {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 7px 11px;
+  border: 1px solid var(--p-line);
+  padding: 8px 12px;
   text-align: left;
 }
-.md th { background: rgba(255, 255, 255, 0.035); color: var(--p-primary-soft); font-weight: 600; }
+.md th { background: rgba(255, 255, 255, 0.035); color: var(--p-fg); font-weight: 600; }
 
-/* ---------- highlight.js mapeado no tema prime ---------- */
-.hljs-comment, .hljs-quote { color: var(--p-muted); font-style: italic; }
+.hljs-comment, .hljs-quote { color: var(--p-dim); font-style: italic; }
 .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-name { color: var(--p-info); }
 .hljs-title, .hljs-title.function_, .hljs-section { color: var(--p-info); }
 .hljs-string, .hljs-regexp, .hljs-template-string { color: var(--p-mint); }
@@ -183,26 +230,16 @@ body {
 textarea { font-family: inherit; }
 button { font-family: inherit; }
 
-/*
- * O Chromium desenha um anel branco em :focus-visible. Depois de clicar em
- * "Nova conversa" o botão continuava focado e o anel ficava aparente.
- * Trocamos por um anel discreto do tema, só para navegação por teclado.
- */
 :focus { outline: none; }
 
 :focus-visible {
   outline: 2px solid rgba(124, 111, 175, 0.55);
   outline-offset: 1px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 
 button:focus:not(:focus-visible) { outline: none; }
 
-/*
- * Campos de texto já sinalizam foco pela borda do próprio container
- * (`focus-within`). O outline global desenhava um segundo anel por fora da
- * caixa arredondada, desalinhado dela.
- */
 input:focus-visible,
 textarea:focus-visible,
 [contenteditable]:focus-visible {
