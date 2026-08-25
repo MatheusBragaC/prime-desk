@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
-import { StatusBar } from './components/StatusBar'
+import { StatusBar, type Dock } from './components/StatusBar'
 import { Composer } from './components/Composer'
 import { Message } from './components/Message'
 import { Welcome } from './components/Welcome'
@@ -19,6 +19,7 @@ import { useWindowWidth, DOCK_MIN_WIDTH, SIDEBAR_MIN_WIDTH } from './lib/useWind
 const PAGE_SIZE = 60
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
+import { DiffPanel } from './components/DiffPanel'
 import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
@@ -32,7 +33,7 @@ export function App() {
   const [palette, setPalette] = useState(false)
   // Dock único à direita: dois painéis simultâneos espremiam a conversa a ponto
   // de o composer ficar inutilizável em janela normal.
-  const [dock, setDock] = useState<'files' | 'agents' | null>(null)
+  const [dock, setDock] = useState<Dock>(null)
   const width = useWindowWidth()
   const narrowDock = width < DOCK_MIN_WIDTH
   const narrowSidebar = width < SIDEBAR_MIN_WIDTH
@@ -98,7 +99,20 @@ export function App() {
     const store = useAgent.getState()
 
     const offEvent = window.prime.on('agent:event', (p) => {
-      const ev = p as AgentEvent & { activeSessionId?: string; event?: AgentEvent; error?: string }
+      const ev = p as AgentEvent & {
+        activeSessionId?: string
+        event?: AgentEvent
+        error?: string
+        bridgeId?: string
+      }
+
+      /*
+        Evento de ponte estacionada: aquele turno continua rodando fora da tela e
+        não pode escrever na conversa que está aberta. O aviso de término chega
+        pelo canal `bridge:run-ended`.
+      */
+      const activeBridge = useAgent.getState().activeBridgeId
+      if (ev.bridgeId && activeBridge && ev.bridgeId !== activeBridge) return
 
       // Eventos de sessões observadas vêm embrulhados para não se confundirem
       // com os da sessão própria. Roteia para o namespace do observado.
@@ -122,6 +136,15 @@ export function App() {
         void refreshSessions()
         void maybeGenerateTitle()
       }
+    })
+    const offParked = window.prime.on('bridge:parked', (p) =>
+      store.setParkedRuns(p as Parameters<typeof store.setParkedRuns>[0])
+    )
+    const offEnded = window.prime.on('bridge:run-ended', (p) => {
+      const info = p as { sessionPath?: string }
+      const title = useAgent.getState().sessions.find((x) => x.path === info.sessionPath)?.title
+      store.notify('info', t('session.runFinished', { name: title ?? '' }).trim())
+      void refreshSessions()
     })
     const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
     const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))
@@ -162,6 +185,7 @@ export function App() {
       // O cwd efetivo vem do main, não do que pedimos: se a ponte já estava de
       // pé (recarga do renderer), o diretório real é o dela.
       store.setCwd(r.cwd ?? info.home)
+      store.setActiveBridge((r.bridgeId as string) ?? null)
 
       // O worker do daemon leva alguns segundos para aceitar comandos.
       for (let i = 0; i < 30; i++) {
@@ -188,6 +212,8 @@ export function App() {
 
     return () => {
       offEvent()
+      offParked()
+      offEnded()
       offErr()
       offFatal()
       offExit()
@@ -201,6 +227,20 @@ export function App() {
     Soltar um arquivo fora do composer faria o Electron navegar para ele,
     substituindo a interface pelo arquivo. Bloqueamos na janela inteira.
   */
+  /*
+    Durante o turno os subagentes nascem e morrem em segundos, e o poller do main
+    roda a cada 3s — tempo suficiente para a árvore mostrar um estado que já
+    passou. Enquanto está transmitindo, o renderer pede atualização mais de perto;
+    parado, volta ao ritmo do main, que gasta um processo `prime-agent list` por
+    ciclo.
+  */
+  useEffect(() => {
+    if (!streaming) return
+    void window.prime.refreshAgentTree()
+    const id = setInterval(() => void window.prime.refreshAgentTree(), 1500)
+    return () => clearInterval(id)
+  }, [streaming])
+
   useEffect(() => {
     const block = (e: DragEvent): void => {
       if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
@@ -227,6 +267,10 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
         setDock((d) => (d === 'files' ? null : 'files'))
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        setDock((d) => (d === 'diff' ? null : 'diff'))
       }
 
       // Zoom da interface. `=` cobre o Ctrl+= sem Shift, comum em teclado ABNT.
@@ -278,18 +322,43 @@ export function App() {
     scrolledFor.current = key
 
     pinned.current = true
-    let frame = 0
-    let tries = 0
 
-    const toBottom = (): void => {
-      const el = scroller.current
-      if (el) el.scrollTop = el.scrollHeight
-      if (++tries < 6) frame = requestAnimationFrame(toBottom)
+    const el = scroller.current
+    if (!el) return
+
+    const stick = (): void => {
+      el.scrollTop = el.scrollHeight
     }
+    stick()
 
-    toBottom()
-    return () => cancelAnimationFrame(frame)
+    /*
+      A altura só se estabiliza depois da primeira pintura: imagens anexadas
+      carregam, o destaque de sintaxe re-renderiza os blocos de código e as
+      fontes embutidas reflowam o texto. Seis quadros de `requestAnimationFrame`
+      (~100ms) terminavam antes disso e a conversa abria no meio. Aqui a gente
+      cola no fim enquanto o conteúdo estiver crescendo, por até dois segundos.
+    */
+    const content = el.firstElementChild
+    const ro = new ResizeObserver(stick)
+    if (content) ro.observe(content)
+
+    const imgs = Array.from(el.querySelectorAll('img'))
+    for (const img of imgs) img.addEventListener('load', stick)
+
+    const release = (): void => {
+      ro.disconnect()
+      for (const img of imgs) img.removeEventListener('load', stick)
+    }
+    const timer = setTimeout(release, 2000)
+
+    return () => {
+      clearTimeout(timer)
+      release()
+    }
   }, [sessionId, loadingSession, messages.length])
+
+  /** Conversa sem conteúdo: a tela inicial troca o layout do palco. */
+  const isEmpty = !loadingSession && !fatal && messages.length === 0
 
   const hiddenCount = Math.max(0, messages.length - visibleCount)
   const visibleMessages = hiddenCount > 0 ? messages.slice(hiddenCount) : messages
@@ -354,10 +423,12 @@ export function App() {
     if (!r?.ok) {
       store.setStatus('error')
       store.notify('error', r?.error ?? 'Não foi possível iniciar nesse destino.')
-      await window.prime.startBridge({ cwd: store.cwd })
+      const back = await window.prime.startBridge({ cwd: store.cwd })
+      store.setActiveBridge((back?.bridgeId as string) ?? null)
       return
     }
 
+    store.setActiveBridge((r.bridgeId as string) ?? null)
     for (let i = 0; i < 30; i++) {
       await new Promise((res) => setTimeout(res, 700))
       await refreshState()
@@ -376,6 +447,7 @@ export function App() {
     await window.prime.stopBridge()
     const started = await window.prime.startBridge({ cwd: r.path })
     store.setCwd(started?.cwd ?? r.path)
+    store.setActiveBridge((started?.bridgeId as string) ?? null)
     for (let i = 0; i < 30; i++) {
       await new Promise((res) => setTimeout(res, 700))
       await refreshState()
@@ -418,8 +490,6 @@ export function App() {
         onSignedOut={() => setNeedsSetup(true)}
         home={home}
         onPickCwd={() => void pickCwd()}
-        onToggleTree={() => setDock((d) => (d === 'agents' ? null : 'agents'))}
-        treeOpen={treeOpen}
         onNavigate={() => narrowSidebar && setSidebarOpen(false)}
       />
       </div>
@@ -428,43 +498,57 @@ export function App() {
         <div className="aurora pointer-events-none absolute inset-0" />
         <StatusBar
           onToggleSidebar={narrowSidebar ? () => setSidebarOpen((v) => !v) : undefined}
+          dock={dock}
+          onDock={(kind) => setDock((d) => (d === kind ? null : kind))}
         />
         <Notice />
 
+        {/*
+          Conversa vazia: a saudação e o composer formam um grupo só, centrado na
+          área útil — é assim no Claude Desktop. Com conteúdo, o rolador volta a
+          ocupar tudo e o composer se fixa no rodapé.
+        */}
+        <div
+          className={
+            'relative z-10 flex min-h-0 flex-1 flex-col ' + (isEmpty ? 'justify-center' : '')
+          }
+        >
         {fatal ? (
           <div className="flex flex-1 items-center justify-center p-10">
             <div className="max-w-[560px] rounded-xl border border-err/30 bg-err/[0.07] p-5">
-              <div className="text-[14px] font-semibold text-err">{t('bridge.fatalTitle')}</div>
-              <pre className="mt-2.5 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[12px] text-muted">
+              <div className="text-base font-semibold text-err">{t('bridge.fatalTitle')}</div>
+              <pre className="mt-2.5 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-sm text-muted">
                 {fatal}
               </pre>
-              <div className="mt-3 text-[12.5px] text-dim">{t('bridge.fatalHint')}</div>
+              <div className="mt-3 text-sm text-dim">{t('bridge.fatalHint')}</div>
             </div>
           </div>
         ) : (
           <div
             ref={scroller}
             onScroll={onScroll}
-            className="relative z-10 min-h-0 flex-1 overflow-y-auto"
+            className={
+              'relative z-10 overflow-y-auto ' + (isEmpty ? 'shrink-0' : 'min-h-0 flex-1')
+            }
           >
             {loadingSession ? (
-              <div className="flex h-full items-center justify-center gap-2 text-[13px] text-dim">
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-dim">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 {t('chat.opening')}
               </div>
             ) : messages.length === 0 ? (
               <Welcome />
             ) : (
-              <div className="mx-auto max-w-[860px] py-4">
+              <div className="mx-auto max-w-col pb-2 pt-1">
                 {hiddenCount > 0 && (
                   <div className="mb-2 flex flex-col items-center gap-1 px-6">
                     <button
                       onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-                      className="rounded-lg border border-white/[0.1] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-primary/40 hover:text-fg"
+                      className="rounded-field px-3 py-1.5 text-sm text-muted transition-colors hover:bg-elevated hover:text-fg"
                     >
                       {t('chat.loadOlder')}
                     </button>
-                    <span className="text-[10.5px] text-dim">
+                    <span className="text-micro text-dim">
                       {t('chat.hiddenCount', { n: hiddenCount })}
                     </span>
                   </div>
@@ -478,17 +562,16 @@ export function App() {
                   />
                 ))}
                 {showPending && <PendingBubble />}
-                <div className="h-4" />
+                <div className="h-6" />
               </div>
             )}
           </div>
         )}
 
-        <div className="relative z-10 mx-auto w-full max-w-[860px]">
+        <div className="relative z-10 mx-auto w-full max-w-col">
           <Composer
             onOpenPalette={() => setPalette(true)}
             onPickCwd={() => void pickCwd()}
-            onToggleFiles={() => setDock((d) => (d === 'files' ? null : 'files'))}
             onSetExecution={(conn) => void setExecution(conn)}
             connections={connections}
             onOpenSshModal={() => setSshModal(true)}
@@ -499,6 +582,7 @@ export function App() {
             draft={fileDraft}
             onDraftConsumed={() => setFileDraft(undefined)}
           />
+        </div>
         </div>
 
         {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
@@ -516,6 +600,8 @@ export function App() {
           onQuote={(p) => setFileDraft(p)}
         />
       )}
+
+      {dock === 'diff' && <DiffPanel onClose={() => setDock(null)} />}
 
       {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 

@@ -233,3 +233,96 @@ export async function deleteSessionFile(
 }
 
 void rename
+
+// ------------------------------------------------------------------ git diff
+
+/** Teto do diff devolvido ao renderer: acima disso a leitura deixa de ser útil. */
+const MAX_DIFF_BYTES = 400_000
+
+export interface GitChange {
+  /** Caminho relativo à raiz do repositório. */
+  path: string
+  /** Código de duas letras do `git status --porcelain` (ex.: ` M`, `A `, `??`). */
+  status: string
+  added: number
+  removed: number
+}
+
+function git(cwd: string, args: string[], maxBuffer = MAX_DIFF_BYTES): Promise<string | null> {
+  return new Promise((res) => {
+    execFile('git', args, { cwd, timeout: 8000, maxBuffer }, (err, stdout) => {
+      // `git diff` sai com 1 quando há diferenças: não é erro.
+      if (err && (err as { code?: number }).code !== 1) return res(null)
+      res(stdout)
+    })
+  })
+}
+
+/**
+ * Arquivos alterados no diretório de trabalho, com contagem de linhas.
+ *
+ * `--porcelain` traz o estado (inclusive não rastreados, que o `--numstat` não
+ * vê); `--numstat` traz as contagens. Os dois são unidos pelo caminho.
+ */
+export async function gitChanges(cwd: string): Promise<{ ok: boolean; changes?: GitChange[]; error?: string }> {
+  /*
+    `--untracked-files=normal` (o padrão) colapsa uma pasta nova numa linha só.
+    Com `=all`, um diretório de saída como `graphify-out/` despejava dezenas de
+    entradas e enterrava as alterações que importam.
+  */
+  const porcelain = await git(cwd, ['status', '--porcelain=v1'])
+  if (porcelain === null) return { ok: false, error: 'not-a-repo' }
+
+  const counts = new Map<string, { added: number; removed: number }>()
+  const numstat = await git(cwd, ['diff', 'HEAD', '--numstat'])
+  for (const line of (numstat ?? '').split('\n')) {
+    const m = line.match(/^(\d+|-)\t(\d+|-)\t(.+)$/)
+    if (!m) continue
+    counts.set(m[3], {
+      added: m[1] === '-' ? 0 : Number(m[1]),
+      removed: m[2] === '-' ? 0 : Number(m[2])
+    })
+  }
+
+  const changes: GitChange[] = []
+  for (const line of porcelain.split('\n')) {
+    if (line.length < 4) continue
+    const status = line.slice(0, 2)
+    // Renomeio vem como "antigo -> novo": só o destino interessa.
+    const path = line.slice(3).split(' -> ').pop()!.replace(/^"|"$/g, '')
+    const c = counts.get(path) ?? { added: 0, removed: 0 }
+    changes.push({ path, status, added: c.added, removed: c.removed })
+  }
+  changes.sort((a, b) => a.path.localeCompare(b.path))
+  return { ok: true, changes }
+}
+
+/**
+ * Diff de um arquivo, ou do repositório inteiro quando `relPath` é omitido.
+ *
+ * Arquivo não rastreado não tem diff contra HEAD; nesse caso o `--no-index`
+ * contra /dev/null produz a mesma saída, com todas as linhas como adição.
+ */
+export async function gitDiff(
+  root: string,
+  relPath?: string
+): Promise<{ ok: boolean; diff?: string; truncated?: boolean; error?: string }> {
+  // Mesma regra do explorador: nada fora da raiz, nem por symlink.
+  if (relPath) {
+    const real = await realPathInside(root, join(root, relPath))
+    if (!real) return { ok: false, error: OUTSIDE }
+  }
+
+  const args = relPath
+    ? ['diff', 'HEAD', '--', relPath]
+    : ['diff', 'HEAD']
+  let out = await git(root, args)
+
+  if (relPath && (out === null || out.trim() === '')) {
+    out = await git(root, ['diff', '--no-index', '--', '/dev/null', relPath])
+  }
+  if (out === null) return { ok: false, error: 'not-a-repo' }
+
+  const truncated = out.length > MAX_DIFF_BYTES
+  return { ok: true, diff: truncated ? out.slice(0, MAX_DIFF_BYTES) : out, truncated }
+}

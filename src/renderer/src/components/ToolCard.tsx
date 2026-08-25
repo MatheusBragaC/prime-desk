@@ -54,8 +54,8 @@ export function ToolCard({
     */
     if (live) {
       return (
-        <div className="my-1.5 flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-[var(--p-tool-pending)] px-3 py-2 text-[12.5px] text-dim">
-          <Loader2 size={13} className="animate-spin text-primary" />
+        <div className="my-2 flex items-center gap-2 rounded-card border border-[var(--p-line)] bg-[var(--p-surface)] px-3 py-2 text-sm text-dim">
+          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
           <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
         </div>
       )
@@ -64,10 +64,10 @@ export function ToolCard({
     return (
       <div
         title={t('tool.noResultHint')}
-        className="my-1.5 flex items-center gap-2 rounded-[10px] border border-warn/25 bg-warn/[0.05] px-3 py-2 text-[12.3px] text-warn"
+        className="my-2 flex items-center gap-2 rounded-card border border-[var(--p-line)] bg-[var(--p-surface)] px-3 py-2 text-sm text-warn"
       >
-        <CircleSlash size={13} className="shrink-0" />
-        <span className="font-mono text-[12px] opacity-80">{pendingName ?? 'tool'}</span>
+        <CircleSlash size={14} strokeWidth={1.75} className="shrink-0" />
+        <span className="font-mono text-sm opacity-80">{pendingName ?? 'tool'}</span>
         <span className="opacity-90">· {t('tool.noResult')}</span>
       </div>
     )
@@ -77,62 +77,63 @@ export function ToolCard({
   const failed = exec.status === 'error'
   const code = codeFrom(exec.args)
 
-  const bg = failed
-    ? 'bg-[var(--p-tool-error)] border-[rgba(208,111,130,0.28)]'
-    : running
-      ? 'bg-[var(--p-tool-pending)] border-[rgba(124,111,175,0.3)]'
-      : 'bg-[var(--p-tool-success)] border-white/[0.07]'
+  /*
+    Um fundo só, para os três estados. Pintar o card inteiro de verde ou vermelho
+    dava a uma chamada de ferramenta o mesmo peso visual da resposta — o status
+    cabe no ícone à direita.
+  */
+  const bg = 'bg-[var(--p-surface)] border-[var(--p-line)]'
 
   const body = exec.text.length > MAX_PREVIEW
     ? exec.text.slice(0, MAX_PREVIEW) + '\n' + t('tool.omitted', { n: exec.text.length - MAX_PREVIEW })
     : exec.text
 
   return (
-    <div className={`my-1.5 overflow-hidden rounded-[10px] border transition-colors ${bg}`}>
+    <div className={`my-2 overflow-hidden rounded-card border transition-colors ${bg}`}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-elevated"
       >
         <ChevronRight
-          size={13}
+          size={14} strokeWidth={1.75}
           className={'shrink-0 text-dim transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
         />
-        <Terminal size={12.5} className="shrink-0 text-muted" />
-        <span className="flex-1 truncate font-mono text-[12.3px] text-muted">
+        <Terminal size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+        <span className="flex-1 truncate font-mono text-sm text-dim">
           {summary(exec.name, exec.args)}
         </span>
 
         {exec.kernelRestarted && (
           <span className="shrink-0" title={t('tool.kernelRestarted')}>
-            <RotateCcw size={12} className="text-warn" />
+            <RotateCcw size={14} strokeWidth={1.75} className="text-warn" />
           </span>
         )}
         {exec.durationMs !== undefined && !running && (
-          <span className="shrink-0 font-mono text-[11px] text-dim">{fmtDuration(exec.durationMs)}</span>
+          <span className="shrink-0 font-mono text-xs text-dim">{fmtDuration(exec.durationMs)}</span>
         )}
-        {running && <Loader2 size={13} className="shrink-0 animate-spin text-primary" />}
-        {exec.status === 'ok' && <Check size={13} className="shrink-0 text-ok" />}
-        {failed && <X size={13} className="shrink-0 text-err" />}
+        {running && <Loader2 size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-primary" />}
+        {exec.status === 'ok' && <Check size={14} strokeWidth={1.75} className="shrink-0 text-ok" />}
+        {failed && <X size={14} strokeWidth={1.75} className="shrink-0 text-err" />}
       </button>
 
       {open && (
-        <div className="animate-fade-up border-t border-white/[0.06]">
+        <div className="animate-fade-up border-t border-[var(--p-line)]">
           {code && (
-            <pre className="overflow-x-auto border-b border-white/[0.06] bg-[#08080a] px-3.5 py-2.5 font-mono text-[12.2px] leading-relaxed text-mint">
+            <pre className="overflow-x-auto border-b border-[var(--p-line)] bg-[var(--p-bg)] px-4 py-3 font-mono text-sm leading-relaxed text-mint">
               {code}
             </pre>
           )}
           {body ? (
-            <pre className="max-h-[420px] overflow-auto px-3.5 py-2.5 font-mono text-[12.2px] leading-relaxed text-[#c9c9d1] whitespace-pre-wrap">
+            <pre className="max-h-[380px] overflow-auto px-4 py-3 font-mono text-sm leading-relaxed text-muted whitespace-pre-wrap">
               {body}
             </pre>
           ) : (
-            <div className="px-3.5 py-2.5 text-[12.2px] italic text-dim">
+            <div className="px-4 py-3 text-sm italic text-dim">
               {running ? t('tool.running') : t('tool.noOutput')}
             </div>
           )}
           {exec.stderr && (
-            <pre className="max-h-48 overflow-auto border-t border-white/[0.06] px-3.5 py-2.5 font-mono text-[12.2px] text-err whitespace-pre-wrap">
+            <pre className="max-h-48 overflow-auto border-t border-[var(--p-line)] px-4 py-3 font-mono text-sm text-err whitespace-pre-wrap">
               {exec.stderr}
             </pre>
           )}
