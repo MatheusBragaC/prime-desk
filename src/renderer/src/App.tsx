@@ -228,20 +228,14 @@ export function App() {
     substituindo a interface pelo arquivo. Bloqueamos na janela inteira.
   */
   /*
-    Ritmo da árvore de agentes.
-
-    Cada ciclo gasta um `prime-agent list`, que **medido nesta máquina custa
-    0,67s de CPU**. A 1,5s isso queima ~45% de um núcleo durante o turno inteiro
-    — foi o que deixou a resposta longa travada. O ritmo curto agora só vale
-    quando existe subagente para acompanhar; sem nenhum, o poller do main a cada
-    3s já descobre o primeiro.
+    Ritmo da árvore de agentes, decidido aqui porque é aqui que se sabe o que
+    está na tela. Cada ciclo custa um `prime-agent list` — 0,67s de CPU medidos —
+    então parado ele fica desligado: nada muda quando nada roda.
   */
-  const subagents = useAgent((s) => s.tree?.subagents ?? 0)
   useEffect(() => {
-    if (!streaming || subagents === 0) return
-    const id = setInterval(() => void window.prime.refreshAgentTree(), 2000)
-    return () => clearInterval(id)
-  }, [streaming, subagents])
+    const ms = dock === 'agents' ? 2000 : streaming ? 8000 : 0
+    void window.prime.setAgentCadence(ms)
+  }, [dock, streaming])
 
   useEffect(() => {
     const block = (e: DragEvent): void => {

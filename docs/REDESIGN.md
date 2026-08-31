@@ -426,3 +426,29 @@ Verificado na janela, com turno real de `time.sleep` no Haiku 4.5:
 do tema antigo (`#050506`, `#a1a1aa`): o primeiro quadro da janela piscava mais
 escuro que o app e os botões nativos ficavam sobre a cor errada. Alinhados a
 `#0b0b0f` / `#a3a3ae`.
+
+
+### Custo em repouso: o poller da árvore de agentes
+
+`prime-agent list` custa **0,67s de CPU por ciclo** (medido). Rodando fixo a
+cada 3s, era ~22% de um núcleo queimado o tempo todo — inclusive com o app
+parado, sem turno e sem ninguém olhando o painel.
+
+O ritmo passou a ser decidido pelo renderer, que sabe o que está na tela:
+
+| situação | ritmo |
+|---|---|
+| painel de agentes aberto | 2s |
+| turno rodando, painel fechado | 8s (só para acender o selo de subagentes) |
+| parado | desligado |
+
+Ao desligar, ainda roda um ciclo final — senão o selo ficaria congelado no
+último número visto, mostrando trabalho que já terminou. E `refreshSessions`
+dispara um ciclo avulso, que é o que mantém fresca a marca de "carregada em
+outro worker" na sidebar, justamente nos momentos em que ela importa.
+
+Medido depois da mudança: 40 amostras em 20s com o app parado e o painel
+fechado, sempre os mesmos 4 processos `prime-agent` (daemon e workers) — nenhum
+processo novo criado. O ramo do painel aberto não foi exercitado na janela:
+outra janela cobria a área e o guard de automação abortou os cliques em vez de
+chutar na tela.

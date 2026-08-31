@@ -267,6 +267,13 @@ export async function refreshCommands(): Promise<void> {
 export async function refreshSessions(): Promise<void> {
   const r = await bridge().listSessions()
   if (r?.ok) useAgent.getState().setSessions(r.sessions as SessionSummary[])
+
+  /*
+    Um ciclo da árvore junto com o catálogo. Com o poller desligado em repouso, é
+    isto que mantém fresca a marca de "carregada em outro worker" na sidebar —
+    exatamente nos momentos em que ela importa: abrir, criar ou renomear conversa.
+  */
+  void bridge().refreshAgentTree()
 }
 
 export async function refreshFolders(): Promise<void> {

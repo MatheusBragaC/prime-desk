@@ -301,7 +301,7 @@ function createWindow(): void {
       if (!image.isEmpty()) win?.setIcon(image)
     }
     win?.show()
-    startTreePolling()
+    // O ritmo vem do renderer; aqui a janela só fica elegível a rodar.
   })
 
   win.on('hide', stopTreePolling)
@@ -490,10 +490,22 @@ handle('bridge:fire', (_e, args: { type: string; payload?: Record<string, unknow
   return { ok: true }
 })
 
-// Poller da árvore de agentes. Só roda com janela visível: `prime-agent list`
-// é um processo separado e não deve girar à toa em background.
+/*
+  Poller da árvore de agentes.
+
+  Cada ciclo dispara um `prime-agent list`, que **medido nesta máquina custa
+  0,67s de CPU**. Fixo a cada 3s, isso é ~22% de um núcleo queimado o tempo
+  todo — inclusive com o app parado, sem turno e sem ninguém olhando o painel.
+  Quem manda no ritmo agora é o renderer, que sabe o que está na tela:
+
+    painel de agentes aberto ....... 2s
+    turno rodando, painel fechado .. 8s   (só para acender o selo de subagentes)
+    parado ......................... desligado
+
+  Janela escondida ou minimizada continua parando tudo, como antes.
+*/
 let treeTimer: NodeJS.Timeout | null = null
-const TREE_INTERVAL_MS = 3000
+let treeCadenceMs = 0
 
 async function tickTree(): Promise<void> {
   if (!win || win.isDestroyed() || !win.isVisible()) return
@@ -505,9 +517,24 @@ async function tickTree(): Promise<void> {
 }
 
 function startTreePolling(): void {
-  if (treeTimer) return
+  if (treeTimer || treeCadenceMs <= 0) return
   void tickTree()
-  treeTimer = setInterval(() => void tickTree(), TREE_INTERVAL_MS)
+  treeTimer = setInterval(() => void tickTree(), treeCadenceMs)
+}
+
+/**
+ * Define o ritmo pedido pelo renderer. `0` desliga.
+ *
+ * Ao desligar, ainda roda um ciclo final: senão o selo de subagentes ficaria
+ * congelado no último número visto, mostrando trabalho que já terminou.
+ */
+function setTreeCadence(ms: number): void {
+  if (ms === treeCadenceMs) return
+  const wasOn = treeCadenceMs > 0
+  treeCadenceMs = ms
+  stopTreePolling()
+  if (ms > 0) startTreePolling()
+  else if (wasOn) void tickTree()
 }
 
 function stopTreePolling(): void {
@@ -548,6 +575,11 @@ handle('agents:stop', async (_e, activeSessionId: string) => {
       }
     )
   })
+})
+
+handle('agents:cadence', (_e, ms: number) => {
+  setTreeCadence(Math.max(0, Math.min(60_000, Number(ms) || 0)))
+  return { ok: true }
 })
 
 handle('agents:refresh', () => {
