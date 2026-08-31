@@ -7,16 +7,34 @@ import { ToolCard } from './ToolCard'
 import { fmtTokens } from '../lib/format'
 import { useSmoothText } from '../lib/useSmoothText'
 import { balanceMarkdown } from '../lib/markdownStream'
+import { splitStream } from '../lib/splitStream'
 
-/** Bloco de texto do assistente, com revelação suave enquanto transmite. */
+/**
+ * Bloco de texto do assistente, com revelação suave enquanto transmite.
+ *
+ * Ao vivo o texto é partido em prefixo estável e cauda: só a cauda é reparseada
+ * a cada quadro. Sem isso, um parse da mensagem inteira (26,7 ms aos 15 mil
+ * caracteres) estourava sozinho o orçamento de 16,7 ms do quadro, e a resposta
+ * ia ficando mais pesada quanto mais longa.
+ */
 function StreamingText({ text, live }: { text: string; live: boolean }) {
   const shown = useSmoothText(text, live)
   const catchingUp = live && shown.length < text.length
-  const body = live ? balanceMarkdown(shown) : shown
+
+  if (!live && !catchingUp) {
+    return (
+      <div className="mb-1">
+        <Markdown text={shown} />
+      </div>
+    )
+  }
+
+  const { stable, tail } = splitStream(shown)
   return (
     <div className="mb-1">
-      <Markdown text={body} highlight={!live} />
-      {(live || catchingUp) && <Caret />}
+      {stable && <Markdown text={stable} highlight={false} />}
+      <Markdown text={balanceMarkdown(tail)} highlight={false} />
+      <Caret />
     </div>
   )
 }

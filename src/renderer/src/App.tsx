@@ -228,18 +228,20 @@ export function App() {
     substituindo a interface pelo arquivo. Bloqueamos na janela inteira.
   */
   /*
-    Durante o turno os subagentes nascem e morrem em segundos, e o poller do main
-    roda a cada 3s — tempo suficiente para a árvore mostrar um estado que já
-    passou. Enquanto está transmitindo, o renderer pede atualização mais de perto;
-    parado, volta ao ritmo do main, que gasta um processo `prime-agent list` por
-    ciclo.
+    Ritmo da árvore de agentes.
+
+    Cada ciclo gasta um `prime-agent list`, que **medido nesta máquina custa
+    0,67s de CPU**. A 1,5s isso queima ~45% de um núcleo durante o turno inteiro
+    — foi o que deixou a resposta longa travada. O ritmo curto agora só vale
+    quando existe subagente para acompanhar; sem nenhum, o poller do main a cada
+    3s já descobre o primeiro.
   */
+  const subagents = useAgent((s) => s.tree?.subagents ?? 0)
   useEffect(() => {
-    if (!streaming) return
-    void window.prime.refreshAgentTree()
-    const id = setInterval(() => void window.prime.refreshAgentTree(), 1500)
+    if (!streaming || subagents === 0) return
+    const id = setInterval(() => void window.prime.refreshAgentTree(), 2000)
     return () => clearInterval(id)
-  }, [streaming])
+  }, [streaming, subagents])
 
   useEffect(() => {
     const block = (e: DragEvent): void => {
