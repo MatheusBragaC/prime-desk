@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 
 /**
  * Superfície mínima exposta ao renderer. Nenhum acesso a fs, path ou child_process.
@@ -61,7 +61,13 @@ const api = {
   loadFolders: () => ipcRenderer.invoke('folders:load'),
   saveFolders: (state: unknown) => ipcRenderer.invoke('folders:save', state),
   pickDirectory: () => ipcRenderer.invoke('dialog:pickDirectory'),
-  pickImage: () => ipcRenderer.invoke('dialog:pickImage'),
+  pickAttachment: () => ipcRenderer.invoke('dialog:pickAttachment'),
+  /*
+    Caminho real de um arquivo arrastado. Com `sandbox: true` o `File.path` do
+    DOM nao existe mais; `webUtils.getPathForFile` e a via suportada, e precisa
+    rodar no preload.
+  */
+  pathForFile: (file: File) => webUtils.getPathForFile(file),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   appInfo: () => ipcRenderer.invoke('app:info'),
 

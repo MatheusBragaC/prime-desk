@@ -404,13 +404,43 @@ export function Composer({
   }
 
   /** Adiciona imagens vindas de colar ou arrastar. */
+  /** Acrescenta caminhos ao texto, um por linha, para o agente ler no disco. */
+  function quotePaths(paths: string[]): void {
+    if (paths.length === 0) return
+    setValue((v) => {
+      const prefix = v.trim().length > 0 ? v.replace(/\s*$/, '') + '\n' : ''
+      return prefix + paths.join('\n') + '\n'
+    })
+    ta.current?.focus()
+  }
+
+  /**
+   * Arquivos arrastados ou colados.
+   *
+   * Imagem vira anexo de verdade. Qualquer outra coisa — PDF, planilha, código —
+   * entra como caminho: o RPC do prime-agent só transporta `ImageContent`, e o
+   * agente lê o arquivo com as próprias ferramentas.
+   */
   async function addFiles(list: FileList | File[]): Promise<void> {
-    const files = Array.from(list).filter((f) => f.type.startsWith('image/'))
-    if (files.length === 0) return
-    const added = (await Promise.all(files.map(fileToAttachment))).filter(
-      (a): a is Attachment => a !== null
-    )
-    if (added.length > 0) setAtts((prev) => [...prev, ...added])
+    const all = Array.from(list)
+    const images = all.filter((f) => f.type.startsWith('image/'))
+    const others = all.filter((f) => !f.type.startsWith('image/'))
+
+    if (images.length > 0) {
+      const added = (await Promise.all(images.map(fileToAttachment))).filter(
+        (a): a is Attachment => a !== null
+      )
+      if (added.length > 0) setAtts((prev) => [...prev, ...added])
+    }
+
+    if (others.length > 0) {
+      // `File.path` não existe com o renderer em sandbox; o preload resolve.
+      const paths = others.map((f) => window.prime.pathForFile(f)).filter(Boolean)
+      quotePaths(paths)
+      if (paths.length < others.length) {
+        useAgent.getState().notify('info', t('composer.noPath'))
+      }
+    }
   }
 
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>): void {
@@ -423,8 +453,18 @@ export function Composer({
   }
 
   async function attach() {
-    const r = await window.prime.pickImage()
-    if (r?.ok) setAtts((a) => [...a, { path: r.path, data: r.data, mimeType: r.mimeType }])
+    const r = await window.prime.pickAttachment()
+    if (!r?.ok) return
+    const picked = r.picked as { path: string; isImage: boolean; data?: string; mimeType?: string }[]
+
+    const images = picked.filter((p) => p.isImage)
+    if (images.length > 0) {
+      setAtts((a) => [
+        ...a,
+        ...images.map((p) => ({ path: p.path, data: p.data!, mimeType: p.mimeType! }))
+      ])
+    }
+    quotePaths(picked.filter((p) => !p.isImage).map((p) => p.path))
   }
 
   return (

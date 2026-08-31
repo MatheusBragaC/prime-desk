@@ -692,19 +692,43 @@ handle('dialog:pickDirectory', async () => {
   return { ok: true, path: r.filePaths[0] }
 })
 
-handle('dialog:pickImage', async () => {
+const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp'])
+
+/**
+ * Seletor de anexo.
+ *
+ * O RPC do prime-agent aceita **só imagem** (`ImageContent`); a doc dele lista a
+ * entrada do modelo como `["text", "image"]`. Então PDF, planilha ou código não
+ * viram anexo: o que volta é o caminho, e o agente lê o arquivo com as próprias
+ * ferramentas — que é o caminho mais barato de qualquer forma, já que ele tem
+ * disco e IPython à disposição.
+ */
+handle('dialog:pickAttachment', async () => {
   if (!win) return { ok: false }
   const r = await dialog.showOpenDialog(win, {
-    properties: ['openFile'],
-    title: 'Anexar imagem',
-    filters: [{ name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }]
+    properties: ['openFile', 'multiSelections'],
+    title: 'Anexar arquivo',
+    filters: [
+      { name: 'Todos os arquivos', extensions: ['*'] },
+      { name: 'Imagens', extensions: [...IMAGE_EXT] }
+    ]
   })
   if (r.canceled || r.filePaths.length === 0) return { ok: false }
-  const path = r.filePaths[0]
-  const buf = await readFile(path)
-  const ext = path.split('.').pop()!.toLowerCase()
-  const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
-  return { ok: true, path, data: buf.toString('base64'), mimeType }
+
+  const picked = await Promise.all(
+    r.filePaths.map(async (path) => {
+      const ext = path.split('.').pop()?.toLowerCase() ?? ''
+      if (!IMAGE_EXT.has(ext)) return { path, isImage: false as const }
+      const buf = await readFile(path)
+      const mimeType =
+        ext === 'png' ? 'image/png'
+        : ext === 'gif' ? 'image/gif'
+        : ext === 'webp' ? 'image/webp'
+        : 'image/jpeg'
+      return { path, isImage: true as const, data: buf.toString('base64'), mimeType }
+    })
+  )
+  return { ok: true, picked }
 })
 
 handle('files:list', async (_e, relPath: string) => listDir(workspaceRoot, relPath ?? ''))
