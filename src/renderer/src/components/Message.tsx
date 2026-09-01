@@ -8,6 +8,8 @@ import { fmtTokens } from '../lib/format'
 import { useSmoothText } from '../lib/useSmoothText'
 import { balanceMarkdown } from '../lib/markdownStream'
 import { splitStream } from '../lib/splitStream'
+import { splitTrailingPaths, baseName } from '../lib/attachments'
+import { FileText } from 'lucide-react'
 
 /**
  * Bloco de texto do assistente, com revelação suave enquanto transmite.
@@ -60,6 +62,7 @@ export const Message = memo(function Message({
       .filter((b): b is Extract<ContentBlock, { type: 'text' }> => b.type === 'text')
       .map((b) => b.text)
       .join('\n')
+    const { body, paths } = splitTrailingPaths(text)
     const images = msg.content.filter(
       (b): b is Extract<ContentBlock, { type: 'image' }> => b.type === 'image'
     )
@@ -85,7 +88,26 @@ export const Message = memo(function Message({
               ))}
             </div>
           )}
-          <div className="whitespace-pre-wrap text-base">{text}</div>
+          {/*
+            Os caminhos que o composer acrescentou no fim voltam a ser anexos na
+            leitura. A mensagem enviada continua tendo o caminho — é assim que o
+            agente acha o arquivo —, só não é ele que aparece.
+          */}
+          {paths.length > 0 && (
+            <div className={'flex flex-wrap gap-1.5 ' + (body ? 'mb-2' : '')}>
+              {paths.map((p, i) => (
+                <span
+                  key={i}
+                  title={p}
+                  className="flex max-w-[240px] items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1"
+                >
+                  <FileText size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                  <span className="truncate text-sm text-muted">{baseName(p)}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {body && <div className="whitespace-pre-wrap text-base">{body}</div>}
         </div>
       </div>
     )

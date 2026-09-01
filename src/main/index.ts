@@ -737,13 +737,16 @@ const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp'])
  */
 handle('dialog:pickAttachment', async () => {
   if (!win) return { ok: false }
+  /*
+    Sem `filters`. Verificado na janela: com um filtro "Todos os arquivos"
+    (`extensions: ['*']`) declarado, o seletor do GTK ainda escondia PDF e .log
+    da lista — só imagem aparecia, e o arquivo que a pessoa queria anexar era
+    invisível. Sem filtro nenhum, tudo aparece, que é o comportamento correto
+    aqui: o agente lê qualquer arquivo.
+  */
   const r = await dialog.showOpenDialog(win, {
     properties: ['openFile', 'multiSelections'],
-    title: 'Anexar arquivo',
-    filters: [
-      { name: 'Todos os arquivos', extensions: ['*'] },
-      { name: 'Imagens', extensions: [...IMAGE_EXT] }
-    ]
+    title: 'Anexar arquivo'
   })
   if (r.canceled || r.filePaths.length === 0) return { ok: false }
 

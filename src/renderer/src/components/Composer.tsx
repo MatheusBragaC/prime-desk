@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp,
+  Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp, FileText,
   Check, Terminal, Trash2
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
+import { joinWithPaths, baseName } from '../lib/attachments'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -18,7 +19,16 @@ export interface SshConnection {
   remotePath?: string
 }
 
-interface Attachment { path: string; data: string; mimeType: string }
+/**
+ * Anexo pendente na caixa de entrada.
+ *
+ * `image` sobe em base64 no campo `images` do prompt. `file` não sobe: o RPC do
+ * prime-agent só transporta imagem, então o caminho é acrescentado ao texto e
+ * quem lê o arquivo é o agente. Os dois aparecem como chip na caixa.
+ */
+type Attachment =
+  | { kind: 'image'; path: string; data: string; mimeType: string }
+  | { kind: 'file'; path: string }
 
 /** Acima disso o payload em base64 fica grande demais para uma mensagem. */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -40,6 +50,7 @@ function fileToAttachment(file: File): Promise<Attachment | null> {
       const comma = result.indexOf(',')
       if (comma < 0) return resolve(null)
       resolve({
+        kind: 'image',
         path: file.name || 'imagem',
         data: result.slice(comma + 1),
         mimeType: file.type
@@ -365,11 +376,14 @@ export function Composer({
   }
 
   async function submit() {
-    const text = value.trim()
+    const files = atts.filter((a) => a.kind === 'file')
+    const images = atts.filter((a) => a.kind === 'image')
+    // Com anexo de arquivo, o caminho basta: a mensagem pode vir só com ele.
+    const text = joinWithPaths(value, files.map((f) => f.path))
     if (!text || !ready) return
     setValue('')
     setAtts([])
-    await sendPrompt(text, atts.map((a) => ({ data: a.data, mimeType: a.mimeType })))
+    await sendPrompt(text, images.map((a) => ({ data: a.data, mimeType: a.mimeType })))
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -404,22 +418,12 @@ export function Composer({
   }
 
   /** Adiciona imagens vindas de colar ou arrastar. */
-  /** Acrescenta caminhos ao texto, um por linha, para o agente ler no disco. */
-  function quotePaths(paths: string[]): void {
-    if (paths.length === 0) return
-    setValue((v) => {
-      const prefix = v.trim().length > 0 ? v.replace(/\s*$/, '') + '\n' : ''
-      return prefix + paths.join('\n') + '\n'
-    })
-    ta.current?.focus()
-  }
-
   /**
    * Arquivos arrastados ou colados.
    *
-   * Imagem vira anexo de verdade. Qualquer outra coisa — PDF, planilha, código —
-   * entra como caminho: o RPC do prime-agent só transporta `ImageContent`, e o
-   * agente lê o arquivo com as próprias ferramentas.
+   * Imagem sobe em base64. Qualquer outra coisa — PDF, planilha, código — entra
+   * como anexo de caminho: o chip aparece igual, e o caminho só se junta ao
+   * texto no envio.
    */
   async function addFiles(list: FileList | File[]): Promise<void> {
     const all = Array.from(list)
@@ -436,7 +440,9 @@ export function Composer({
     if (others.length > 0) {
       // `File.path` não existe com o renderer em sandbox; o preload resolve.
       const paths = others.map((f) => window.prime.pathForFile(f)).filter(Boolean)
-      quotePaths(paths)
+      if (paths.length > 0) {
+        setAtts((prev) => [...prev, ...paths.map((path) => ({ kind: 'file' as const, path }))])
+      }
       if (paths.length < others.length) {
         useAgent.getState().notify('info', t('composer.noPath'))
       }
@@ -457,14 +463,14 @@ export function Composer({
     if (!r?.ok) return
     const picked = r.picked as { path: string; isImage: boolean; data?: string; mimeType?: string }[]
 
-    const images = picked.filter((p) => p.isImage)
-    if (images.length > 0) {
-      setAtts((a) => [
-        ...a,
-        ...images.map((p) => ({ path: p.path, data: p.data!, mimeType: p.mimeType! }))
-      ])
-    }
-    quotePaths(picked.filter((p) => !p.isImage).map((p) => p.path))
+    setAtts((a) => [
+      ...a,
+      ...picked.map((p): Attachment =>
+        p.isImage
+          ? { kind: 'image', path: p.path, data: p.data!, mimeType: p.mimeType! }
+          : { kind: 'file', path: p.path }
+      )
+    ])
   }
 
   return (
@@ -527,12 +533,28 @@ export function Composer({
           <div className="flex flex-wrap gap-2 px-4 pb-1 pt-4">
             {atts.map((a, i) => (
               <div key={i} className="group/att relative">
-                <img
-                  src={`data:${a.mimeType};base64,${a.data}`}
-                  alt={a.path}
-                  title={a.path}
-                  className="h-14 w-14 rounded-card border border-white/[0.12] object-cover"
-                />
+                {a.kind === 'image' ? (
+                  <img
+                    src={`data:${a.mimeType};base64,${a.data}`}
+                    alt={a.path}
+                    title={a.path}
+                    className="h-14 w-14 rounded-card border border-white/[0.12] object-cover"
+                  />
+                ) : (
+                  /* Arquivo não tem miniatura: o chip mostra nome e tipo. */
+                  <div
+                    title={a.path}
+                    className="flex h-14 max-w-[220px] items-center gap-2 rounded-card border border-white/[0.12] bg-[var(--p-panel)] px-3"
+                  >
+                    <FileText size={18} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-fg">{baseName(a.path)}</span>
+                      <span className="block truncate text-micro uppercase tracking-wider text-dim">
+                        {baseName(a.path).split('.').pop()}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <button
                   onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
                   title={t('composer.removeAttachment')}
