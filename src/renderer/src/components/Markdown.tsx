@@ -33,15 +33,15 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         onClick={() => void copy()}
         title={copied ? t('common.copied') : t('common.copyCode')}
         className={
-          'absolute right-2 top-2 flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10.5px] transition-all ' +
+          'absolute right-2 top-2 flex items-center gap-1 rounded-md border px-1.5 py-1 text-micro transition-all ' +
           // Sempre visível, discreto: depender de hover esconde a ação de quem
           // usa trackpad/toque e de quem simplesmente não sabe que ela existe.
           (copied
             ? 'border-ok/40 bg-ok/15 text-ok opacity-100'
-            : 'border-white/[0.09] bg-[var(--p-panel)] text-dim opacity-45 hover:border-white/20 hover:text-fg hover:opacity-100 group-hover/code:opacity-90')
+            : 'border-[var(--p-line)] bg-[var(--p-panel)] text-dim opacity-45 hover:border-white/20 hover:text-fg hover:opacity-100 group-hover/code:opacity-90')
         }
       >
-        {copied ? <Check size={11} /> : <Copy size={11} />}
+        {copied ? <Check size={14} strokeWidth={1.75} /> : <Copy size={14} strokeWidth={1.75} />}
         {copied ? t('common.copied') : t('common.copy').toLowerCase()}
       </button>
     </div>

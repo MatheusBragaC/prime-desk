@@ -8,23 +8,23 @@ export function ThinkingBlock({ text, streaming }: { text: string; streaming: bo
   if (!text.trim()) return null
 
   return (
-    <div className="mb-1.5">
+    <div className="mb-2">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="group flex items-center gap-1.5 text-[12.5px] text-dim transition-colors hover:text-muted"
+        className="group flex items-center gap-1.5 text-sm text-dim transition-colors hover:text-muted"
       >
         <ChevronRight
-          size={13}
+          size={16} strokeWidth={1.75}
           className={'transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
         />
-        <Sparkles size={12} className={streaming ? 'animate-pulse-soft text-primary' : 'text-dim'} />
+        <Sparkles size={14} strokeWidth={1.75} className={streaming ? 'animate-pulse-soft text-primary' : 'text-dim'} />
         <span className={streaming ? 'animate-pulse-soft' : ''}>
           {streaming ? t('thinking.streaming') : t('thinking.label')}
         </span>
       </button>
 
       {open && (
-        <div className="mt-2 animate-fade-up border-l border-white/10 pl-3.5 text-[13px] italic leading-relaxed text-[#8b8b94] whitespace-pre-wrap">
+        <div className="mt-2 animate-fade-up border-l border-[var(--p-elevated)] pl-4 text-sm leading-relaxed text-dim whitespace-pre-wrap">
           {text}
         </div>
       )}

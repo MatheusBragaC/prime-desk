@@ -33,22 +33,22 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
     // Fundo opaco: o transcript observado é um contexto próprio e não deve
     // deixar a conversa principal vazar por trás.
     <div className="absolute inset-0 z-40 flex flex-col bg-[var(--p-bg)]">
-      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-white/[0.07] px-5">
-        {status === 'loading' && <Loader2 size={14} className="animate-spin text-primary" />}
+      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
+        {status === 'loading' && <Loader2 size={16} strokeWidth={1.75} className="animate-spin text-primary" />}
         {live && (
           <Radio
-            size={14}
+            size={16} strokeWidth={1.75}
             className={fresh ? 'animate-pulse-soft text-ok' : 'text-primarySoft'}
           />
         )}
-        {status === 'closed' && <CircleOff size={14} className="text-dim" />}
-        {status === 'error' && <AlertTriangle size={14} className="text-err" />}
+        {status === 'closed' && <CircleOff size={16} strokeWidth={1.75} className="text-dim" />}
+        {status === 'error' && <AlertTriangle size={16} strokeWidth={1.75} className="text-err" />}
 
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13.5px] font-semibold">
+          <div className="truncate text-sm font-semibold">
             {obs.name || activeSessionId}
           </div>
-          <div className="font-mono text-[10.5px] text-dim">
+          <div className="font-mono text-micro text-dim">
             {activeSessionId} ·{' '}
             {status === 'loading'
               ? t('observed.connecting')
@@ -63,7 +63,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
 
         <button
           onClick={() => void unobserveSession(activeSessionId)}
-          className="rounded-lg px-2.5 py-1.5 text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+          className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
           {t('observed.stop')}
         </button>
@@ -71,18 +71,18 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
           onClick={() => void unobserveSession(activeSessionId)}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
-          <X size={15} />
+          <X size={16} strokeWidth={1.75} />
         </button>
       </div>
 
       {obs.error && (
-        <div className="mx-5 mt-4 rounded-xl border border-err/25 bg-err/[0.07] p-3.5 text-[12.5px] text-err">
+        <div className="mx-5 mt-4 rounded-xl border border-err/25 bg-err/[0.07] p-3.5 text-sm text-err">
           {obs.error}
         </div>
       )}
 
       {status === 'closed' && (
-        <div className="mx-5 mt-4 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-[12.5px] text-muted">
+        <div className="mx-5 mt-4 rounded-xl border border-[var(--p-line)] bg-white/[0.02] p-3 text-sm text-muted">
           {t('observed.closedNote')}
         </div>
       )}
@@ -92,7 +92,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
         if (el) pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90
       }} className="min-h-0 flex-1 overflow-y-auto">
         {transcript.messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-[13px] text-dim">
+          <div className="flex h-full items-center justify-center text-sm text-dim">
             {status === 'loading' ? t('observed.loadingTranscript') : t('observed.empty')}
           </div>
         ) : (
@@ -110,7 +110,7 @@ export function ObservedPanel({ activeSessionId }: { activeSessionId: string }) 
         )}
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.07] px-5 py-2.5 text-[11px] text-dim">
+      <div className="shrink-0 border-t border-[var(--p-line)] px-5 py-2.5 text-xs text-dim">
         {t('observed.readOnly')}
       </div>
     </div>

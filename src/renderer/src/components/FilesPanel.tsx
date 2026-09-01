@@ -14,10 +14,10 @@ const IMG = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'])
 
 function FileIcon({ name }: { name: string }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (IMG.has(ext)) return <ImageIcon size={12} className="shrink-0 text-primarySoft" />
-  if (DATA.has(ext)) return <FileJson size={12} className="shrink-0 text-warn" />
-  if (CODE.has(ext)) return <FileCode2 size={12} className="shrink-0 text-info" />
-  return <FileText size={12} className="shrink-0 text-dim" />
+  if (IMG.has(ext)) return <ImageIcon size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+  if (DATA.has(ext)) return <FileJson size={14} strokeWidth={1.75} className="shrink-0 text-warn" />
+  if (CODE.has(ext)) return <FileCode2 size={14} strokeWidth={1.75} className="shrink-0 text-info" />
+  return <FileText size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
 }
 
 function fmtSize(bytes: number): string {
@@ -70,18 +70,18 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
           <>
             <button onClick={() => void toggle()} className="shrink-0">
               <ChevronRight
-                size={11}
+                size={14} strokeWidth={1.75}
                 className={'text-dim transition-transform duration-150 ' + (open ? 'rotate-90' : '')}
               />
             </button>
             <button onClick={() => void toggle()} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
               {open ? (
-                <FolderOpen size={12} className="shrink-0 text-primarySoft" />
+                <FolderOpen size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
               ) : (
-                <Folder size={12} className="shrink-0 text-muted" />
+                <Folder size={14} strokeWidth={1.75} className="shrink-0 text-muted" />
               )}
-              <span className="truncate text-[12.2px] text-fg">{entry.name}</span>
-              {loading && <RefreshCw size={9} className="shrink-0 animate-spin text-dim" />}
+              <span className="truncate text-sm text-fg">{entry.name}</span>
+              {loading && <RefreshCw size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-dim" />}
             </button>
           </>
         ) : (
@@ -93,21 +93,21 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
               className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
             >
               <FileIcon name={entry.name} />
-              <span className="truncate text-[12.2px] text-muted group-hover:text-fg">{entry.name}</span>
+              <span className="truncate text-sm text-muted group-hover:text-fg">{entry.name}</span>
             </button>
             <button
               onClick={() => onQuote(entry)}
               title={t('files.quote')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
             >
-              <AtSign size={10.5} />
+              <AtSign size={14} strokeWidth={1.75} />
             </button>
             <button
               onClick={() => void window.prime.revealFile(entry.path)}
               title={t('files.openExternal')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
             >
-              <ExternalLink size={10.5} />
+              <ExternalLink size={14} strokeWidth={1.75} />
             </button>
           </>
         )}
@@ -126,7 +126,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
             />
           ))}
           {children !== null && visibleChildren.length === 0 && (
-            <div className="py-[3px] text-[11px] italic text-dim" style={{ paddingLeft: 19 + level * 13 }}>
+            <div className="py-[3px] text-xs italic text-dim" style={{ paddingLeft: 19 + level * 13 }}>
               {t('files.empty')}
             </div>
           )}
@@ -183,7 +183,7 @@ export function FilesPanel({
   return (
     <aside
       style={{ width: size.width }}
-      className="relative flex shrink-0 flex-col border-l border-white/[0.06] bg-[var(--p-surface)]"
+      className="relative flex shrink-0 flex-col border-l border-[var(--p-line)] bg-[var(--p-surface)]"
     >
       <ResizeHandle
         side="left"
@@ -192,9 +192,9 @@ export function FilesPanel({
         onReset={size.reset}
       />
 
-      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-white/[0.06] px-4">
-        <FolderTree size={14} className="text-primarySoft" />
-        <span className="flex-1 truncate text-[12.5px] font-semibold" title={root}>
+      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-[var(--p-line)] px-4">
+        <FolderTree size={16} strokeWidth={1.75} className="text-primarySoft" />
+        <span className="flex-1 truncate text-sm font-semibold" title={root}>
           {shortRoot}
         </span>
         <button
@@ -202,25 +202,25 @@ export function FilesPanel({
           className="no-drag text-dim transition-colors hover:text-muted"
           title={t('common.refresh')}
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={14} strokeWidth={1.75} className={loading ? 'animate-spin' : ''} />
         </button>
         <button onClick={onClose} className="no-drag text-dim transition-colors hover:text-fg">
-          <X size={14} />
+          <X size={16} strokeWidth={1.75} />
         </button>
       </div>
 
       <div className="px-3 py-2">
-        <div className="flex items-center gap-2 rounded-[9px] border border-white/[0.07] bg-black/25 px-2.5 py-1.5 focus-within:border-primary/40">
-          <Search size={12.5} className="shrink-0 text-dim" />
+        <div className="flex items-center gap-2 rounded-[9px] border border-[var(--p-line)] bg-black/25 px-2.5 py-1.5 focus-within:border-primary/40">
+          <Search size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder={t('files.filter')}
-            className="w-full bg-transparent text-[12.3px] text-fg outline-none placeholder:text-dim"
+            className="w-full bg-transparent text-sm text-fg outline-none placeholder:text-dim"
           />
           {filter && (
             <button onClick={() => setFilter('')} className="shrink-0 text-dim hover:text-fg">
-              <X size={11} />
+              <X size={14} strokeWidth={1.75} />
             </button>
           )}
         </div>
@@ -228,12 +228,12 @@ export function FilesPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         {error && (
-          <div className="mx-1.5 my-2 rounded-lg border border-err/25 bg-err/[0.07] p-2.5 text-[11.5px] text-err">
+          <div className="mx-1.5 my-2 rounded-lg border border-err/25 bg-err/[0.07] p-2.5 text-xs text-err">
             {error}
           </div>
         )}
         {!error && visible.length === 0 && !loading && (
-          <div className="px-3 py-8 text-center text-[12px] text-dim">{t('files.nothing')}</div>
+          <div className="px-3 py-8 text-center text-sm text-dim">{t('files.nothing')}</div>
         )}
         {visible.map((e) => (
           <Node
@@ -247,7 +247,7 @@ export function FilesPanel({
         ))}
       </div>
 
-      <div className="border-t border-white/[0.06] px-4 py-2 text-[10.5px] leading-snug text-dim">
+      <div className="border-t border-[var(--p-line)] px-4 py-2 text-micro leading-snug text-dim">
         {t('files.hint')}
       </div>
     </aside>

@@ -71,10 +71,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   }
 
   const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.2px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 
   return (
-    <div ref={ref} className="relative border-t border-white/[0.06]">
+    <div ref={ref} className="relative border-t border-[var(--p-line)]">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
@@ -85,19 +85,19 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             (label ? 'border-primary/40 bg-primary/15 text-primarySoft' : 'border-white/10 text-dim')
           }
         >
-          <UserRound size={13} />
+          <UserRound size={14} strokeWidth={1.75} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.3px] text-fg">
+          <span className="block truncate text-sm text-fg">
             {label ?? t('acct.none')}
           </span>
-          {kind && <span className="block truncate text-[10.5px] text-dim">{kind}</span>}
+          {kind && <span className="block truncate text-micro text-dim">{kind}</span>}
         </span>
       </button>
 
       {open && (
         <div className="absolute bottom-full left-2 right-2 z-50 mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
-          <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-dim">
+          <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('lang.title')}
           </div>
           {LANGS.map((l) => (
@@ -109,13 +109,13 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
                 setOpen(false)
               }}
             >
-              <Globe size={12} />
+              <Globe size={14} strokeWidth={1.75} />
               <span className="flex-1">{l.label}</span>
-              {getLang() === l.code && <Check size={12} className="text-primarySoft" />}
+              {getLang() === l.code && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
             </button>
           ))}
 
-          <div className="my-1 border-t border-white/[0.07]" />
+          <div className="my-1 border-t border-[var(--p-line)]" />
 
           <button
             className={item}
@@ -127,33 +127,33 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             }}
             title={t('acct.switchHint')}
           >
-            <Terminal size={12} />
+            <Terminal size={14} strokeWidth={1.75} />
             {label ? t('acct.switch') : t('acct.signIn')}
           </button>
 
           {envKey && !provider && (
-            <div className="flex items-start gap-2 px-2 py-1.5 text-[11px] leading-snug text-dim">
-              <KeyRound size={11} className="mt-[2px] shrink-0" />
+            <div className="flex items-start gap-2 px-2 py-1.5 text-xs leading-snug text-dim">
+              <KeyRound size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
               {t('acct.envHint')}: <span className="font-mono">{envKey}</span>
             </div>
           )}
 
           <button className={item} onClick={() => void refresh()}>
-            <RefreshCw size={12} />
+            <RefreshCw size={14} strokeWidth={1.75} />
             {t('common.refresh')}
           </button>
 
           {provider && (
             <>
-              <div className="my-1 border-t border-white/[0.07]" />
+              <div className="my-1 border-t border-[var(--p-line)]" />
               <button className={item + ' text-err hover:text-err'} onClick={askSignOut}>
-                <LogOut size={12} />
+                <LogOut size={14} strokeWidth={1.75} />
                 {t('acct.signOut')}
               </button>
             </>
           )}
 
-          <div className="px-2 pb-1 pt-1 text-[10px] text-dim">
+          <div className="px-2 pb-1 pt-1 text-micro text-dim">
             {lang === 'pt' ? 'Credenciais ficam no prime-agent.' : lang === 'es' ? 'Las credenciales viven en prime-agent.' : 'Credentials live in prime-agent.'}
           </div>
         </div>

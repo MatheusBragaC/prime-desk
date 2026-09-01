@@ -34,16 +34,16 @@ export function ModelPicker() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
       >
-        <Cpu size={12.5} className="text-dim" />
+        <Cpu size={14} strokeWidth={1.75} className="text-dim" />
         <span className="max-w-[190px] truncate">{state?.model?.name ?? '—'}</span>
-        <ChevronDown size={11} className="text-dim" />
+        <ChevronDown size={14} strokeWidth={1.75} className="text-dim" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-40 mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-white/[0.09] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
-          <div className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-dim">
+        <div className="absolute bottom-full right-0 z-40 mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+          <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('model.label')}
           </div>
           {models.map((m) => {
@@ -61,18 +61,18 @@ export function ModelPicker() {
                 }
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[12.8px] text-fg">{m.name}</div>
-                  <div className="truncate font-mono text-[10.5px] text-dim">
+                  <div className="truncate text-sm text-fg">{m.name}</div>
+                  <div className="truncate font-mono text-micro text-dim">
                     {m.provider}/{m.id}
                     {m.cost ? ` · $${m.cost.input}/$${m.cost.output} ${t('model.perMtok')}` : ''}
                   </div>
                 </div>
                 {m.reasoning && (
                   <span className="shrink-0" title={t('model.reasoning')}>
-                    <Brain size={11.5} className="text-dim" />
+                    <Brain size={14} strokeWidth={1.75} className="text-dim" />
                   </span>
                 )}
-                {active && <Check size={13} className="shrink-0 text-primarySoft" />}
+                {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
               </button>
             )
           })}
@@ -93,16 +93,16 @@ export function ThinkingPicker() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
       >
-        <Brain size={12.5} className={THINKING_COLOR[level]} />
+        <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[level]} />
         <span>{thinkingLabel(level)}</span>
-        <ChevronDown size={11} className="text-dim" />
+        <ChevronDown size={14} strokeWidth={1.75} className="text-dim" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-40 mb-2 w-[190px] animate-fade-up rounded-xl border border-white/[0.09] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
-          <div className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-dim">
+        <div className="absolute bottom-full right-0 z-40 mb-2 w-[190px] animate-fade-up rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+          <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('thinking.label')}
           </div>
           {THINKING_LEVELS.map((l) => (
@@ -113,13 +113,13 @@ export function ThinkingPicker() {
                 setOpen(false)
               }}
               className={
-                'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12.8px] transition-colors ' +
+                'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ' +
                 (l === level ? 'bg-primary/[0.16] text-fg' : 'text-muted hover:bg-white/[0.05]')
               }
             >
-              <Brain size={11.5} className={THINKING_COLOR[l]} />
+              <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[l]} />
               <span className="flex-1">{thinkingLabel(l)}</span>
-              {l === level && <Check size={12.5} className="text-primarySoft" />}
+              {l === level && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
             </button>
           ))}
         </div>
