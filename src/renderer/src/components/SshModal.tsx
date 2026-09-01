@@ -121,12 +121,12 @@ export function SshModal({
         <Button variant="subtle" onClick={() => void test()} disabled={!hostOk || testing}>
           {testing ? (
             <span className="flex items-center gap-1.5">
-              <Loader2 size={12} className="animate-spin" />
+              <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
               {t('ssh.testing')}
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
-              <Plug size={12} />
+              <Plug size={14} strokeWidth={1.75} />
               {t('ssh.test')}
             </span>
           )}
@@ -135,21 +135,21 @@ export function SshModal({
         {result && (
           <span
             className={
-              'flex items-start gap-1.5 text-[11.5px] leading-snug ' +
+              'flex items-start gap-1.5 text-xs leading-snug ' +
               (result.ok ? 'text-ok' : 'text-err')
             }
           >
             {result.ok ? (
-              <CheckCircle2 size={12} className="mt-[1px] shrink-0" />
+              <CheckCircle2 size={14} strokeWidth={1.75} className="mt-[1px] shrink-0" />
             ) : (
-              <AlertTriangle size={12} className="mt-[1px] shrink-0" />
+              <AlertTriangle size={14} strokeWidth={1.75} className="mt-[1px] shrink-0" />
             )}
             {result.message}
           </span>
         )}
       </div>
 
-      <p className="mt-3 rounded-lg border border-white/[0.07] bg-black/20 p-2.5 text-[11px] leading-relaxed text-dim">
+      <p className="mt-3 rounded-lg border border-[var(--p-line)] bg-black/20 p-2.5 text-xs leading-relaxed text-dim">
         {t('ssh.keyNote')}
       </p>
     </Modal>

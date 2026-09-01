@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Square, X, Command, Folder, GitBranch, Monitor, FolderTree, Plus, CornerDownLeft,
-  FolderOpen, Check, Terminal, Trash2
+  Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp, FileText,
+  Check, Terminal, Trash2
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
+import { joinWithPaths, baseName } from '../lib/attachments'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -18,7 +19,16 @@ export interface SshConnection {
   remotePath?: string
 }
 
-interface Attachment { path: string; data: string; mimeType: string }
+/**
+ * Anexo pendente na caixa de entrada.
+ *
+ * `image` sobe em base64 no campo `images` do prompt. `file` não sobe: o RPC do
+ * prime-agent só transporta imagem, então o caminho é acrescentado ao texto e
+ * quem lê o arquivo é o agente. Os dois aparecem como chip na caixa.
+ */
+type Attachment =
+  | { kind: 'image'; path: string; data: string; mimeType: string }
+  | { kind: 'file'; path: string }
 
 /** Acima disso o payload em base64 fica grande demais para uma mensagem. */
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
@@ -40,6 +50,7 @@ function fileToAttachment(file: File): Promise<Attachment | null> {
       const comma = result.indexOf(',')
       if (comma < 0) return resolve(null)
       resolve({
+        kind: 'image',
         path: file.name || 'imagem',
         data: result.slice(comma + 1),
         mimeType: file.type
@@ -87,7 +98,7 @@ function ExecutionMenu({
   }, [onClose])
 
   const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.3px] text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 
   return (
     <div
@@ -95,14 +106,14 @@ function ExecutionMenu({
       className="absolute bottom-full left-0 z-50 mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
     >
       <button className={item} onClick={onLocal}>
-        <Monitor size={12} />
+        <Monitor size={14} strokeWidth={1.75} />
         <span className="flex-1">{t('exec.local')}</span>
-        {execution.kind === 'local' && <Check size={12} className="text-primarySoft" />}
+        {execution.kind === 'local' && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
       </button>
 
       {connections.length > 0 && (
         <>
-          <div className="mt-1 px-2 py-1 text-[10px] uppercase tracking-wider text-dim">
+          <div className="mt-1 px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('exec.connections')}
           </div>
           {connections.map((c) => {
@@ -110,22 +121,22 @@ function ExecutionMenu({
             return (
               <div key={c.id} className="group/conn relative">
                 <button className={item + ' pr-7'} onClick={() => onConnect(c)}>
-                  <Terminal size={12} />
+                  <Terminal size={14} strokeWidth={1.75} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{c.name}</span>
-                    <span className="block truncate font-mono text-[10.5px] text-dim">
+                    <span className="block truncate font-mono text-micro text-dim">
                       {c.host}
                       {c.port ? `:${c.port}` : ''}
                     </span>
                   </span>
-                  {active && <Check size={12} className="shrink-0 text-primarySoft" />}
+                  {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
                 </button>
                 <button
                   onClick={() => onRemove(c.id)}
                   title={t('exec.removeConn')}
                   className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/conn:opacity-100"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={14} strokeWidth={1.75} />
                 </button>
               </div>
             )
@@ -133,14 +144,14 @@ function ExecutionMenu({
         </>
       )}
 
-      <div className="mt-1 border-t border-white/[0.07] pt-1">
+      <div className="mt-1 border-t border-[var(--p-line)] pt-1">
         <button className={item} onClick={onAdd}>
-          <Plus size={12} />
+          <Plus size={14} strokeWidth={1.75} />
           {t('exec.addSsh')}
         </button>
       </div>
 
-      <div className="px-2 pb-1 pt-1 text-[10.5px] leading-snug text-dim">
+      <div className="px-2 pb-1 pt-1 text-micro leading-snug text-dim">
         {t('exec.note')}
       </div>
     </div>
@@ -151,7 +162,6 @@ function ExecutionMenu({
 function ContextChips({
   home,
   onPickCwd,
-  onToggleFiles,
   onSetExecution,
   connections,
   onOpenSshModal,
@@ -159,7 +169,6 @@ function ContextChips({
 }: {
   home: string
   onPickCwd: () => void
-  onToggleFiles: () => void
   onSetExecution: (conn: SshConnection | null) => void
   connections: SshConnection[]
   onOpenSshModal: () => void
@@ -195,18 +204,23 @@ function ContextChips({
       : (cwd.split('/').filter(Boolean).pop() ?? cwd)
     : '—'
 
+  /*
+    Contexto é informação de apoio, não comando: sai da forma de pílula com
+    borda — que competia com o composer logo abaixo — e vira uma linha de texto
+    fraca. O affordance de clique aparece no hover.
+  */
   const chip =
-    'flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[var(--p-surface)] px-2.5 py-1 text-[11.5px] transition-colors'
+    'flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-dim transition-colors hover:bg-elevated hover:text-muted'
 
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+    <div className="mb-1.5 flex flex-wrap items-center gap-0.5 px-1">
       <div className="relative">
         <button
           onClick={() => setMenu((v) => !v)}
-          className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
+          className={chip}
           title={t('chips.execTitle')}
         >
-          {execution.kind === 'ssh' ? <Terminal size={11} /> : <Monitor size={11} />}
+          {execution.kind === 'ssh' ? <Terminal size={14} strokeWidth={1.75} /> : <Monitor size={14} strokeWidth={1.75} />}
           {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : t('exec.local')}
         </button>
         {menu && (
@@ -231,38 +245,23 @@ function ContextChips({
         )}
       </div>
 
-      <button
-        onClick={onPickCwd}
-        className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
-        title={cwd || 'Escolher diretório de trabalho'}
-      >
-        <Folder size={11} className="text-primarySoft" />
+      <span className="select-none text-xs text-grid">·</span>
+
+      <button onClick={onPickCwd} className={chip} title={cwd || t('chips.pickDir')}>
+        <Folder size={14} strokeWidth={1.75} />
         {short}
       </button>
 
       {branch && (
-        <span className={chip + ' text-muted'} title={t('chips.branch')}>
-          <GitBranch size={11} className="text-dim" />
-          <span className="max-w-[180px] truncate">{branch}</span>
-        </span>
+        <>
+          <span className="select-none text-xs text-grid">·</span>
+          <span className={chip.replace('hover:bg-elevated hover:text-muted', '')} title={t('chips.branch')}>
+            <GitBranch size={14} strokeWidth={1.75} />
+            <span className="max-w-[180px] truncate">{branch}</span>
+          </span>
+        </>
       )}
 
-      <button
-        onClick={onToggleFiles}
-        className={chip + ' text-muted hover:border-primary/40 hover:text-fg'}
-        title={t('chips.filesTitle')}
-      >
-        <FolderTree size={11} />
-        {t('chips.files')}
-      </button>
-
-      <button
-        onClick={onPickCwd}
-        className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-[var(--p-surface)] px-2 py-1 text-dim transition-colors hover:border-primary/40 hover:text-fg"
-        title={t('chips.pickDir')}
-      >
-        <FolderOpen size={12} />
-      </button>
     </div>
   )
 }
@@ -270,7 +269,6 @@ function ContextChips({
 export function Composer({
   onOpenPalette,
   onPickCwd,
-  onToggleFiles,
   onSetExecution,
   connections,
   onOpenSshModal,
@@ -281,7 +279,6 @@ export function Composer({
 }: {
   onOpenPalette: () => void
   onPickCwd: () => void
-  onToggleFiles: () => void
   onSetExecution: (conn: SshConnection | null) => void
   connections: SshConnection[]
   onOpenSshModal: () => void
@@ -379,11 +376,14 @@ export function Composer({
   }
 
   async function submit() {
-    const text = value.trim()
+    const files = atts.filter((a) => a.kind === 'file')
+    const images = atts.filter((a) => a.kind === 'image')
+    // Com anexo de arquivo, o caminho basta: a mensagem pode vir só com ele.
+    const text = joinWithPaths(value, files.map((f) => f.path))
     if (!text || !ready) return
     setValue('')
     setAtts([])
-    await sendPrompt(text, atts.map((a) => ({ data: a.data, mimeType: a.mimeType })))
+    await sendPrompt(text, images.map((a) => ({ data: a.data, mimeType: a.mimeType })))
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -418,13 +418,35 @@ export function Composer({
   }
 
   /** Adiciona imagens vindas de colar ou arrastar. */
+  /**
+   * Arquivos arrastados ou colados.
+   *
+   * Imagem sobe em base64. Qualquer outra coisa — PDF, planilha, código — entra
+   * como anexo de caminho: o chip aparece igual, e o caminho só se junta ao
+   * texto no envio.
+   */
   async function addFiles(list: FileList | File[]): Promise<void> {
-    const files = Array.from(list).filter((f) => f.type.startsWith('image/'))
-    if (files.length === 0) return
-    const added = (await Promise.all(files.map(fileToAttachment))).filter(
-      (a): a is Attachment => a !== null
-    )
-    if (added.length > 0) setAtts((prev) => [...prev, ...added])
+    const all = Array.from(list)
+    const images = all.filter((f) => f.type.startsWith('image/'))
+    const others = all.filter((f) => !f.type.startsWith('image/'))
+
+    if (images.length > 0) {
+      const added = (await Promise.all(images.map(fileToAttachment))).filter(
+        (a): a is Attachment => a !== null
+      )
+      if (added.length > 0) setAtts((prev) => [...prev, ...added])
+    }
+
+    if (others.length > 0) {
+      // `File.path` não existe com o renderer em sandbox; o preload resolve.
+      const paths = others.map((f) => window.prime.pathForFile(f)).filter(Boolean)
+      if (paths.length > 0) {
+        setAtts((prev) => [...prev, ...paths.map((path) => ({ kind: 'file' as const, path }))])
+      }
+      if (paths.length < others.length) {
+        useAgent.getState().notify('info', t('composer.noPath'))
+      }
+    }
   }
 
   function onPaste(e: React.ClipboardEvent<HTMLTextAreaElement>): void {
@@ -437,8 +459,18 @@ export function Composer({
   }
 
   async function attach() {
-    const r = await window.prime.pickImage()
-    if (r?.ok) setAtts((a) => [...a, { path: r.path, data: r.data, mimeType: r.mimeType }])
+    const r = await window.prime.pickAttachment()
+    if (!r?.ok) return
+    const picked = r.picked as { path: string; isImage: boolean; data?: string; mimeType?: string }[]
+
+    setAtts((a) => [
+      ...a,
+      ...picked.map((p): Attachment =>
+        p.isImage
+          ? { kind: 'image', path: p.path, data: p.data!, mimeType: p.mimeType! }
+          : { kind: 'file', path: p.path }
+      )
+    ])
   }
 
   return (
@@ -448,7 +480,6 @@ export function Composer({
       <ContextChips
         home={home}
         onPickCwd={onPickCwd}
-        onToggleFiles={onToggleFiles}
         onSetExecution={onSetExecution}
         connections={connections}
         onOpenSshModal={onOpenSshModal}
@@ -456,13 +487,13 @@ export function Composer({
       />
 
       {queued > 0 && (
-        <div className="mb-2 flex items-center gap-2 text-[11.5px] text-warn">
+        <div className="mb-2 flex items-center gap-2 px-1 text-xs text-warn">
           <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-warn" />
           {t('composer.queued', { n: queued })}
         </div>
       )}
 
-      {/* Caixa de entrada: o envio fica dentro dela, à direita. */}
+      {/* Caixa de entrada: texto, anexos e todos os controles moram dentro dela. */}
       <div
         onDragOver={(e) => {
           if (!e.dataTransfer.types.includes('Files')) return
@@ -480,12 +511,12 @@ export function Composer({
           void addFiles(e.dataTransfer.files)
         }}
         className={
-          'relative rounded-[12px] border bg-[var(--p-surface)] transition-colors focus-within:border-primary/40 ' +
-          (dragging ? 'border-primary/70 bg-primary/[0.06]' : 'border-white/[0.09]')
+          'relative rounded-composer border bg-[var(--p-surface)] transition-colors focus-within:border-primary/45 ' +
+          (dragging ? 'border-primary/70 bg-primary/[0.06]' : 'border-[var(--p-line)]')
         }
       >
         {dragging && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[12px] bg-[var(--p-surface)]/80 text-[12.5px] text-primarySoft">
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-composer bg-[var(--p-surface)]/80 text-sm text-primarySoft">
             {t('composer.dropHere')}
           </div>
         )}
@@ -499,21 +530,37 @@ export function Composer({
         )}
         {/* Anexos dentro da caixa: fazem parte da mensagem que está sendo escrita. */}
         {atts.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-3 pb-1 pt-3">
+          <div className="flex flex-wrap gap-2 px-4 pb-1 pt-4">
             {atts.map((a, i) => (
               <div key={i} className="group/att relative">
-                <img
-                  src={`data:${a.mimeType};base64,${a.data}`}
-                  alt={a.path}
-                  title={a.path}
-                  className="h-14 w-14 rounded-lg border border-white/[0.12] object-cover"
-                />
+                {a.kind === 'image' ? (
+                  <img
+                    src={`data:${a.mimeType};base64,${a.data}`}
+                    alt={a.path}
+                    title={a.path}
+                    className="h-14 w-14 rounded-card border border-white/[0.12] object-cover"
+                  />
+                ) : (
+                  /* Arquivo não tem miniatura: o chip mostra nome e tipo. */
+                  <div
+                    title={a.path}
+                    className="flex h-14 max-w-[220px] items-center gap-2 rounded-card border border-white/[0.12] bg-[var(--p-panel)] px-3"
+                  >
+                    <FileText size={18} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-fg">{baseName(a.path)}</span>
+                      <span className="block truncate text-micro uppercase tracking-wider text-dim">
+                        {baseName(a.path).split('.').pop()}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <button
                   onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
                   title={t('composer.removeAttachment')}
                   className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover/att:opacity-100"
                 >
-                  <X size={10} />
+                  <X size={14} strokeWidth={1.75} />
                 </button>
               </div>
             ))}
@@ -546,60 +593,57 @@ export function Composer({
               : t('composer.connecting')
           }
           className={
-            'max-h-[260px] w-full resize-none bg-transparent pb-3 pl-3.5 pr-11 text-[14px] leading-relaxed text-fg outline-none placeholder:text-dim disabled:opacity-50 ' +
-            (atts.length > 0 ? 'pt-2' : 'pt-3')
+            'max-h-[260px] w-full resize-none bg-transparent px-4 pb-1 text-base text-fg outline-none placeholder:text-dim disabled:opacity-50 ' +
+            (atts.length > 0 ? 'pt-2' : 'pt-4')
           }
         />
 
-        {streaming ? (
+        {/*
+          Barra de controles DENTRO da caixa. Fora dela, como estava, ela lia
+          como uma segunda barra de ferramentas do app; dentro, pertence
+          visivelmente à mensagem que está sendo escrita.
+        */}
+        <div className="flex items-center gap-0.5 px-2.5 pb-2.5 pt-1">
           <button
-            onClick={() => void abortTurn()}
-            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg border border-err/30 bg-err/15 text-err transition-colors hover:bg-err/25"
-            title={t('composer.stop')}
+            onClick={() => void attach()}
+            disabled={!ready}
+            className="rounded-md p-1.5 text-dim transition-colors hover:bg-elevated hover:text-muted disabled:opacity-40"
+            title={t('composer.attach')}
           >
-            <Square size={11} fill="currentColor" />
+            <Plus size={16} strokeWidth={1.75} />
           </button>
-        ) : (
           <button
-            onClick={() => void submit()}
-            disabled={!value.trim() || !ready}
-            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg text-dim transition-colors hover:bg-white/[0.07] hover:text-fg disabled:pointer-events-none disabled:opacity-35"
-            title={t('composer.send')}
+            onClick={onOpenPalette}
+            className="rounded-md p-1.5 text-dim transition-colors hover:bg-elevated hover:text-muted"
+            title={t('composer.commands').replace('Ctrl', mod)}
           >
-            <CornerDownLeft size={14} />
+            <Command size={16} strokeWidth={1.75} />
           </button>
-        )}
-      </div>
 
-      {/* Controles fora da caixa, como no Claude Code. */}
-      <div className="mt-2 flex items-center gap-0.5 px-0.5">
-        <button
-          onClick={() => void attach()}
-          disabled={!ready}
-          className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted disabled:opacity-40"
-          title={t('composer.attach')}
-        >
-          <Plus size={15} />
-        </button>
-        <button
-          onClick={onOpenPalette}
-          className="rounded-md p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-muted"
-          title={t('composer.commands').replace('Ctrl', mod)}
-        >
-          <Command size={14} />
-        </button>
+          <div className="flex-1" />
 
-        <div className="flex-1" />
+          <ThinkingPicker />
+          <ModelPicker />
 
-        <ThinkingPicker />
-        <ModelPicker />
-        <span
-          className={
-            'ml-1.5 h-2 w-2 rounded-full transition-colors ' +
-            (streaming ? 'animate-pulse-soft bg-primary' : ready ? 'bg-ok/70' : 'bg-warn')
-          }
-          title={streaming ? t('app.running') : ready ? t('app.ready') : t('app.starting')}
-        />
+          {streaming ? (
+            <button
+              onClick={() => void abortTurn()}
+              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-fg transition-colors hover:bg-white/20"
+              title={t('composer.stop')}
+            >
+              <Square size={14} strokeWidth={1.75} fill="currentColor" />
+            </button>
+          ) : (
+            <button
+              onClick={() => void submit()}
+              disabled={!value.trim() || !ready}
+              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primarySoft disabled:bg-elevated disabled:text-dim"
+              title={t('composer.send')}
+            >
+              <ArrowUp size={16} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
