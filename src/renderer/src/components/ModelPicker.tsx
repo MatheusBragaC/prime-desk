@@ -52,7 +52,7 @@ export function ModelPicker() {
               <button
                 key={m.id}
                 onClick={() => {
-                  void setModel(m.id)
+                  void setModel(m.provider, m.id)
                   setOpen(false)
                 }}
                 className={

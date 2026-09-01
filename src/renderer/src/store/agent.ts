@@ -314,8 +314,21 @@ export async function abortTurn(): Promise<void> {
   void refreshState()
 }
 
-export async function setModel(id: string): Promise<void> {
-  await rpc('set_model', { model: id })
+/**
+ * Troca o modelo ativo.
+ *
+ * O RPC do prime-agent exige `provider` e `modelId` como campos separados
+ * (`docs/rpc.md`: `{"type":"set_model","provider":"anthropic","modelId":"..."}`)
+ * — nunca existiu um campo `model` só. A primeira versão da GUI mandava
+ * `{ model: id }`, que o daemon rejeitava com "Model not found" a cada troca;
+ * o erro só ia para o console, então a interface simplesmente não reagia.
+ */
+export async function setModel(provider: string, id: string): Promise<void> {
+  const out = await rpcCall('set_model', { provider, modelId: id })
+  if (!out.ok) {
+    useAgent.getState().notify('error', out.error ?? t('model.switchFailed'))
+    return
+  }
   void refreshState()
 }
 
