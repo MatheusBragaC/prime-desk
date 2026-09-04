@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe } from 'lucide-react'
+import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
 import { usePopover } from '../lib/usePopover'
@@ -66,25 +66,44 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 
   return (
-    <div ref={ref} className="relative border-t border-[var(--p-line)]">
+    /*
+      O rodapé é um bloco só — conta e pasta de trabalho — com uma régua acima
+      dele. Antes cada linha trazia a própria `border-t`, e duas réguas em 70px
+      liam como formulário. O item 8 do REDESIGN é explícito: separar por tom,
+      não por linha.
+    */
+    <div ref={ref} className="group/acct relative border-t border-[var(--p-line)]">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
       >
+        {/*
+          Coluna de ícone de 20px, a mesma da linha de baixo: com 24px aqui e 14
+          lá, os dois textos começavam em x diferentes. Sem preenchimento de
+          destaque — o accent é o recurso mais caro da paleta e não se gasta em
+          ícone decorativo; quem carrega a identidade é o nome.
+        */}
         <span
           className={
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ' +
-            (label ? 'border-primary/40 bg-primary/15 text-primarySoft' : 'border-white/10 text-dim')
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full ' +
+            (label ? 'bg-white/[0.07] text-muted' : 'text-dim')
           }
         >
-          <UserRound size={14} strokeWidth={1.75} />
+          <UserRound size={13} strokeWidth={1.75} />
         </span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-sm text-fg">
             {label ?? t('acct.none')}
           </span>
           {kind && <span className="block truncate text-micro text-dim">{kind}</span>}
         </span>
+        <ChevronUp
+          size={13} strokeWidth={1.75}
+          className={
+            'shrink-0 text-dim transition-all ' +
+            (open ? 'rotate-180 opacity-100' : 'opacity-0 group-hover/acct:opacity-100')
+          }
+        />
       </button>
 
       {open && (

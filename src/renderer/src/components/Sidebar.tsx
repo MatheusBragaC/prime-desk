@@ -461,13 +461,21 @@ export function Sidebar({
 
       <AccountBadge onSignedOut={onSignedOut} />
 
+      {/*
+        Sem `border-t` própria: a régua do AccountBadge já abre o rodapé, e as
+        duas juntas liam como formulário. O ritmo horizontal (px-3, coluna de
+        ícone de 20px) é o mesmo da linha de cima, senão os dois textos começam
+        em x diferentes — que era o que mais saltava aos olhos aqui.
+      */}
       <button
         onClick={onPickCwd}
-        className="flex items-center gap-2 border-t border-[var(--p-line)] px-4 py-2 text-left transition-colors hover:bg-elevated"
+        className="group/cwd flex items-center gap-2.5 px-3 pb-2 text-left transition-colors hover:bg-elevated"
         title={t('sidebar.pickCwd')}
       >
-        <FolderOpen size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
-        <span className="truncate font-mono text-xs text-muted">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-dim">
+          <FolderOpen size={13} strokeWidth={1.75} />
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
           {shortPath(cwd, home) || t('sidebar.pickCwdEmpty')}
         </span>
       </button>
