@@ -20,6 +20,7 @@ const PAGE_SIZE = 60
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { DiffPanel } from './components/DiffPanel'
+import { TerminalPanel } from './components/TerminalPanel'
 import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
@@ -267,6 +268,11 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         setDock((d) => (d === 'diff' ? null : 'diff'))
+      }
+      // Crase é onde VS Code e Claude Desktop põem o terminal.
+      if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+        e.preventDefault()
+        setDock((d) => (d === 'terminal' ? null : 'terminal'))
       }
 
       // Zoom da interface. `=` cobre o Ctrl+= sem Shift, comum em teclado ABNT.
@@ -598,6 +604,8 @@ export function App() {
       )}
 
       {dock === 'diff' && <DiffPanel onClose={() => setDock(null)} />}
+
+      {dock === 'terminal' && <TerminalPanel onClose={() => setDock(null)} />}
 
       {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 

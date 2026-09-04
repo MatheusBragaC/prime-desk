@@ -63,6 +63,7 @@ const api = {
   saveFolders: (state: unknown) => ipcRenderer.invoke('folders:save', state),
   pickDirectory: () => ipcRenderer.invoke('dialog:pickDirectory'),
   pickAttachment: () => ipcRenderer.invoke('dialog:pickAttachment'),
+  pickWorkspaceFile: () => ipcRenderer.invoke('dialog:pickWorkspaceFile'),
   /*
     Caminho real de um arquivo arrastado. Com `sandbox: true` o `File.path` do
     DOM nao existe mais; `webUtils.getPathForFile` e a via suportada, e precisa
@@ -72,11 +73,21 @@ const api = {
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   appInfo: () => ipcRenderer.invoke('app:info'),
 
+  createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
+    ipcRenderer.invoke('terminal:create', spec),
+  writeTerminal: (id: string, data: string) =>
+    ipcRenderer.invoke('terminal:write', { id, data }),
+  resizeTerminal: (id: string, cols: number, rows: number) =>
+    ipcRenderer.invoke('terminal:resize', { id, cols, rows }),
+  terminalScrollback: (id: string) => ipcRenderer.invoke('terminal:scrollback', id),
+  killTerminal: (id: string) => ipcRenderer.invoke('terminal:kill', id),
+
   on: (channel: string, listener: (payload: unknown) => void) => {
     const allowed = [
       'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
       'agents:tree', 'agents:tree-error', 'onboarding:output', 'onboarding:env',
-      'bridge:parked', 'bridge:run-ended'
+      'bridge:parked', 'bridge:run-ended',
+      'terminal:data', 'terminal:exit'
     ]
     if (!allowed.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
     const wrapped = (_e: IpcRendererEvent, payload: unknown) => listener(payload)

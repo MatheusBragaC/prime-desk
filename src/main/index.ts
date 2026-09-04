@@ -1,7 +1,7 @@
 import {
   app, BrowserWindow, ipcMain, shell, dialog, nativeImage, type IpcMainInvokeEvent
 } from 'electron'
-import { basename, join, dirname } from 'node:path'
+import { basename, join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 import { readFile, stat, open } from 'node:fs/promises'
@@ -22,6 +22,10 @@ import {
   startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
+import {
+  createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
+  killTerminal, killAllTerminals
+} from './terminal.js'
 import {
   resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
   loadConnections, saveConnections, type SshConnection, type SshShim
@@ -330,6 +334,8 @@ function createWindow(): void {
 
   win.on('closed', () => {
     stopTreePolling()
+    // Shells do painel são filhos da janela: sem isso ficam órfãos rodando.
+    killAllTerminals()
     win = null
   })
 }
@@ -805,6 +811,58 @@ handle('files:reveal', async (_e, relPath: string) => {
 
   const err = await shell.openPath(target)
   return err ? { ok: false, error: err } : { ok: true }
+})
+
+/**
+ * Seletor de arquivo para abrir como aba no painel.
+ *
+ * Devolve caminho RELATIVO à raiz do workspace, porque é o que `files:read` e
+ * `files:write` aceitam. A confinação usa a mesma `realPathInside` do resto do
+ * explorador: escolher algo fora da raiz — ou um symlink que aponte pra fora —
+ * é recusado aqui, não lá na leitura.
+ */
+handle('dialog:pickWorkspaceFile', async () => {
+  if (!win) return { ok: false }
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    defaultPath: workspaceRoot,
+    title: 'Abrir arquivo'
+  })
+  if (r.canceled || r.filePaths.length === 0) return { ok: false }
+
+  const real = await realPathInside(workspaceRoot, r.filePaths[0])
+  if (!real) return { ok: false, error: 'O arquivo está fora da pasta de trabalho.' }
+
+  return { ok: true, path: relative(workspaceRoot, real) }
+})
+
+// ------------------------------------------------------- terminal embutido
+
+handle('terminal:create', (e, spec: { id: string; cwd?: string; command?: string }) =>
+  createTerminal(
+    { id: spec.id, cwd: spec.cwd || workspaceRoot, command: spec.command },
+    e.sender
+  )
+)
+
+handle('terminal:write', (_e, args: { id: string; data: string }) => {
+  writeTerminal(args.id, args.data)
+  return { ok: true }
+})
+
+handle('terminal:resize', (_e, args: { id: string; cols: number; rows: number }) => {
+  resizeTerminal(args.id, args.cols, args.rows)
+  return { ok: true }
+})
+
+handle('terminal:scrollback', (_e, id: string) => ({
+  ok: true,
+  scrollback: terminalScrollback(id)
+}))
+
+handle('terminal:kill', (_e, id: string) => {
+  killTerminal(id)
+  return { ok: true }
 })
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))

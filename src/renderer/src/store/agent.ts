@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
-  ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState
+  ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
+  ContextUsage, SessionStats
 } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
@@ -57,6 +58,8 @@ interface AgentStore {
   messages: UiMessage[]
   tools: Record<string, ToolExec>
   totals: Totals
+  /** Ocupação da janela, vinda do agente. `null` enquanto não foi consultada. */
+  context: ContextUsage | null
   cwd: string
   platform: string
   loadingSession: boolean
@@ -83,6 +86,7 @@ interface AgentStore {
   applyStderr: (chunk: string) => void
   setFatal: (m: string | null) => void
   setState: (s: AgentState) => void
+  setContext: (c: ContextUsage | null) => void
   setModels: (m: ModelInfo[]) => void
   setCommands: (c: CommandInfo[]) => void
   setSessions: (s: SessionSummary[]) => void
@@ -110,6 +114,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   messages: [],
   tools: {},
   totals: { tokens: 0, cost: 0 },
+  context: null,
   cwd: '',
   platform: '',
   loadingSession: false,
@@ -132,6 +137,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setLoadingSession: (loadingSession) => set({ loadingSession }),
   setFatal: (m) => set({ fatal: m, status: m ? 'error' : get().status }),
   setState: (s) => set({ state: s }),
+  setContext: (context) => set({ context }),
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
@@ -144,7 +150,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   closeConfirm: () => set({ confirm: null }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
-  reset: () => set({ ...emptyTranscript(), retry: null }),
+  reset: () => set({ ...emptyTranscript(), context: null, retry: null }),
 
   loadHistory: (messages) => set(hydrate(messages)),
 
@@ -160,6 +166,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
         break
       case 'agent_end':
         set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
+        // A ocupação só muda quando o turno fecha; consultar durante o stream
+        // seria pedir o mesmo número várias vezes.
+        void refreshContext()
         break
       case 'session_action_update': {
         const a = (ev as { actions?: AgentState['sessionActions'] }).actions
@@ -171,6 +180,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
         break
       case 'compaction_end':
         set({ compacting: false })
+        // Aqui o agente devolve `tokens: null` de propósito, até a próxima
+        // resposta. A UI mostra "desconhecido" em vez do número velho.
+        void refreshContext()
         break
       case 'auto_retry_start': {
         const e = ev as unknown as { attempt: number; maxAttempts: number; errorMessage: string }
@@ -247,9 +259,22 @@ export async function rpc<T = unknown>(type: string, payload?: Record<string, un
   return out.data
 }
 
+/**
+ * Ocupação da janela de contexto.
+ *
+ * Vem de `get_session_stats`, não de soma local: `totals.tokens` é consumo
+ * acumulado (recontando `cacheRead` a cada turno) e nunca desce, então dividir
+ * aquilo pela janela dava um indicador que saturava em 100% e não voltava nem
+ * depois de compactar. Aqui o número é o do próprio agente.
+ */
+export async function refreshContext(): Promise<void> {
+  const data = await rpc<SessionStats>('get_session_stats')
+  useAgent.getState().setContext(data?.contextUsage ?? null)
+}
+
 export async function refreshState(): Promise<void> {
-  const data = await rpc<AgentState>('get_state')
-  if (data) useAgent.getState().setState(data)
+  const [state] = await Promise.all([rpc<AgentState>('get_state'), refreshContext()])
+  if (state) useAgent.getState().setState(state)
 }
 
 export async function refreshModels(): Promise<void> {
