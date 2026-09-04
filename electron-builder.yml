@@ -7,14 +7,21 @@ directories:
   buildResources: build
 
 # Só o build compilado entra no pacote. src/, docs/ e scripts/ ficam fora.
+# Exceção: o node-pty é o único módulo que sobrevive fora do bundle do vite,
+# porque é nativo — precisa ir junto em node_modules.
 files:
   - out/**/*
   - package.json
   - '!**/*.map'
+  - node_modules/node-pty/**/*
 
 # O prime-agent NÃO é embutido: o app usa o binário já instalado do usuário,
 # para não congelar uma versão do agente dentro do pacote.
 asar: true
+# O binário do node-pty precisa existir como arquivo real no disco: dentro do
+# asar o `require` do `.node` falha. Sai do pacote compactado, o resto fica.
+asarUnpack:
+  - '**/node_modules/node-pty/**'
 compression: normal
 
 linux:

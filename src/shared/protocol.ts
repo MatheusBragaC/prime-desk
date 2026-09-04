@@ -37,6 +37,40 @@ export interface Usage {
   cost?: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number }
 }
 
+/**
+ * Ocupação atual da janela de contexto, calculada pelo próprio agente.
+ *
+ * Não confundir com o consumo acumulado da sessão (`Usage`/`totals`): aqui o
+ * número é o `totalTokens` da ÚLTIMA resposta do assistente, que é o tamanho
+ * real do prompt no momento — sobe e desce. O agente aplica a mesma conta em
+ * `calculateContextTokens` (core/compaction/compaction.js).
+ */
+export interface ContextUsage {
+  /**
+   * Tokens estimados na janela. `null` logo depois de compactar, enquanto não
+   * houver resposta nova: o agente prefere admitir que não sabe a devolver o
+   * número pré-compactação, que estaria errado.
+   */
+  tokens: number | null
+  contextWindow: number
+  /** Percentual da janela; `null` quando `tokens` é desconhecido. */
+  percent: number | null
+}
+
+/** Resposta de `get_session_stats`. */
+export interface SessionStats {
+  sessionFile?: string
+  sessionId: string
+  userMessages: number
+  assistantMessages: number
+  toolCalls: number
+  toolResults: number
+  totalMessages: number
+  tokens: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number }
+  cost: number
+  contextUsage?: ContextUsage
+}
+
 /** Blocos de conteúdo de uma mensagem. */
 export type ContentBlock =
   | { type: 'text'; text: string; index?: number }

@@ -28,7 +28,17 @@ function fmtSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(2)} MB`
 }
 
-export function FileViewer({ path, onClose }: { path: string; onClose: () => void }) {
+export function FileViewer({ path, onClose, active = true }: {
+  path: string
+  onClose: () => void
+  /**
+   * Falso quando o visor está montado mas escondido — caso das abas do painel
+   * de terminal, que ficam todas montadas para não perder edição pendente ao
+   * trocar de aba. Sem isso, cada instância escutaria o teclado da janela e um
+   * Esc fecharia todos os arquivos abertos de uma vez.
+   */
+  active?: boolean
+}) {
   const { t } = useT()
   const [content, setContent] = useState('')
   const [original, setOriginal] = useState('')
@@ -73,6 +83,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
   }, [content, dirty, meta.truncated, path])
 
   useEffect(() => {
+    if (!active) return
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
@@ -82,7 +93,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [save, dirty, onClose])
+  }, [save, dirty, onClose, active])
 
   const highlighted = useMemo(() => {
     if (editing || state !== 'ready' || meta.binary) return null
