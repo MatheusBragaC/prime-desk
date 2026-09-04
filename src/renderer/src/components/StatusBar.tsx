@@ -1,30 +1,44 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   Layers, Target, AlertTriangle, Minimize2, PanelLeft,
   SquareTerminal, FileDiff, FolderTree, GitBranch
 } from 'lucide-react'
 import { useAgent, compactNow } from '../store/agent'
+import { usePopover } from '../lib/usePopover'
 import { useIsMac, WIN_CONTROLS_WIDTH } from '../lib/platform'
 import { fmtCost, fmtTokens } from '../lib/format'
 import { useT } from '../i18n'
 
-/** Anel de uso da janela de contexto. Substitui a barrinha de 16px. */
-function ContextRing({ pct, size = 15 }: { pct: number; size?: number }) {
+/**
+ * Anel de uso da janela de contexto.
+ *
+ * `pct` nulo é estado legítimo, não erro: logo depois de compactar o agente
+ * ainda não sabe a ocupação, e o anel fica só com o trilho — melhor do que
+ * exibir o número pré-compactação.
+ */
+function ContextRing({ pct, size = 15 }: { pct: number | null; size?: number }) {
   const r = (size - 2.5) / 2
   const c = 2 * Math.PI * r
-  const color = pct > 80 ? 'var(--p-error)' : pct > 55 ? 'var(--p-warning)' : 'var(--p-primary)'
+  const color =
+    pct === null ? 'transparent'
+    : pct > 80 ? 'var(--p-error)'
+    : pct > 55 ? 'var(--p-warning)'
+    : 'var(--p-primary)'
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
       <circle
         cx={size / 2} cy={size / 2} r={r}
         fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2"
+        strokeDasharray={pct === null ? '2 2' : undefined}
       />
-      <circle
-        cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
-        strokeDasharray={`${(c * pct) / 100} ${c}`}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
+      {pct !== null && (
+        <circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
+          strokeDasharray={`${(c * pct) / 100} ${c}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      )}
     </svg>
   )
 }
@@ -36,23 +50,20 @@ function ContextRing({ pct, size = 15 }: { pct: number; size?: number }) {
  * barra de título. São dados de acompanhamento, não de operação: aqui viram um
  * indicador só, que abre sob demanda.
  */
-function MetricsPopover({ onClose }: { onClose: () => void }) {
+function MetricsPopover({ onClose, trigger }: {
+  onClose: () => void
+  trigger: RefObject<HTMLElement | null>
+}) {
   const { t } = useT()
   const state = useAgent((s) => s.state)
   const totals = useAgent((s) => s.totals)
+  const context = useAgent((s) => s.context)
   const compacting = useAgent((s) => s.compacting)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
-  const ctx = state?.model?.contextWindow ?? 0
-  const pct = ctx > 0 ? Math.min(100, Math.round((totals.tokens / ctx) * 100)) : 0
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [onClose])
+  const ctx = context?.contextWindow ?? state?.model?.contextWindow ?? 0
+  const used = context?.tokens ?? null
+  const pct = context?.percent ?? null
 
   /*
     O rótulo encolhe e trunca; o valor nunca quebra. Sem isso, "Accumulated turn
@@ -65,12 +76,12 @@ function MetricsPopover({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={ref}
-      className="no-drag absolute right-0 top-full z-50 mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-black/60"
+      className="no-drag absolute right-0 top-full z-dropdown mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-black/60"
     >
       <div className={row}>
-        <span className={label} title={t('app.tokensTitle')}>{t('app.tokensTitle')}</span>
+        <span className={label} title={t('app.contextTitle')}>{t('app.contextLabel')}</span>
         <span className={value}>
-          {fmtTokens(totals.tokens)}
+          {used === null ? <span className="text-dim">—</span> : fmtTokens(used)}
           {ctx ? <span className="text-dim"> / {fmtTokens(ctx)}</span> : null}
         </span>
       </div>
@@ -78,17 +89,26 @@ function MetricsPopover({ onClose }: { onClose: () => void }) {
       {ctx > 0 && (
         <div className="px-3 pb-1.5 pt-0.5">
           <div className="h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
-            <div
-              className={
-                'h-full rounded-full transition-all ' +
-                (pct > 80 ? 'bg-err' : pct > 55 ? 'bg-warn' : 'bg-primary')
-              }
-              style={{ width: `${pct}%` }}
-            />
+            {pct !== null && (
+              <div
+                className={
+                  'h-full rounded-full transition-all ' +
+                  (pct > 80 ? 'bg-err' : pct > 55 ? 'bg-warn' : 'bg-primary')
+                }
+                style={{ width: `${pct}%` }}
+              />
+            )}
           </div>
-          <div className="mt-1 text-micro text-dim">{pct}% {t('app.contextWindow')}</div>
+          <div className="mt-1 text-micro text-dim">
+            {pct === null ? t('app.contextUnknown') : `${pct}% ${t('app.contextWindow')}`}
+          </div>
         </div>
       )}
+
+      <div className={row}>
+        <span className={label} title={t('app.tokensTitle')}>{t('app.sessionUsage')}</span>
+        <span className={value}>{fmtTokens(totals.tokens)}</span>
+      </div>
 
       <div className={row}>
         <span className={label} title={t('app.costTitle')}>{t('app.costTitle')}</span>
@@ -123,7 +143,7 @@ function MetricsPopover({ onClose }: { onClose: () => void }) {
   )
 }
 
-export type Dock = 'files' | 'agents' | 'diff' | null
+export type Dock = 'files' | 'agents' | 'diff' | 'terminal' | null
 
 /** Botão da barra de ferramentas: mesma caixa de 28px para todos. */
 function ToolButton({
@@ -170,7 +190,7 @@ export function StatusBar({
   const { t } = useT()
   const isMac = useIsMac()
   const state = useAgent((s) => s.state)
-  const totals = useAgent((s) => s.totals)
+  const context = useAgent((s) => s.context)
   const status = useAgent((s) => s.status)
   const compacting = useAgent((s) => s.compacting)
   const retry = useAgent((s) => s.retry)
@@ -178,9 +198,10 @@ export function StatusBar({
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
   const [metrics, setMetrics] = useState(false)
+  const metricsBtn = useRef<HTMLButtonElement>(null)
 
-  const ctx = state?.model?.contextWindow ?? 0
-  const pct = ctx > 0 ? Math.min(100, Math.round((totals.tokens / ctx) * 100)) : 0
+  const pct = context?.percent ?? null
+  const used = context?.tokens ?? null
 
   const title = useMemo(() => {
     const id = state?.sessionId
@@ -212,7 +233,7 @@ export function StatusBar({
       (Windows/Linux). No macOS eles estão à esquerda, na sidebar.
     */
     <div
-      className="drag-region relative z-20 flex h-[var(--p-titlebar)] shrink-0 items-center gap-2.5 pl-4"
+      className="drag-region relative z-chrome flex h-[var(--p-titlebar)] shrink-0 items-center gap-2.5 pl-4"
       style={{ paddingRight: isMac ? 16 : WIN_CONTROLS_WIDTH }}
     >
       {onToggleSidebar && (
@@ -264,7 +285,8 @@ export function StatusBar({
         <ToolButton
           icon={<SquareTerminal size={16} strokeWidth={1.75} />}
           title={t('toolbar.terminal')}
-          onClick={() => void window.prime.openAgentTerminal()}
+          active={dock === 'terminal'}
+          onClick={() => onDock('terminal')}
         />
         <ToolButton
           icon={<FileDiff size={16} strokeWidth={1.75} />}
@@ -289,17 +311,20 @@ export function StatusBar({
 
       <div className="relative">
         <button
+          ref={metricsBtn}
           onClick={() => setMetrics((v) => !v)}
           className={
             'no-drag flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-elevated ' +
             (metrics ? 'bg-elevated text-fg' : 'text-dim')
           }
-          title={t('app.tokensTitle')}
+          title={pct === null ? t('app.contextUnknown') : t('app.contextTitle')}
         >
           <ContextRing pct={pct} />
-          <span className="font-mono text-xs">{fmtTokens(totals.tokens)}</span>
+          <span className="font-mono text-xs">
+            {used === null ? '—' : fmtTokens(used)}
+          </span>
         </button>
-        {metrics && <MetricsPopover onClose={() => setMetrics(false)} />}
+        {metrics && <MetricsPopover onClose={() => setMetrics(false)} trigger={metricsBtn} />}
       </div>
     </div>
   )

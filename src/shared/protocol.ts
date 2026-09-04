@@ -37,6 +37,40 @@ export interface Usage {
   cost?: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number }
 }
 
+/**
+ * Ocupação atual da janela de contexto, calculada pelo próprio agente.
+ *
+ * Não confundir com o consumo acumulado da sessão (`Usage`/`totals`): aqui o
+ * número é o `totalTokens` da ÚLTIMA resposta do assistente, que é o tamanho
+ * real do prompt no momento — sobe e desce. O agente aplica a mesma conta em
+ * `calculateContextTokens` (core/compaction/compaction.js).
+ */
+export interface ContextUsage {
+  /**
+   * Tokens estimados na janela. `null` logo depois de compactar, enquanto não
+   * houver resposta nova: o agente prefere admitir que não sabe a devolver o
+   * número pré-compactação, que estaria errado.
+   */
+  tokens: number | null
+  contextWindow: number
+  /** Percentual da janela; `null` quando `tokens` é desconhecido. */
+  percent: number | null
+}
+
+/** Resposta de `get_session_stats`. */
+export interface SessionStats {
+  sessionFile?: string
+  sessionId: string
+  userMessages: number
+  assistantMessages: number
+  toolCalls: number
+  toolResults: number
+  totalMessages: number
+  tokens: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number }
+  cost: number
+  contextUsage?: ContextUsage
+}
+
 /** Blocos de conteúdo de uma mensagem. */
 export type ContentBlock =
   | { type: 'text'; text: string; index?: number }
@@ -66,10 +100,74 @@ export interface ToolResult {
   isError?: boolean
 }
 
+export type QueueMode = 'all' | 'one-at-a-time'
+
+/** Como uma mensagem entra quando o agente está ocupado. */
+export type DeliveryBehavior = 'steer' | 'followUp'
+
+/**
+ * Fila de mensagens da sessão.
+ *
+ * `steering` e `followUps` são os TEXTOS já enfileirados — e já expandidos pelo
+ * agente (skills e templates resolvidos), então não são o que a pessoa digitou.
+ * Estavam tipados como `unknown[]` aqui, o que escondia que dá para exibi-los.
+ *
+ * Não há comando RPC para remover ou reordenar item: dá para enfileirar e ler.
+ */
 export interface SessionActions {
+  /** Conta ações, não mensagens: não derive de `steering.length + followUps.length`. */
   queuedCount: number
-  steering: unknown[]
-  followUps: unknown[]
+  steering: readonly string[]
+  followUps: readonly string[]
+  /** O que está em curso agora. Ausente quando o agente está ocioso. */
+  active?: {
+    kind: 'turn' | 'session_command'
+    phase: 'preparing' | 'committing' | 'running'
+    label?: string
+  }
+}
+
+// ------------------------------------------------- agendamentos e heartbeats
+
+export type AgentCronJobStatus = 'active' | 'paused' | 'completed' | 'cancelled'
+export type AgentCronScheduleKind = 'once' | 'cron' | 'interval'
+export type AgentCronJobSource = 'cron' | 'heartbeat' | 'rlm_heartbeat'
+
+/** `steer` interrompe o turno em andamento; `follow_up` espera terminar. */
+export type AgentHeartbeatDeliveryMode = 'steer' | 'follow_up'
+
+export interface AgentCronSchedule {
+  kind: AgentCronScheduleKind
+  expression: string
+  intervalMs?: number
+}
+
+/**
+ * Prompt agendado. Serve tanto para agendamento comum quanto para heartbeat —
+ * o que os separa é o `source`.
+ *
+ * `list_schedules` é filtrado por sessão no servidor: são os jobs da conversa
+ * aberta, não uma visão global.
+ */
+export interface AgentCronJob {
+  id: string
+  status: AgentCronJobStatus
+  source?: AgentCronJobSource
+  deliveryMode?: AgentHeartbeatDeliveryMode
+  activeSessionId: string
+  sessionId: string
+  sessionFile: string
+  cwd: string
+  label?: string
+  prompt: string
+  schedule: AgentCronSchedule
+  createdAt: string
+  updatedAt: string
+  nextRunAt?: string
+  lastRunAt?: string
+  lastSkippedAt?: string
+  lastError?: string
+  runCount: number
 }
 
 export interface GoalState {
@@ -87,8 +185,8 @@ export interface AgentState {
   thinkingLevel: ThinkingLevel
   isStreaming: boolean
   isCompacting: boolean
-  steeringMode: string
-  followUpMode: string
+  steeringMode: QueueMode
+  followUpMode: QueueMode
   sessionId: string
   /** Nome de exibição definido via `set_session_name`; ausente se não houver. */
   sessionName?: string

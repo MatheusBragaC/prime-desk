@@ -4,6 +4,7 @@ import {
   X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
 } from 'lucide-react'
 import { useT } from '../i18n'
+import { fmtSize } from '../lib/format'
 
 const LANG_BY_EXT: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
@@ -22,13 +23,17 @@ function langOf(path: string): string | null {
   return LANG_BY_EXT[ext] ?? null
 }
 
-function fmtSize(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / 1024 / 1024).toFixed(2)} MB`
-}
-
-export function FileViewer({ path, onClose }: { path: string; onClose: () => void }) {
+export function FileViewer({ path, onClose, active = true }: {
+  path: string
+  onClose: () => void
+  /**
+   * Falso quando o visor está montado mas escondido — caso das abas do painel
+   * de terminal, que ficam todas montadas para não perder edição pendente ao
+   * trocar de aba. Sem isso, cada instância escutaria o teclado da janela e um
+   * Esc fecharia todos os arquivos abertos de uma vez.
+   */
+  active?: boolean
+}) {
   const { t } = useT()
   const [content, setContent] = useState('')
   const [original, setOriginal] = useState('')
@@ -73,6 +78,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
   }, [content, dirty, meta.truncated, path])
 
   useEffect(() => {
+    if (!active) return
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
@@ -82,7 +88,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [save, dirty, onClose])
+  }, [save, dirty, onClose, active])
 
   const highlighted = useMemo(() => {
     if (editing || state !== 'ready' || meta.binary) return null
@@ -100,7 +106,7 @@ export function FileViewer({ path, onClose }: { path: string; onClose: () => voi
   const name = path.split('/').pop() ?? path
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-[var(--p-bg)]">
+    <div className="absolute inset-0 z-panel flex flex-col bg-[var(--p-bg)]">
       <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

@@ -39,7 +39,7 @@ export function SlashMenu({
   if (items.length === 0) return null
 
   return (
-    <div className="absolute bottom-full left-0 right-0 z-50 mb-2 animate-fade-up overflow-hidden rounded-xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70">
+    <div className="absolute bottom-full left-0 right-0 z-dropdown mb-2 animate-fade-up overflow-hidden rounded-xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70">
       <div ref={listRef} className="max-h-[300px] overflow-y-auto p-1">
         {items.map((item, i) => (
           <button
