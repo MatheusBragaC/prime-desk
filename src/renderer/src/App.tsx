@@ -475,7 +475,7 @@ export function App() {
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
       {narrowSidebar && sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 animate-fade-up"
+          className="fixed inset-0 z-scrim bg-black/50 animate-fade-up"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -483,7 +483,7 @@ export function App() {
       <div
         className={
           narrowSidebar
-            ? 'fixed inset-y-0 left-0 z-40 transition-transform duration-200 ' +
+            ? 'fixed inset-y-0 left-0 z-panel transition-transform duration-200 ' +
               (sidebarOpen ? 'translate-x-0 shadow-2xl shadow-black/60' : '-translate-x-full')
             : 'contents'
         }

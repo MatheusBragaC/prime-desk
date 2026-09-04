@@ -106,7 +106,7 @@ export function FileViewer({ path, onClose, active = true }: {
   const name = path.split('/').pop() ?? path
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-[var(--p-bg)]">
+    <div className="absolute inset-0 z-panel flex flex-col bg-[var(--p-bg)]">
       <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

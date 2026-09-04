@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   Layers, Target, AlertTriangle, Minimize2, PanelLeft,
   SquareTerminal, FileDiff, FolderTree, GitBranch
 } from 'lucide-react'
 import { useAgent, compactNow } from '../store/agent'
+import { usePopover } from '../lib/usePopover'
 import { useIsMac, WIN_CONTROLS_WIDTH } from '../lib/platform'
 import { fmtCost, fmtTokens } from '../lib/format'
 import { useT } from '../i18n'
@@ -49,25 +50,20 @@ function ContextRing({ pct, size = 15 }: { pct: number | null; size?: number }) 
  * barra de título. São dados de acompanhamento, não de operação: aqui viram um
  * indicador só, que abre sob demanda.
  */
-function MetricsPopover({ onClose }: { onClose: () => void }) {
+function MetricsPopover({ onClose, trigger }: {
+  onClose: () => void
+  trigger: RefObject<HTMLElement | null>
+}) {
   const { t } = useT()
   const state = useAgent((s) => s.state)
   const totals = useAgent((s) => s.totals)
   const context = useAgent((s) => s.context)
   const compacting = useAgent((s) => s.compacting)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
   const ctx = context?.contextWindow ?? state?.model?.contextWindow ?? 0
   const used = context?.tokens ?? null
   const pct = context?.percent ?? null
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [onClose])
 
   /*
     O rótulo encolhe e trunca; o valor nunca quebra. Sem isso, "Accumulated turn
@@ -80,7 +76,7 @@ function MetricsPopover({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={ref}
-      className="no-drag absolute right-0 top-full z-50 mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-black/60"
+      className="no-drag absolute right-0 top-full z-dropdown mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-black/60"
     >
       <div className={row}>
         <span className={label} title={t('app.contextTitle')}>{t('app.contextLabel')}</span>
@@ -202,6 +198,7 @@ export function StatusBar({
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
   const [metrics, setMetrics] = useState(false)
+  const metricsBtn = useRef<HTMLButtonElement>(null)
 
   const pct = context?.percent ?? null
   const used = context?.tokens ?? null
@@ -236,7 +233,7 @@ export function StatusBar({
       (Windows/Linux). No macOS eles estão à esquerda, na sidebar.
     */
     <div
-      className="drag-region relative z-20 flex h-[var(--p-titlebar)] shrink-0 items-center gap-2.5 pl-4"
+      className="drag-region relative z-chrome flex h-[var(--p-titlebar)] shrink-0 items-center gap-2.5 pl-4"
       style={{ paddingRight: isMac ? 16 : WIN_CONTROLS_WIDTH }}
     >
       {onToggleSidebar && (
@@ -314,6 +311,7 @@ export function StatusBar({
 
       <div className="relative">
         <button
+          ref={metricsBtn}
           onClick={() => setMetrics((v) => !v)}
           className={
             'no-drag flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors hover:bg-elevated ' +
@@ -326,7 +324,7 @@ export function StatusBar({
             {used === null ? '—' : fmtTokens(used)}
           </span>
         </button>
-        {metrics && <MetricsPopover onClose={() => setMetrics(false)} />}
+        {metrics && <MetricsPopover onClose={() => setMetrics(false)} trigger={metricsBtn} />}
       </div>
     </div>
   )
