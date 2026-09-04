@@ -34,7 +34,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       id: c.name,
       label: '/' + c.name,
       hint: c.description.slice(0, 96),
-      run: () => sendPrompt('/' + c.name)
+      // `sendPrompt` devolve se foi aceito; aqui não há caixa para preservar.
+      run: async () => {
+        await sendPrompt('/' + c.name)
+      }
     }))
     const all = [...builtin, ...skills]
     const q = query.trim().toLowerCase()
