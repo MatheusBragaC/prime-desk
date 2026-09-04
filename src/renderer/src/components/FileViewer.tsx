@@ -4,6 +4,7 @@ import {
   X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
 } from 'lucide-react'
 import { useT } from '../i18n'
+import { fmtSize } from '../lib/format'
 
 const LANG_BY_EXT: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
@@ -20,12 +21,6 @@ function langOf(path: string): string | null {
   if (/^dockerfile/i.test(base)) return 'dockerfile'
   const ext = base.split('.').pop()?.toLowerCase() ?? ''
   return LANG_BY_EXT[ext] ?? null
-}
-
-function fmtSize(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / 1024 / 1024).toFixed(2)} MB`
 }
 
 export function FileViewer({ path, onClose, active = true }: {
