@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, FolderOpen, RefreshCw, ChevronRight, SquarePen,
   FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff
@@ -35,6 +35,7 @@ function SessionRow({
 }) {
   const { t } = useT()
   const [menu, setMenu] = useState(false)
+  const menuBtn = useRef<HTMLButtonElement>(null)
   const [renaming, setRenaming] = useState(false)
   const folders = useAgent((st) => st.folders)
   const pinned = Boolean(folders.pinned?.[s.id])
@@ -102,6 +103,7 @@ function SessionRow({
       </button>
 
       <button
+        ref={menuBtn}
         onClick={(e) => {
           e.stopPropagation()
           setMenu((v) => !v)
@@ -121,6 +123,7 @@ function SessionRow({
           groups={groups}
           isActive={active}
           onClose={() => setMenu(false)}
+          trigger={menuBtn}
           onOpen={() => {
             setMenu(false)
             onOpen()

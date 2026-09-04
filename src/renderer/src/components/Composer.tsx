@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp, FileText,
   Check, Terminal, Trash2
@@ -8,6 +8,7 @@ import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
 import { joinWithPaths, baseName } from '../lib/attachments'
+import { usePopover } from '../lib/usePopover'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -76,7 +77,8 @@ function ExecutionMenu({
   onConnect,
   onRemove,
   onAdd,
-  onClose
+  onClose,
+  trigger
 }: {
   execution: { kind: 'local' | 'ssh'; target?: string }
   connections: SshConnection[]
@@ -85,17 +87,10 @@ function ExecutionMenu({
   onRemove: (id: string) => void
   onAdd: () => void
   onClose: () => void
+  trigger: RefObject<HTMLElement | null>
 }) {
   const { t } = useT()
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [onClose])
+  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
   const item =
     'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
@@ -103,7 +98,7 @@ function ExecutionMenu({
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 z-50 mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
     >
       <button className={item} onClick={onLocal}>
         <Monitor size={14} strokeWidth={1.75} />
@@ -178,6 +173,7 @@ function ContextChips({
   const cwd = useAgent((s) => s.cwd)
   const [branch, setBranch] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  const execBtn = useRef<HTMLButtonElement>(null)
   const [execution, setExecution] = useState<{ kind: 'local' | 'ssh'; target?: string }>({
     kind: 'local'
   })
@@ -216,6 +212,7 @@ function ContextChips({
     <div className="mb-1.5 flex flex-wrap items-center gap-0.5 px-1">
       <div className="relative">
         <button
+          ref={execBtn}
           onClick={() => setMenu((v) => !v)}
           className={chip}
           title={t('chips.execTitle')}
@@ -241,6 +238,7 @@ function ContextChips({
               onOpenSshModal()
             }}
             onClose={() => setMenu(false)}
+            trigger={execBtn}
           />
         )}
       </div>

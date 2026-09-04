@@ -70,7 +70,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
       onMouseDown={onClose}
     >
       <div

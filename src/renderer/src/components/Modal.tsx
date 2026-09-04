@@ -101,7 +101,7 @@ export function Modal({
     divs com `position: relative` + `z-index` não-auto (o "palco" e o rolador
     da conversa, em App.tsx). Cada uma dessas cria seu próprio contexto de
     empilhamento — e "fixed" só escapa da geometria do ancestral, não do
-    contexto de empilhamento dele. Resultado: mesmo com z-[60], o modal ficava
+    contexto de empilhamento dele. Resultado: mesmo com z-modal, o modal ficava
     preso dentro do contexto do rolador, que empata em z-index com o composer
     (irmão seguinte, mesmo z-10) — e por ordem no DOM o composer pintava por
     cima. É por isso que só ESTE modal (o único aberto de dentro da árvore da
@@ -114,7 +114,7 @@ export function Modal({
   */
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 p-6 backdrop-blur-[2px]"
       onClick={(e) => {
         // Fecha no clique completo (press + release) na área externa. Usar
         // mousedown fechava o diálogo com press perdido ou com arraste que

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
+import { usePopover } from '../lib/usePopover'
 
 interface EnvStatus {
   agent: { installed: boolean; path: string | null; version: string | null }
@@ -21,7 +22,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const [open, setOpen] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const notify = useAgent((s) => s.notify)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()
@@ -31,15 +32,6 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   useEffect(() => {
     void refresh()
   }, [refresh])
-
-  useEffect(() => {
-    if (!open) return
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
 
   const provider = status?.auth.providers[0] ?? null
   const envKey = status?.auth.envKeys[0] ?? null
@@ -96,7 +88,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-2 right-2 z-50 mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
+        <div className="absolute bottom-full left-2 right-2 z-dropdown mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
           <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('lang.title')}
           </div>

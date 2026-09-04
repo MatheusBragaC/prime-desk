@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Check, ChevronDown, Brain, Cpu } from 'lucide-react'
 import { useAgent, setModel, setThinking } from '../store/agent'
 import { THINKING_LEVELS, type ThinkingLevel } from '../../../shared/protocol'
+import { usePopover } from '../lib/usePopover'
 import { t, useT } from '../i18n'
 
 const thinkingLabel = (l: ThinkingLevel): string => t(`thinking.${l}`)
@@ -11,24 +12,12 @@ const THINKING_COLOR: Record<ThinkingLevel, string> = {
   medium: 'text-primarySoft', high: 'text-primary', xhigh: 'text-primary', max: 'text-primary'
 }
 
-function useOutside(onClose: () => void) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    function h(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
-  return ref
-}
-
 export function ModelPicker() {
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const models = useAgent((s) => s.models)
   const state = useAgent((s) => s.state)
-  const ref = useOutside(() => setOpen(false))
+  const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   return (
     <div className="relative" ref={ref}>
@@ -42,7 +31,7 @@ export function ModelPicker() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-40 mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+        <div className="absolute bottom-full right-0 z-dropdown mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
           <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('model.label')}
           </div>
@@ -86,7 +75,7 @@ export function ThinkingPicker() {
   const { t } = useT()
   const [open, setOpen] = useState(false)
   const state = useAgent((s) => s.state)
-  const ref = useOutside(() => setOpen(false))
+  const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
   const level = (state?.thinkingLevel ?? 'medium') as ThinkingLevel
 
   return (
@@ -101,7 +90,7 @@ export function ThinkingPicker() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-40 mb-2 w-[190px] animate-fade-up rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+        <div className="absolute bottom-full right-0 z-dropdown mb-2 w-[190px] animate-fade-up rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
           <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('thinking.label')}
           </div>
