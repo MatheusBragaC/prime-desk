@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
+import { usePopover } from '../lib/usePopover'
 
 interface EnvStatus {
   agent: { installed: boolean; path: string | null; version: string | null }
@@ -21,7 +22,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const [open, setOpen] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const notify = useAgent((s) => s.notify)
-  const ref = useRef<HTMLDivElement>(null)
+  const requestTerminal = useAgent((s) => s.requestTerminal)
+  const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
+
+  const [userName, setUserName] = useState('')
 
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()
@@ -30,21 +34,42 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
 
   useEffect(() => {
     void refresh()
+    void window.prime.appInfo().then((i) => setUserName(i?.userName ?? ''))
   }, [refresh])
 
+  /*
+    Login e logout acontecem fora daqui — no terminal embutido, ou por `/logout`
+    numa conversa. O main já observa o `auth.json` e avisa quando muda; sem
+    assinar, o badge só atualizaria se a pessoa clicasse em "Atualizar".
+
+    O watch é global no main, mas Onboarding e AccountBadge nunca coexistem: o
+    Onboarding substitui a árvore inteira quando o ambiente está incompleto.
+  */
   useEffect(() => {
-    if (!open) return
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    const off = window.prime.on('onboarding:env', (payload) => {
+      const next = payload as EnvStatus | undefined
+      if (next?.auth) setStatus(next)
+    })
+    void window.prime.watchEnvironment()
+    return () => {
+      off()
+      void window.prime.unwatchEnvironment()
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  }, [])
 
   const provider = status?.auth.providers[0] ?? null
   const envKey = status?.auth.envKeys[0] ?? null
-  const label = provider ?? (envKey ? envKey.replace('_API_KEY', '').toLowerCase() : null)
+  const signedIn = Boolean(provider || envKey)
+  /** Como a credencial foi obtida — o que estava na segunda linha. */
   const kind = provider ? t('acct.subscription') : envKey ? t('acct.apiKey') : null
+  /*
+    A linha de cima passa a ser o nome da pessoa. `anthropic` é o provedor da
+    credencial, não a identidade de ninguém: como rótulo principal soava como
+    nome de usuário e não era. Desce para o menu, junto do resto do técnico.
+    Sem nome do sistema, o provedor volta a servir de rótulo.
+  */
+  const providerLabel = provider ?? (envKey ? envKey.replace('_API_KEY', '').toLowerCase() : null)
+  const label = signedIn ? (userName || providerLabel) : null
 
   function askSignOut() {
     setOpen(false)
@@ -74,29 +99,63 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 
   return (
-    <div ref={ref} className="relative border-t border-[var(--p-line)]">
+    /*
+      O rodapé é um bloco só — conta e pasta de trabalho — com uma régua acima
+      dele. Antes cada linha trazia a própria `border-t`, e duas réguas em 70px
+      liam como formulário. O item 8 do REDESIGN é explícito: separar por tom,
+      não por linha.
+    */
+    <div ref={ref} className="group/acct relative border-t border-[var(--p-line)]">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
       >
+        {/*
+          Coluna de ícone de 20px, a mesma da linha de baixo: com 24px aqui e 14
+          lá, os dois textos começavam em x diferentes. Sem preenchimento de
+          destaque — o accent é o recurso mais caro da paleta e não se gasta em
+          ícone decorativo; quem carrega a identidade é o nome.
+        */}
         <span
           className={
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ' +
-            (label ? 'border-primary/40 bg-primary/15 text-primarySoft' : 'border-white/10 text-dim')
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full ' +
+            (label ? 'bg-white/[0.07] text-muted' : 'text-dim')
           }
         >
-          <UserRound size={14} strokeWidth={1.75} />
+          <UserRound size={13} strokeWidth={1.75} />
         </span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-sm text-fg">
             {label ?? t('acct.none')}
           </span>
           {kind && <span className="block truncate text-micro text-dim">{kind}</span>}
         </span>
+        <ChevronUp
+          size={13} strokeWidth={1.75}
+          className={
+            'shrink-0 text-dim transition-all ' +
+            (open ? 'rotate-180 opacity-100' : 'opacity-0 group-hover/acct:opacity-100')
+          }
+        />
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-2 right-2 z-50 mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
+        <div className="absolute bottom-full left-2 right-2 z-dropdown mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
+          {/* O provedor mora aqui: é de onde a credencial vem, não quem você é. */}
+          {providerLabel && (
+            <>
+              <div className="flex items-baseline gap-2 px-2 py-1.5">
+                <span className="text-micro uppercase tracking-wider text-dim">
+                  {t('acct.provider')}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-right text-xs text-muted">
+                  {providerLabel}
+                </span>
+              </div>
+              <div className="my-1 border-t border-[var(--p-line)]" />
+            </>
+          )}
+
           <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('lang.title')}
           </div>
@@ -121,9 +180,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             className={item}
             onClick={() => {
               setOpen(false)
-              void window.prime.openAgentTerminal().then((r) => {
-                if (!r?.ok) notify('error', r?.error ?? t('onb.termFailed'))
-              })
+              // `/login` é interativo (escolha de provedor no TUI + OAuth no
+              // navegador) e a GUI não o reimplementa. Antes isso abria uma
+              // janela do gnome-terminal por fora; agora vai para o painel.
+              requestTerminal('prime-agent', t('acct.loginTab'))
             }}
             title={t('acct.switchHint')}
           >

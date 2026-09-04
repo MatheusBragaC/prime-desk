@@ -1,11 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
-  Plus, Search, FolderOpen, RefreshCw, ChevronRight, SquarePen,
+  Plus, Search, RefreshCw, ChevronRight, SquarePen,
   FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff
 } from 'lucide-react'
 import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
-import { shortPath } from '../lib/format'
 import { groupSessions, withTitles, type Group } from '../lib/grouping'
 import { SessionMenu } from './SessionMenu'
 import { AccountBadge } from './AccountBadge'
@@ -35,6 +34,7 @@ function SessionRow({
 }) {
   const { t } = useT()
   const [menu, setMenu] = useState(false)
+  const menuBtn = useRef<HTMLButtonElement>(null)
   const [renaming, setRenaming] = useState(false)
   const folders = useAgent((st) => st.folders)
   const pinned = Boolean(folders.pinned?.[s.id])
@@ -102,6 +102,7 @@ function SessionRow({
       </button>
 
       <button
+        ref={menuBtn}
         onClick={(e) => {
           e.stopPropagation()
           setMenu((v) => !v)
@@ -121,6 +122,7 @@ function SessionRow({
           groups={groups}
           isActive={active}
           onClose={() => setMenu(false)}
+          trigger={menuBtn}
           onOpen={() => {
             setMenu(false)
             onOpen()
@@ -244,19 +246,16 @@ function GroupHeader({
 
 export function Sidebar({
   home,
-  onPickCwd,
   onSignedOut,
   onNavigate
 }: {
   home: string
-  onPickCwd: () => void
   onSignedOut: () => void
   /** Chamado ao abrir uma conversa, para fechar a sobreposição em tela estreita. */
   onNavigate?: () => void
 }) {
   const sessions = useAgent((s) => s.sessions)
   const state = useAgent((s) => s.state)
-  const cwd = useAgent((s) => s.cwd)
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
   const parkedRuns = useAgent((s) => s.parkedRuns)
@@ -458,16 +457,12 @@ export function Sidebar({
 
       <AccountBadge onSignedOut={onSignedOut} />
 
-      <button
-        onClick={onPickCwd}
-        className="flex items-center gap-2 border-t border-[var(--p-line)] px-4 py-2 text-left transition-colors hover:bg-elevated"
-        title={t('sidebar.pickCwd')}
-      >
-        <FolderOpen size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
-        <span className="truncate font-mono text-xs text-muted">
-          {shortPath(cwd, home) || t('sidebar.pickCwdEmpty')}
-        </span>
-      </button>
+      {/*
+        A linha do diretório de trabalho saiu daqui. Ela duplicava o chip que o
+        composer já tem (`ContextChips`), e no rodapé aparecia como um "~" solto
+        numa faixa larga — informação de contexto ocupando o lugar de identidade.
+        Trocar de pasta continua a um clique, no chip.
+      */}
     </aside>
   )
 }

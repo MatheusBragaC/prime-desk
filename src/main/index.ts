@@ -1,11 +1,11 @@
 import {
   app, BrowserWindow, ipcMain, shell, dialog, nativeImage, type IpcMainInvokeEvent
 } from 'electron'
-import { basename, join, dirname } from 'node:path'
+import { basename, join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { homedir } from 'node:os'
+import { homedir, userInfo } from 'node:os'
 import { readFile, stat, open } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
@@ -22,6 +22,10 @@ import {
   startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
+import {
+  createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
+  killTerminal, killAllTerminals
+} from './terminal.js'
 import {
   resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
   loadConnections, saveConnections, type SshConnection, type SshShim
@@ -130,8 +134,9 @@ async function isRiskyToOpen(target: string): Promise<boolean> {
  */
 const RPC_SEND_ALLOWED = new Set([
   'clone', 'compact', 'get_available_models', 'get_commands', 'get_messages',
-  'get_state', 'new_session', 'observe', 'prompt', 'set_model',
-  'set_session_name', 'set_thinking_level', 'switch_session'
+  'get_session_stats', 'get_state', 'new_session', 'observe', 'prompt',
+  'set_follow_up_mode', 'set_model', 'set_session_name', 'set_steering_mode',
+  'set_thinking_level', 'switch_session'
 ])
 
 /** `fire` não espera resposta: só o que precisa furar a fila. */
@@ -330,6 +335,8 @@ function createWindow(): void {
 
   win.on('closed', () => {
     stopTreePolling()
+    // Shells do painel são filhos da janela: sem isso ficam órfãos rodando.
+    killAllTerminals()
     win = null
   })
 }
@@ -807,12 +814,97 @@ handle('files:reveal', async (_e, relPath: string) => {
   return err ? { ok: false, error: err } : { ok: true }
 })
 
+/**
+ * Seletor de arquivo para abrir como aba no painel.
+ *
+ * Devolve caminho RELATIVO à raiz do workspace, porque é o que `files:read` e
+ * `files:write` aceitam. A confinação usa a mesma `realPathInside` do resto do
+ * explorador: escolher algo fora da raiz — ou um symlink que aponte pra fora —
+ * é recusado aqui, não lá na leitura.
+ */
+handle('dialog:pickWorkspaceFile', async () => {
+  if (!win) return { ok: false }
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    defaultPath: workspaceRoot,
+    title: 'Abrir arquivo'
+  })
+  if (r.canceled || r.filePaths.length === 0) return { ok: false }
+
+  const real = await realPathInside(workspaceRoot, r.filePaths[0])
+  if (!real) return { ok: false, error: 'O arquivo está fora da pasta de trabalho.' }
+
+  return { ok: true, path: relative(workspaceRoot, real) }
+})
+
+// ------------------------------------------------------- terminal embutido
+
+handle('terminal:create', (e, spec: { id: string; cwd?: string; command?: string }) =>
+  createTerminal(
+    { id: spec.id, cwd: spec.cwd || workspaceRoot, command: spec.command },
+    e.sender
+  )
+)
+
+handle('terminal:write', (_e, args: { id: string; data: string }) => {
+  writeTerminal(args.id, args.data)
+  return { ok: true }
+})
+
+handle('terminal:resize', (_e, args: { id: string; cols: number; rows: number }) => {
+  resizeTerminal(args.id, args.cols, args.rows)
+  return { ok: true }
+})
+
+handle('terminal:scrollback', (_e, id: string) => ({
+  ok: true,
+  scrollback: terminalScrollback(id)
+}))
+
+handle('terminal:kill', (_e, id: string) => {
+  killTerminal(id)
+  return { ok: true }
+})
+
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
+
+/**
+ * Nome de exibição da pessoa, vindo do sistema operacional.
+ *
+ * Não vem da conta do provedor: o `auth.json` do prime-agent guarda só `type`,
+ * `refresh`, `access` e `expires` — nome e e-mail não estão lá. Buscá-los
+ * exigiria chamar a API do provedor com o token do usuário, e credencial não
+ * sai do processo principal por decisão de projeto.
+ *
+ * No Linux/macOS o nome completo mora no campo GECOS do `/etc/passwd`, que
+ * costuma trazer "Nome Sobrenome". Sem ele, sobra o login.
+ */
+function displayName(): string {
+  let username = ''
+  try {
+    username = userInfo().username
+  } catch {
+    return ''
+  }
+  if (process.platform === 'win32') return username
+
+  try {
+    const line = readFileSync('/etc/passwd', 'utf-8')
+      .split('\n')
+      .find((l) => l.startsWith(username + ':'))
+    const gecos = (line ?? '').split(':')[4]?.split(',')[0]?.trim()
+    if (gecos) return gecos
+  } catch {
+    // Sem /etc/passwd legível: o login serve.
+  }
+  return username
+}
 
 handle('app:info', () => ({
   version: app.getVersion(),
   home: homedir(),
-  platform: process.platform
+  platform: process.platform,
+  userName: displayName()
 }))
 
 // ---------------------------------------------------------------- lifecycle

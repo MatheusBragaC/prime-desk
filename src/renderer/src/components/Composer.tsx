@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp, FileText,
   Check, Terminal, Trash2
@@ -8,6 +8,9 @@ import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
 import { joinWithPaths, baseName } from '../lib/attachments'
+import { usePopover } from '../lib/usePopover'
+import { QueuePopover } from './QueuePopover'
+import type { DeliveryBehavior } from '../../../shared/protocol'
 import { useT } from '../i18n'
 
 export interface SshConnection {
@@ -76,7 +79,8 @@ function ExecutionMenu({
   onConnect,
   onRemove,
   onAdd,
-  onClose
+  onClose,
+  trigger
 }: {
   execution: { kind: 'local' | 'ssh'; target?: string }
   connections: SshConnection[]
@@ -85,17 +89,10 @@ function ExecutionMenu({
   onRemove: (id: string) => void
   onAdd: () => void
   onClose: () => void
+  trigger: RefObject<HTMLElement | null>
 }) {
   const { t } = useT()
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [onClose])
+  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
   const item =
     'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
@@ -103,7 +100,7 @@ function ExecutionMenu({
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 z-50 mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
     >
       <button className={item} onClick={onLocal}>
         <Monitor size={14} strokeWidth={1.75} />
@@ -178,6 +175,7 @@ function ContextChips({
   const cwd = useAgent((s) => s.cwd)
   const [branch, setBranch] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  const execBtn = useRef<HTMLButtonElement>(null)
   const [execution, setExecution] = useState<{ kind: 'local' | 'ssh'; target?: string }>({
     kind: 'local'
   })
@@ -216,6 +214,7 @@ function ContextChips({
     <div className="mb-1.5 flex flex-wrap items-center gap-0.5 px-1">
       <div className="relative">
         <button
+          ref={execBtn}
           onClick={() => setMenu((v) => !v)}
           className={chip}
           title={t('chips.execTitle')}
@@ -241,6 +240,7 @@ function ContextChips({
               onOpenSshModal()
             }}
             onClose={() => setMenu(false)}
+            trigger={execBtn}
           />
         )}
       </div>
@@ -299,6 +299,21 @@ export function Composer({
   const streaming = useAgent((s) => s.state?.isStreaming ?? false)
   const queued = useAgent((s) => s.state?.sessionActions?.queuedCount ?? 0)
   const ready = useAgent((s) => s.status === 'ready')
+
+  /*
+    Como a mensagem entra quando o agente está ocupado. Padrão `steer`, que é o
+    comportamento que o app sempre teve — trocar o padrão em silêncio mudaria o
+    significado de apertar Enter.
+  */
+  const [delivery, setDelivery] = useState<DeliveryBehavior>(() =>
+    localStorage.getItem('prime-desk:delivery') === 'followUp' ? 'followUp' : 'steer'
+  )
+  const chooseDelivery = useCallback((next: DeliveryBehavior) => {
+    setDelivery(next)
+    localStorage.setItem('prime-desk:delivery', next)
+  }, [])
+  const [queueOpen, setQueueOpen] = useState(false)
+  const queueBtn = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const el = ta.current
@@ -381,9 +396,21 @@ export function Composer({
     // Com anexo de arquivo, o caminho basta: a mensagem pode vir só com ele.
     const text = joinWithPaths(value, files.map((f) => f.path))
     if (!text || !ready) return
+
+    /*
+      A caixa só é limpa depois do aceite. Antes o `setValue('')` vinha antes do
+      await e o erro do RPC morria num console.warn: quando o agente recusava —
+      o que acontece de verdade se ele estiver ocupado — o texto e os anexos da
+      pessoa sumiam sem nenhum aviso na tela.
+    */
+    const sent = await sendPrompt(
+      text,
+      images.map((a) => ({ data: a.data, mimeType: a.mimeType })),
+      delivery
+    )
+    if (!sent) return
     setValue('')
     setAtts([])
-    await sendPrompt(text, images.map((a) => ({ data: a.data, mimeType: a.mimeType })))
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -486,10 +513,47 @@ export function Composer({
         onRemoveConnection={onRemoveConnection}
       />
 
-      {queued > 0 && (
-        <div className="mb-2 flex items-center gap-2 px-1 text-xs text-warn">
-          <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-warn" />
-          {t('composer.queued', { n: queued })}
+      {/*
+        Chip da fila: era só um contador morto. Agora abre o conteúdo, e ao lado
+        fica a escolha de como a próxima mensagem entra — que é a decisão que a
+        pessoa toma justamente aqui, com o agente ocupado.
+      */}
+      {(queued > 0 || streaming) && (
+        <div className="relative mb-2 flex items-center gap-2 px-1">
+          <button
+            ref={queueBtn}
+            onClick={() => setQueueOpen((v) => !v)}
+            className={
+              'flex items-center gap-2 rounded-md px-1.5 py-0.5 text-xs transition-colors hover:bg-elevated ' +
+              (queued > 0 ? 'text-warn' : 'text-dim')
+            }
+            title={t('queue.title')}
+          >
+            {queued > 0 && (
+              <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-warn" />
+            )}
+            {queued > 0 ? t('composer.queued', { n: queued }) : t('queue.title')}
+          </button>
+
+          <div className="flex gap-0.5 rounded-md bg-black/25 p-0.5">
+            {(['steer', 'followUp'] as DeliveryBehavior[]).map((b) => (
+              <button
+                key={b}
+                onClick={() => chooseDelivery(b)}
+                title={b === 'steer' ? t('queue.steerHint') : t('queue.followUpHint')}
+                className={
+                  'rounded px-1.5 py-0.5 text-micro transition-colors ' +
+                  (delivery === b ? 'bg-elevated text-fg' : 'text-dim hover:text-muted')
+                }
+              >
+                {b === 'steer' ? t('queue.steerNow') : t('queue.sendLater')}
+              </button>
+            ))}
+          </div>
+
+          {queueOpen && (
+            <QueuePopover onClose={() => setQueueOpen(false)} trigger={queueBtn} />
+          )}
         </div>
       )}
 

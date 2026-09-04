@@ -20,6 +20,7 @@ const PAGE_SIZE = 60
 import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { DiffPanel } from './components/DiffPanel'
+import { TerminalPanel } from './components/TerminalPanel'
 import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
@@ -73,6 +74,7 @@ export function App() {
   const loadingSession = useAgent((s) => s.loadingSession)
   const sessionId = useAgent((s) => s.state?.sessionId)
   const observed = useAgent((s) => s.observed)
+  const terminalRequest = useAgent((s) => s.terminalRequest)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
@@ -237,6 +239,12 @@ export function App() {
     void window.prime.setAgentCadence(ms)
   }, [dock, streaming])
 
+  // Pedido de terminal (ex.: trocar de conta) precisa do painel na tela para
+  // que o TerminalPanel monte e consuma o recado.
+  useEffect(() => {
+    if (terminalRequest) setDock('terminal')
+  }, [terminalRequest])
+
   useEffect(() => {
     const block = (e: DragEvent): void => {
       if (e.dataTransfer?.types.includes('Files')) e.preventDefault()
@@ -267,6 +275,11 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         setDock((d) => (d === 'diff' ? null : 'diff'))
+      }
+      // Crase é onde VS Code e Claude Desktop põem o terminal.
+      if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+        e.preventDefault()
+        setDock((d) => (d === 'terminal' ? null : 'terminal'))
       }
 
       // Zoom da interface. `=` cobre o Ctrl+= sem Shift, comum em teclado ABNT.
@@ -469,7 +482,7 @@ export function App() {
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
       {narrowSidebar && sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 animate-fade-up"
+          className="fixed inset-0 z-scrim bg-black/50 animate-fade-up"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -477,7 +490,7 @@ export function App() {
       <div
         className={
           narrowSidebar
-            ? 'fixed inset-y-0 left-0 z-40 transition-transform duration-200 ' +
+            ? 'fixed inset-y-0 left-0 z-panel transition-transform duration-200 ' +
               (sidebarOpen ? 'translate-x-0 shadow-2xl shadow-black/60' : '-translate-x-full')
             : 'contents'
         }
@@ -485,7 +498,6 @@ export function App() {
       <Sidebar
         onSignedOut={() => setNeedsSetup(true)}
         home={home}
-        onPickCwd={() => void pickCwd()}
         onNavigate={() => narrowSidebar && setSidebarOpen(false)}
       />
       </div>
@@ -582,9 +594,7 @@ export function App() {
         </div>
 
         {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
-        {watchedIds.length > 0 && (
-          <ObservedPanel activeSessionId={watchedIds[watchedIds.length - 1]} />
-        )}
+        {watchedIds.length > 0 && <ObservedPanel />}
 
         {openFile && <FileViewer path={openFile} onClose={() => setOpenFile(null)} />}
       </main>
@@ -598,6 +608,8 @@ export function App() {
       )}
 
       {dock === 'diff' && <DiffPanel onClose={() => setDock(null)} />}
+
+      {dock === 'terminal' && <TerminalPanel onClose={() => setDock(null)} />}
 
       {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 

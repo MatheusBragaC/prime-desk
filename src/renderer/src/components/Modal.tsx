@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useT } from '../i18n'
 
@@ -93,9 +94,27 @@ export function Modal({
 
   if (!open) return null
 
-  return (
+  /*
+    Portal para `document.body`, fora de `#root`.
+    ---
+    O painel de uso abre a partir da tela inicial, que mora dentro de duas
+    divs com `position: relative` + `z-index` não-auto (o "palco" e o rolador
+    da conversa, em App.tsx). Cada uma dessas cria seu próprio contexto de
+    empilhamento — e "fixed" só escapa da geometria do ancestral, não do
+    contexto de empilhamento dele. Resultado: mesmo com z-modal, o modal ficava
+    preso dentro do contexto do rolador, que empata em z-index com o composer
+    (irmão seguinte, mesmo z-10) — e por ordem no DOM o composer pintava por
+    cima. É por isso que só ESTE modal (o único aberto de dentro da árvore da
+    conversa) sofria; ConfirmDialog, CommandPalette e SshModal já nascem como
+    filhos diretos da raiz do app e nunca entram nessa armadilha.
+
+    Portal resolve na raiz: o modal deixa de ser descendente de qualquer
+    contexto de empilhamento do app, então nenhuma pilha de z-index interna
+    consegue mais pintar por cima dele.
+  */
+  return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 p-6 backdrop-blur-[2px]"
       onClick={(e) => {
         // Fecha no clique completo (press + release) na área externa. Usar
         // mousedown fechava o diálogo com press perdido ou com arraste que
@@ -138,7 +157,8 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

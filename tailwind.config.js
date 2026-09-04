@@ -51,6 +51,24 @@ export default {
       maxWidth: {
         col: 'var(--col)'
       },
+      /*
+        Camadas nomeadas. Antes os valores eram literais espalhados pelos
+        componentes, e a mesma classe de UI aparecia em dois níveis: os
+        dropdowns do ModelPicker ficavam em z-40 enquanto todos os outros
+        estavam em z-50, então eles renderizavam por baixo dos irmãos. Com nome,
+        errar a camada vira erro de vocabulário, não de aritmética.
+
+        Ordem: cromo < véu < painel < dropdown < modal < aviso. O aviso fica no
+        topo porque costuma reportar erro do que está embaixo dele.
+      */
+      zIndex: {
+        chrome: '20',
+        scrim: '30',
+        panel: '40',
+        dropdown: '50',
+        modal: '60',
+        toast: '70'
+      },
       keyframes: {
         'fade-up': { from: { opacity: '0', transform: 'translateY(2px)' }, to: { opacity: '1', transform: 'none' } },
         shimmer: { '0%': { backgroundPosition: '200% 0' }, '100%': { backgroundPosition: '-200% 0' } },

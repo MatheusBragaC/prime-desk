@@ -34,7 +34,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       id: c.name,
       label: '/' + c.name,
       hint: c.description.slice(0, 96),
-      run: () => sendPrompt('/' + c.name)
+      // `sendPrompt` devolve se foi aceito; aqui não há caixa para preservar.
+      run: async () => {
+        await sendPrompt('/' + c.name)
+      }
     }))
     const all = [...builtin, ...skills]
     const q = query.trim().toLowerCase()
@@ -70,7 +73,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
       onMouseDown={onClose}
     >
       <div
