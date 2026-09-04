@@ -24,6 +24,7 @@ export function DockPanel({
   onClose,
   actions,
   header,
+  subheader,
   footer,
   headerBorder = true,
   bodyClassName = 'min-h-0 flex-1 overflow-y-auto',
@@ -40,6 +41,12 @@ export function DockPanel({
   actions?: ReactNode
   /** Substitui a linha de título inteira. O painel de terminal usa abas aqui. */
   header?: ReactNode
+  /**
+   * Faixa fixa entre o cabeçalho e o conteúdo rolável — filtro do explorador,
+   * resumo da árvore de agentes. Tem que ficar FORA do `overflow-y-auto`, senão
+   * some ao rolar.
+   */
+  subheader?: ReactNode
   footer?: ReactNode
   /** O painel de alterações não tem régua sob o cabeçalho; os outros têm. */
   headerBorder?: boolean
@@ -83,6 +90,8 @@ export function DockPanel({
           </button>
         </div>
       )}
+
+      {subheader}
 
       <div className={bodyClassName}>{children}</div>
 

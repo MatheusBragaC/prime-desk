@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X, Plus, SquareTerminal, FileCode2, FolderOpen } from 'lucide-react'
 import { useAgent } from '../store/agent'
-import { useResizable } from '../lib/useResizable'
-import { ResizeHandle } from './ResizeHandle'
+import { DockPanel } from './DockPanel'
 import { TerminalView } from './TerminalView'
 import { FileViewer } from './FileViewer'
 import { useT } from '../i18n'
@@ -40,7 +39,6 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   const notify = useAgent((s) => s.notify)
   const request = useAgent((s) => s.terminalRequest)
   const clearRequest = useAgent((s) => s.clearTerminalRequest)
-  const size = useResizable('terminal', 460, 320, 900, 'left')
 
   const [tabs, setTabs] = useState<Tab[]>(() => [shellTab(1)])
   const [active, setActive] = useState<string>(() => '')
@@ -121,18 +119,16 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   return (
-    <aside
-      style={{ width: size.width }}
-      className="relative flex shrink-0 flex-col border-l border-[var(--p-line)] bg-[var(--p-surface)]"
-    >
-      <ResizeHandle
-        side="left"
-        dragging={size.dragging}
-        onMouseDown={size.onMouseDown}
-        onReset={size.reset}
-      />
-
-      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-1 border-b border-[var(--p-line)] pl-2 pr-3">
+    <DockPanel
+      storageKey="terminal"
+      defaultWidth={460}
+      min={320}
+      max={900}
+      onClose={onClose}
+      bodyClassName="relative min-h-0 flex-1"
+      /* Cabeçalho próprio: a tira de abas ocupa o lugar da linha de título. */
+      header={
+        <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-1 border-b border-[var(--p-line)] pl-2 pr-3">
         <div className="no-drag flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
           {tabs.map((tab) => (
             <button
@@ -185,14 +181,15 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
         >
           <X size={15} strokeWidth={1.75} />
         </button>
-      </div>
-
+        </div>
+      }
+    >
       {/*
         Todas as abas permanecem montadas, escondidas por CSS. Desmontar um
         TerminalView descartaria o xterm e a tela voltaria vazia ao reabrir —
         o PTY sobrevive, mas o buffer renderizado não.
       */}
-      <div className="relative min-h-0 flex-1">
+      <>
         {tabs.map((tab) => (
           <div
             key={tab.id}
@@ -211,7 +208,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
             )}
           </div>
         ))}
-      </div>
-    </aside>
+      </>
+    </DockPanel>
   )
 }
