@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X, Plus, SquareTerminal, FileCode2, FolderOpen } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useResizable } from '../lib/useResizable'
@@ -23,6 +23,8 @@ interface Tab {
   title: string
   /** Caminho relativo à raiz do workspace. Só em abas de arquivo. */
   path?: string
+  /** Digitado no shell assim que ele sobe. Só em abas de shell. */
+  command?: string
 }
 
 let seq = 0
@@ -36,6 +38,8 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   const { t } = useT()
   const cwd = useAgent((s) => s.cwd)
   const notify = useAgent((s) => s.notify)
+  const request = useAgent((s) => s.terminalRequest)
+  const clearRequest = useAgent((s) => s.clearTerminalRequest)
   const size = useResizable('terminal', 460, 320, 900, 'left')
 
   const [tabs, setTabs] = useState<Tab[]>(() => [shellTab(1)])
@@ -51,6 +55,24 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
       return [...prev, tab]
     })
   }, [])
+
+  /*
+    Pedido vindo de outro canto da UI — hoje só o "trocar de conta", que precisa
+    do `/login` interativo do agente. Antes isso abria uma janela do
+    gnome-terminal por fora do app.
+  */
+  useEffect(() => {
+    if (!request) return
+    const tab: Tab = {
+      id: nextId('sh'),
+      kind: 'shell',
+      title: request.title,
+      command: request.command
+    }
+    setTabs((prev) => [...prev, tab])
+    setActive(tab.id)
+    clearRequest()
+  }, [request, clearRequest])
 
   const openFile = useCallback(async () => {
     const r = await window.prime.pickWorkspaceFile()
@@ -179,7 +201,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
             }
           >
             {tab.kind === 'shell' ? (
-              <TerminalView id={tab.id} cwd={cwd} />
+              <TerminalView id={tab.id} cwd={cwd} command={tab.command} />
             ) : (
               <FileViewer
                 path={tab.path as string}

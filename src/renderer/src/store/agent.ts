@@ -74,6 +74,14 @@ interface AgentStore {
   /** Ponte cujos eventos alimentam a tela. As demais são descartadas. */
   activeBridgeId: string | null
   parkedRuns: ParkedRun[]
+  /**
+   * Pedido para abrir um comando numa aba do terminal embutido.
+   *
+   * Existe porque quem pede (o menu da conta, no rodapé da sidebar) está longe
+   * de quem atende (o painel de terminal, do outro lado da árvore). Passar
+   * callback por toda a hierarquia para isso seria pior que um recado no store.
+   */
+  terminalRequest: { command: string; title: string } | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -100,6 +108,8 @@ interface AgentStore {
   upsertObserved: (id: string, patch: Partial<Observed>) => void
   dropObserved: (id: string) => void
   ingestObserved: (id: string, ev: AgentEvent) => void
+  requestTerminal: (command: string, title: string) => void
+  clearTerminalRequest: () => void
   reset: () => void
 }
 
@@ -128,6 +138,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   confirm: null,
   activeBridgeId: null,
   parkedRuns: [],
+  terminalRequest: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -138,6 +149,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setFatal: (m) => set({ fatal: m, status: m ? 'error' : get().status }),
   setState: (s) => set({ state: s }),
   setContext: (context) => set({ context }),
+  requestTerminal: (command, title) => set({ terminalRequest: { command, title } }),
+  clearTerminalRequest: () => set({ terminalRequest: null }),
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
