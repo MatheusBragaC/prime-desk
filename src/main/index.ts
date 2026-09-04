@@ -3,9 +3,9 @@ import {
 } from 'electron'
 import { basename, join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { homedir } from 'node:os'
+import { homedir, userInfo } from 'node:os'
 import { readFile, stat, open } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
@@ -867,10 +867,43 @@ handle('terminal:kill', (_e, id: string) => {
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
 
+/**
+ * Nome de exibição da pessoa, vindo do sistema operacional.
+ *
+ * Não vem da conta do provedor: o `auth.json` do prime-agent guarda só `type`,
+ * `refresh`, `access` e `expires` — nome e e-mail não estão lá. Buscá-los
+ * exigiria chamar a API do provedor com o token do usuário, e credencial não
+ * sai do processo principal por decisão de projeto.
+ *
+ * No Linux/macOS o nome completo mora no campo GECOS do `/etc/passwd`, que
+ * costuma trazer "Nome Sobrenome". Sem ele, sobra o login.
+ */
+function displayName(): string {
+  let username = ''
+  try {
+    username = userInfo().username
+  } catch {
+    return ''
+  }
+  if (process.platform === 'win32') return username
+
+  try {
+    const line = readFileSync('/etc/passwd', 'utf-8')
+      .split('\n')
+      .find((l) => l.startsWith(username + ':'))
+    const gecos = (line ?? '').split(':')[4]?.split(',')[0]?.trim()
+    if (gecos) return gecos
+  } catch {
+    // Sem /etc/passwd legível: o login serve.
+  }
+  return username
+}
+
 handle('app:info', () => ({
   version: app.getVersion(),
   home: homedir(),
-  platform: process.platform
+  platform: process.platform,
+  userName: displayName()
 }))
 
 // ---------------------------------------------------------------- lifecycle
