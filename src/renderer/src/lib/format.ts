@@ -10,6 +10,20 @@ export function fmtCost(n: number): string {
   return '$' + n.toFixed(2)
 }
 
+/**
+ * Tamanho de arquivo.
+ *
+ * Existia duas vezes com precisão diferente — o explorador arredondava KB para
+ * inteiro e o visor para uma casa, então o mesmo arquivo aparecia como "12 KB"
+ * numa tela e "11.7 KB" na outra. Vale mais uma regra só: a casa decimal serve
+ * pra decidir se um arquivo cabe na janela antes de abrir.
+ */
+export function fmtSize(n: number): string {
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / 1024 / 1024).toFixed(2)} MB`
+}
+
 export function fmtDuration(ms?: number): string {
   if (ms === undefined) return ''
   if (ms < 1000) return `${ms}ms`

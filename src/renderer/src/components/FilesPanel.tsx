@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import type { DirEntry } from '../../../shared/protocol'
 import { useResizable } from '../lib/useResizable'
+import { fmtSize } from '../lib/format'
 import { ResizeHandle } from './ResizeHandle'
 import { useT } from '../i18n'
 
@@ -18,12 +19,6 @@ function FileIcon({ name }: { name: string }) {
   if (DATA.has(ext)) return <FileJson size={14} strokeWidth={1.75} className="shrink-0 text-warn" />
   if (CODE.has(ext)) return <FileCode2 size={14} strokeWidth={1.75} className="shrink-0 text-info" />
   return <FileText size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
-}
-
-function fmtSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 interface NodeProps {

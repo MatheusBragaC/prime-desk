@@ -588,9 +588,7 @@ export function App() {
         </div>
 
         {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
-        {watchedIds.length > 0 && (
-          <ObservedPanel activeSessionId={watchedIds[watchedIds.length - 1]} />
-        )}
+        {watchedIds.length > 0 && <ObservedPanel />}
 
         {openFile && <FileViewer path={openFile} onClose={() => setOpenFile(null)} />}
       </main>
