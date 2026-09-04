@@ -491,7 +491,6 @@ export function App() {
       <Sidebar
         onSignedOut={() => setNeedsSetup(true)}
         home={home}
-        onPickCwd={() => void pickCwd()}
         onNavigate={() => narrowSidebar && setSidebarOpen(false)}
       />
       </div>

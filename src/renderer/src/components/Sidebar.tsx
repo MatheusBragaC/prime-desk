@@ -1,11 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import {
-  Plus, Search, FolderOpen, RefreshCw, ChevronRight, SquarePen,
+  Plus, Search, RefreshCw, ChevronRight, SquarePen,
   FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff
 } from 'lucide-react'
 import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
-import { shortPath } from '../lib/format'
 import { groupSessions, withTitles, type Group } from '../lib/grouping'
 import { SessionMenu } from './SessionMenu'
 import { AccountBadge } from './AccountBadge'
@@ -247,19 +246,16 @@ function GroupHeader({
 
 export function Sidebar({
   home,
-  onPickCwd,
   onSignedOut,
   onNavigate
 }: {
   home: string
-  onPickCwd: () => void
   onSignedOut: () => void
   /** Chamado ao abrir uma conversa, para fechar a sobreposição em tela estreita. */
   onNavigate?: () => void
 }) {
   const sessions = useAgent((s) => s.sessions)
   const state = useAgent((s) => s.state)
-  const cwd = useAgent((s) => s.cwd)
   const folders = useAgent((s) => s.folders)
   const tree = useAgent((s) => s.tree)
   const parkedRuns = useAgent((s) => s.parkedRuns)
@@ -462,23 +458,11 @@ export function Sidebar({
       <AccountBadge onSignedOut={onSignedOut} />
 
       {/*
-        Sem `border-t` própria: a régua do AccountBadge já abre o rodapé, e as
-        duas juntas liam como formulário. O ritmo horizontal (px-3, coluna de
-        ícone de 20px) é o mesmo da linha de cima, senão os dois textos começam
-        em x diferentes — que era o que mais saltava aos olhos aqui.
+        A linha do diretório de trabalho saiu daqui. Ela duplicava o chip que o
+        composer já tem (`ContextChips`), e no rodapé aparecia como um "~" solto
+        numa faixa larga — informação de contexto ocupando o lugar de identidade.
+        Trocar de pasta continua a um clique, no chip.
       */}
-      <button
-        onClick={onPickCwd}
-        className="group/cwd flex items-center gap-2.5 px-3 pb-2 text-left transition-colors hover:bg-elevated"
-        title={t('sidebar.pickCwd')}
-      >
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-dim">
-          <FolderOpen size={13} strokeWidth={1.75} />
-        </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
-          {shortPath(cwd, home) || t('sidebar.pickCwdEmpty')}
-        </span>
-      </button>
     </aside>
   )
 }

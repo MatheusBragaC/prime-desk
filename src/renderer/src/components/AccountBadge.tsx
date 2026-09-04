@@ -24,6 +24,8 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const notify = useAgent((s) => s.notify)
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
+  const [userName, setUserName] = useState('')
+
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()
     if (r?.ok) setStatus(r.status as EnvStatus)
@@ -31,12 +33,22 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
 
   useEffect(() => {
     void refresh()
+    void window.prime.appInfo().then((i) => setUserName(i?.userName ?? ''))
   }, [refresh])
 
   const provider = status?.auth.providers[0] ?? null
   const envKey = status?.auth.envKeys[0] ?? null
-  const label = provider ?? (envKey ? envKey.replace('_API_KEY', '').toLowerCase() : null)
+  const signedIn = Boolean(provider || envKey)
+  /** Como a credencial foi obtida — o que estava na segunda linha. */
   const kind = provider ? t('acct.subscription') : envKey ? t('acct.apiKey') : null
+  /*
+    A linha de cima passa a ser o nome da pessoa. `anthropic` é o provedor da
+    credencial, não a identidade de ninguém: como rótulo principal soava como
+    nome de usuário e não era. Desce para o menu, junto do resto do técnico.
+    Sem nome do sistema, o provedor volta a servir de rótulo.
+  */
+  const providerLabel = provider ?? (envKey ? envKey.replace('_API_KEY', '').toLowerCase() : null)
+  const label = signedIn ? (userName || providerLabel) : null
 
   function askSignOut() {
     setOpen(false)
@@ -108,6 +120,21 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
 
       {open && (
         <div className="absolute bottom-full left-2 right-2 z-dropdown mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
+          {/* O provedor mora aqui: é de onde a credencial vem, não quem você é. */}
+          {providerLabel && (
+            <>
+              <div className="flex items-baseline gap-2 px-2 py-1.5">
+                <span className="text-micro uppercase tracking-wider text-dim">
+                  {t('acct.provider')}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-right text-xs text-muted">
+                  {providerLabel}
+                </span>
+              </div>
+              <div className="my-1 border-t border-[var(--p-line)]" />
+            </>
+          )}
+
           <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('lang.title')}
           </div>
