@@ -10,7 +10,7 @@ import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
 import { execFile } from 'node:child_process'
-import { agentBinary, agentEnv } from './agent-path.js'
+import { agentBinary, agentEnv, invalidateAgentPath } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
   listDir, gitBranch, gitChanges, gitDiff, realPathInside, readFileSafe, writeFileSafe,
@@ -22,6 +22,7 @@ import {
   startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
+import { checkAgentUpdate } from './updates.js'
 import {
   createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
   killTerminal, killAllTerminals
@@ -864,6 +865,32 @@ handle('terminal:scrollback', (_e, id: string) => ({
 handle('terminal:kill', (_e, id: string) => {
   killTerminal(id)
   return { ok: true }
+})
+
+/**
+ * Existe versão nova do prime-agent?
+ *
+ * Só compara números — quem instala é o `prime-agent update` rodando no
+ * terminal embutido, à vista do usuário. Nunca automático: trocar um binário
+ * que executa `bash` é ação que precisa de gesto explícito no momento.
+ */
+handle('updates:check', async () => {
+  const env = await checkEnvironment()
+  const result = await checkAgentUpdate(env.agent.version)
+  return { ok: true, update: result }
+})
+
+/**
+ * Redescobre o agente depois de uma atualização.
+ *
+ * O caminho é memorizado, e a atualização pode mover o binário de prefixo. O
+ * `startEnvWatch` não ajuda aqui: ele compara a assinatura do `auth.json`, e
+ * troca de versão não mexe em credencial.
+ */
+handle('updates:rescan', async () => {
+  invalidateAgentPath()
+  const status = await checkEnvironment()
+  return { ok: true, status }
 })
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
