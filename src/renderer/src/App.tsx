@@ -74,6 +74,7 @@ export function App() {
   const loadingSession = useAgent((s) => s.loadingSession)
   const sessionId = useAgent((s) => s.state?.sessionId)
   const observed = useAgent((s) => s.observed)
+  const terminalRequest = useAgent((s) => s.terminalRequest)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
@@ -237,6 +238,12 @@ export function App() {
     const ms = dock === 'agents' ? 2000 : streaming ? 8000 : 0
     void window.prime.setAgentCadence(ms)
   }, [dock, streaming])
+
+  // Pedido de terminal (ex.: trocar de conta) precisa do painel na tela para
+  // que o TerminalPanel monte e consuma o recado.
+  useEffect(() => {
+    if (terminalRequest) setDock('terminal')
+  }, [terminalRequest])
 
   useEffect(() => {
     const block = (e: DragEvent): void => {

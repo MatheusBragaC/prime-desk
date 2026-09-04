@@ -11,9 +11,11 @@ import '@xterm/xterm/css/xterm.css'
  * antes de assinar o fluxo — sem isso a tela voltaria em branco com o processo
  * ainda vivo, que é pior do que não ter histórico nenhum.
  */
-export function TerminalView({ id, cwd, onExit }: {
+export function TerminalView({ id, cwd, command, onExit }: {
   id: string
   cwd: string
+  /** Digitado no shell na criação. Só vale na primeira montagem do PTY. */
+  command?: string
   onExit?: (code: number) => void
 }) {
   const host = useRef<HTMLDivElement>(null)
@@ -76,7 +78,7 @@ export function TerminalView({ id, cwd, onExit }: {
     observer.observe(el)
 
     void (async () => {
-      const created = await window.prime.createTerminal({ id, cwd })
+      const created = await window.prime.createTerminal({ id, cwd, command })
       if (disposed) return
       if (!created?.ok) {
         term.write(`\x1b[31m${created?.error ?? 'Falha ao abrir o terminal.'}\x1b[0m\r\n`)
@@ -97,7 +99,7 @@ export function TerminalView({ id, cwd, onExit }: {
       offExit()
       term.dispose()
     }
-  }, [id, cwd])
+  }, [id, cwd, command])
 
   return <div ref={host} className="h-full w-full overflow-hidden px-2 py-1.5" />
 }

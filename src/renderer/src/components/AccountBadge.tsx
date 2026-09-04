@@ -22,6 +22,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const [open, setOpen] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const notify = useAgent((s) => s.notify)
+  const requestTerminal = useAgent((s) => s.requestTerminal)
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   const [userName, setUserName] = useState('')
@@ -35,6 +36,26 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     void refresh()
     void window.prime.appInfo().then((i) => setUserName(i?.userName ?? ''))
   }, [refresh])
+
+  /*
+    Login e logout acontecem fora daqui — no terminal embutido, ou por `/logout`
+    numa conversa. O main já observa o `auth.json` e avisa quando muda; sem
+    assinar, o badge só atualizaria se a pessoa clicasse em "Atualizar".
+
+    O watch é global no main, mas Onboarding e AccountBadge nunca coexistem: o
+    Onboarding substitui a árvore inteira quando o ambiente está incompleto.
+  */
+  useEffect(() => {
+    const off = window.prime.on('onboarding:env', (payload) => {
+      const next = payload as EnvStatus | undefined
+      if (next?.auth) setStatus(next)
+    })
+    void window.prime.watchEnvironment()
+    return () => {
+      off()
+      void window.prime.unwatchEnvironment()
+    }
+  }, [])
 
   const provider = status?.auth.providers[0] ?? null
   const envKey = status?.auth.envKeys[0] ?? null
@@ -159,9 +180,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             className={item}
             onClick={() => {
               setOpen(false)
-              void window.prime.openAgentTerminal().then((r) => {
-                if (!r?.ok) notify('error', r?.error ?? t('onb.termFailed'))
-              })
+              // `/login` é interativo (escolha de provedor no TUI + OAuth no
+              // navegador) e a GUI não o reimplementa. Antes isso abria uma
+              // janela do gnome-terminal por fora; agora vai para o painel.
+              requestTerminal('prime-agent', t('acct.loginTab'))
             }}
             title={t('acct.switchHint')}
           >
