@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
   ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
-  ContextUsage, SessionStats
+  ContextUsage, SessionStats, DeliveryBehavior, QueueMode
 } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
@@ -327,15 +327,32 @@ export async function mutateFolders(fn: (state: FolderState) => FolderState): Pr
   if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
 }
 
+/**
+ * Envia um prompt. Devolve `false` quando o agente recusou.
+ *
+ * `streamingBehavior` vai SEMPRE, e isso é correção de bug. O agente exige o
+ * campo em qualquer estado com trabalho enfileirado — não só streaming, mas
+ * também compactando ou com bash rodando, quando `isStreaming` é `false`
+ * (`core/agent-session.js`: "Specify streamingBehavior ... to queue the
+ * message"). Sem o campo o send era recusado, o erro morria num `console.warn`
+ * e o composer já havia limpado o texto: a mensagem da pessoa sumia sem aviso.
+ *
+ * O retorno existe pelo mesmo motivo — quem chama só pode limpar a caixa
+ * depois de saber que foi aceito.
+ */
 export async function sendPrompt(
   message: string,
-  images?: { data: string; mimeType: string }[]
-): Promise<void> {
-  const streaming = useAgent.getState().state?.isStreaming
-  const payload: Record<string, unknown> = { message }
+  images?: { data: string; mimeType: string }[],
+  behavior: DeliveryBehavior = 'steer'
+): Promise<boolean> {
+  const payload: Record<string, unknown> = { message, streamingBehavior: behavior }
   if (images?.length) payload.images = images.map((i) => ({ type: 'image', ...i }))
-  if (streaming) payload.streamingBehavior = 'steer'
-  await rpc('prompt', payload)
+
+  const out = await rpcCall('prompt', payload)
+  if (!out.ok) {
+    useAgent.getState().notify('error', out.error ?? t('composer.sendFailed'))
+    return false
+  }
   void refreshState()
 
   /*
@@ -345,10 +362,28 @@ export async function sendPrompt(
     primeira mensagem; a resposta raramente muda o nome.
   */
   void maybeGenerateTitle()
+  return true
 }
 
+/**
+ * Aborta o turno em andamento.
+ *
+ * NÃO limpa a fila: o que estiver enfileirado roda em seguida. Limpar exigiria
+ * `abort_and_clear_queue`, que só existe no protocolo interno do daemon e não
+ * está no RPC. A UI precisa dizer isso, senão o botão promete o que não faz.
+ */
 export async function abortTurn(): Promise<void> {
   await bridge().fire('abort')
+  void refreshState()
+}
+
+export async function setSteeringMode(mode: QueueMode): Promise<void> {
+  await rpc('set_steering_mode', { mode })
+  void refreshState()
+}
+
+export async function setFollowUpMode(mode: QueueMode): Promise<void> {
+  await rpc('set_follow_up_mode', { mode })
   void refreshState()
 }
 

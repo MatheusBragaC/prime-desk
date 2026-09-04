@@ -135,7 +135,8 @@ async function isRiskyToOpen(target: string): Promise<boolean> {
 const RPC_SEND_ALLOWED = new Set([
   'clone', 'compact', 'get_available_models', 'get_commands', 'get_messages',
   'get_session_stats', 'get_state', 'new_session', 'observe', 'prompt',
-  'set_model', 'set_session_name', 'set_thinking_level', 'switch_session'
+  'set_follow_up_mode', 'set_model', 'set_session_name', 'set_steering_mode',
+  'set_thinking_level', 'switch_session'
 ])
 
 /** `fire` não espera resposta: só o que precisa furar a fila. */
