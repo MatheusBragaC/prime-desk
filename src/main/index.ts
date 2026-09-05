@@ -23,6 +23,7 @@ import {
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
 import { checkAgentUpdate } from './updates.js'
+import { speechStatus, speechSetupCommand, ensureSpeechDir } from './speech.js'
 import {
   createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
   killTerminal, killAllTerminals
@@ -912,6 +913,24 @@ handle('updates:rescan', async () => {
   invalidateAgentPath()
   const status = await checkEnvironment()
   return { ok: true, status }
+})
+
+// ---------------------------------------------------------- transcricao
+
+handle('speech:status', async () => ({ ok: true, status: await speechStatus() }))
+
+/**
+ * Comando de instalacao do motor local.
+ *
+ * O main so monta o texto; quem executa e o terminal embutido, a vista. O
+ * renderer nunca escolhe o que roda: `modelId` e validado contra a lista.
+ */
+handle('speech:setupCommand', async (_e, modelId: string) => {
+  await ensureSpeechDir()
+  const status = await speechStatus()
+  const valid = status.models.some((m) => m.id === modelId)
+  if (!valid) return { ok: false, error: `Modelo desconhecido: ${modelId}` }
+  return { ok: true, command: speechSetupCommand(modelId) }
 })
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
