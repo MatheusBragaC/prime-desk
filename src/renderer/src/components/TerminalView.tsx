@@ -22,6 +22,16 @@ export function TerminalView({ id, cwd, command, onExit }: {
   const onExitRef = useRef(onExit)
   onExitRef.current = onExit
 
+  /*
+    `cwd` e `command` valem só na criação do PTY, e ficam em ref para não entrar
+    nas dependências do efeito. Estavam lá, e o `cwd` do store começa vazio e
+    muda quando o boot resolve: o efeito reexecutava, descartava o xterm e
+    reescrevia o scrollback por cima do que o PTY já havia ecoado — o comando
+    aparecia duas vezes na tela.
+  */
+  const spawnRef = useRef({ cwd, command })
+  spawnRef.current = { cwd, command }
+
   useEffect(() => {
     const el = host.current
     if (!el) return
@@ -78,7 +88,7 @@ export function TerminalView({ id, cwd, command, onExit }: {
     observer.observe(el)
 
     void (async () => {
-      const created = await window.prime.createTerminal({ id, cwd, command })
+      const created = await window.prime.createTerminal({ id, ...spawnRef.current })
       if (disposed) return
       if (!created?.ok) {
         term.write(`\x1b[31m${created?.error ?? 'Falha ao abrir o terminal.'}\x1b[0m\r\n`)
@@ -99,7 +109,8 @@ export function TerminalView({ id, cwd, command, onExit }: {
       offExit()
       term.dispose()
     }
-  }, [id, cwd, command])
+    // Só o `id` identifica o PTY; o resto é parâmetro de criação.
+  }, [id])
 
   return <div ref={host} className="h-full w-full overflow-hidden px-2 py-1.5" />
 }
