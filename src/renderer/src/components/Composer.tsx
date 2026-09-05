@@ -10,6 +10,7 @@ import { useMod } from '../lib/platform'
 import { joinWithPaths, baseName } from '../lib/attachments'
 import { usePopover } from '../lib/usePopover'
 import { QueuePopover } from './QueuePopover'
+import { MicButton } from './MicButton'
 import type { DeliveryBehavior } from '../../../shared/protocol'
 import { useT } from '../i18n'
 
@@ -683,6 +684,16 @@ export function Composer({
           >
             <Command size={16} strokeWidth={1.75} />
           </button>
+
+          {/*
+            Ditado: o texto reconhecido entra na caixa em vez de ser enviado, para
+            a pessoa revisar antes. Voz erra, e mandar direto seria hostil.
+          */}
+          <MicButton
+            onTranscript={(text) =>
+              setValue((v) => (v ? v.replace(/\s*$/, ' ') + text : text))
+            }
+          />
 
           <div className="flex-1" />
 

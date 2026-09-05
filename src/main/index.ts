@@ -300,6 +300,27 @@ function createWindow(): void {
     }
   })
 
+  /*
+    Permissões do renderer.
+
+    Sem handler o Electron concede tudo por padrão, o que destoa do resto do
+    app — que tem guarda de origem no IPC, allowlist de RPC e CSP fechado. Aqui
+    a lista é explícita: microfone para o ditado, nada mais. Câmera,
+    geolocalização, notificação e afins ficam de fora porque o app não usa.
+
+    A checagem de origem é a mesma do IPC: só o frame principal da janela.
+  */
+  win.webContents.session.setPermissionRequestHandler((contents, permission, done) => {
+    const trusted = win !== null && !win.isDestroyed() && contents === win.webContents
+    done(trusted && permission === 'media')
+  })
+
+  win.webContents.session.setPermissionCheckHandler((contents, permission) => {
+    // `contents` é nulo em checagem sem frame associado; aí a resposta é não.
+    const trusted = win !== null && !win.isDestroyed() && contents === win.webContents
+    return trusted && permission === 'media'
+  })
+
   win.once('ready-to-show', () => {
     // No Linux a opção `icon` do construtor nem sempre pega; setIcon é confiável.
     if (icon) {
