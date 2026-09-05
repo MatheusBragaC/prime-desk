@@ -61,14 +61,28 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   */
   useEffect(() => {
     if (!request) return
-    const tab: Tab = {
-      id: nextId('sh'),
-      kind: 'shell',
-      title: request.title,
-      command: request.command
-    }
-    setTabs((prev) => [...prev, tab])
-    setActive(tab.id)
+    setTabs((prev) => {
+      /*
+        Mesmo comando pedido de novo reusa a aba: pedir "atualizar" duas vezes
+        empilhava duas abas idênticas. O shell continua vivo depois que o
+        processo termina, então reenviar o comando ali é a repetição natural —
+        e o histórico da tentativa anterior fica à vista logo acima.
+      */
+      const found = prev.find((tb) => tb.kind === 'shell' && tb.command === request.command)
+      if (found) {
+        setActive(found.id)
+        void window.prime.writeTerminal(found.id, request.command + '\r')
+        return prev
+      }
+      const tab: Tab = {
+        id: nextId('sh'),
+        kind: 'shell',
+        title: request.title,
+        command: request.command
+      }
+      setActive(tab.id)
+      return [...prev, tab]
+    })
     clearRequest()
   }, [request, clearRequest])
 

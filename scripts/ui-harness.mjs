@@ -117,6 +117,11 @@ const STUB_JS = `
     pickWorkspaceFile: async () => ({ ok: false }),
     openAgentTerminal: async () => ({ ok: true }),
     generateTitle: async () => ({ ok: true, title: null }),
+    checkAgentUpdate: async () => ({ ok: true, update: { current: '0.8.0', latest: 'v0.9.1', available: true } }),
+    rescanAgent: async () => ({ ok: true, status: {
+      agent: { installed: true, path: '/usr/bin/prime-agent', version: '0.9.1' },
+      auth: { ok: true, providers: ['anthropic'], envKeys: [] }
+    } }),
     on: (ch, cb) => { (listeners[ch] ??= []).push(cb); return () => {} }
   }
   window.__harness = { emit: (ch, p) => (listeners[ch] ?? []).forEach((f) => f(p)) }
