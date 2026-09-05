@@ -7,7 +7,7 @@ import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
-import { joinWithPaths, baseName } from '../lib/attachments'
+import { joinWithPaths, baseName, joinDictation } from '../lib/attachments'
 import { usePopover } from '../lib/usePopover'
 import { QueuePopover } from './QueuePopover'
 import { MicButton } from './MicButton'
@@ -315,6 +315,21 @@ export function Composer({
   }, [])
   const [queueOpen, setQueueOpen] = useState(false)
   const queueBtn = useRef<HTMLButtonElement>(null)
+
+  /*
+    O que já estava escrito antes do trecho de fala em curso.
+
+    O parcial é refeito a cada passada do Whisper e substitui o anterior — sem
+    guardar essa base, cada refinamento se somaria ao texto anterior em vez de
+    corrigi-lo, e a frase apareceria repetida várias vezes.
+  */
+  const dictationBase = useRef('')
+  useEffect(() => {
+    // Digitar durante o ditado move a base: o que a pessoa escreveu fica.
+    dictationBase.current = value
+    // Só na montagem e quando o ditado fecha um trecho; ver onFinal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const el = ta.current
@@ -690,9 +705,12 @@ export function Composer({
             a pessoa revisar antes. Voz erra, e mandar direto seria hostil.
           */}
           <MicButton
-            onTranscript={(text) =>
-              setValue((v) => (v ? v.replace(/\s*$/, ' ') + text : text))
-            }
+            onPartial={(text) => setValue(joinDictation(dictationBase.current, text))}
+            onFinal={(text) => {
+              const merged = joinDictation(dictationBase.current, text)
+              dictationBase.current = merged
+              setValue(merged)
+            }}
           />
 
           <div className="flex-1" />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, ChevronDown, Check, Loader2, Download, Wrench } from 'lucide-react'
-import { useMicrophone } from '../lib/useMicrophone'
+import { useDictation } from '../lib/useDictation'
 import { usePopover } from '../lib/usePopover'
 import { useAgent } from '../store/agent'
 import { fmtSize } from '../lib/format'
@@ -47,9 +47,11 @@ function LevelMeter({ level }: { level: number }) {
   )
 }
 
-export function MicButton({ onTranscript }: {
-  /** Recebe o texto reconhecido. Sem motor, ainda não é chamado. */
-  onTranscript?: (text: string) => void
+export function MicButton({ onPartial, onFinal }: {
+  /** Texto do trecho em curso, refeito a cada passada. Substitui o anterior. */
+  onPartial: (text: string) => void
+  /** Trecho fechado. A partir daqui o texto não muda mais. */
+  onFinal: (text: string) => void
 }) {
   const { t } = useT()
   const notify = useAgent((s) => s.notify)
@@ -60,14 +62,14 @@ export function MicButton({ onTranscript }: {
   const menuBtn = useRef<HTMLButtonElement>(null)
   const menuRef = usePopover<HTMLDivElement>(() => setMenu(false), menu, menuBtn)
 
-  const mic = useMicrophone(() => {
-    // Aqui entra o motor: blocos de PCM 16 kHz mono chegam continuamente.
-    // Enquanto não existe, os blocos são descartados de propósito.
-    void onTranscript
-  })
+  const dictation = useDictation(onFinal, onPartial)
+  const mic = dictation.mic
 
   const recording = mic.status === 'recording'
   const busy = mic.status === 'starting'
+
+  /** Melhor modelo baixado: qualidade cresce com o tamanho. */
+  const bestModel = speech?.models.filter((m) => m.present).at(-1)?.id ?? null
 
   const loadSpeech = useCallback(async () => {
     const r = await window.prime.speechStatus()
@@ -102,15 +104,17 @@ export function MicButton({ onTranscript }: {
 
   function toggle() {
     if (recording) {
-      mic.stop()
+      void dictation.stop()
       return
     }
     // Sem motor nao adianta captar: leva direto para a instalacao.
-    if (speech && !speech.ready) {
+    if (!speech?.ready || !bestModel) {
       setMenu(true)
       return
     }
-    void mic.start()
+    void dictation.start(bestModel).then((up) => {
+      if (!up) notify('error', dictation.error ?? t('mic.startFailed'))
+    })
   }
 
   const label =
@@ -141,6 +145,9 @@ export function MicButton({ onTranscript }: {
           <Mic size={15} strokeWidth={1.75} />
         )}
         {recording && <LevelMeter level={mic.level} />}
+        {dictation.working && (
+          <Loader2 size={12} strokeWidth={1.75} className="animate-spin text-dim" />
+        )}
       </button>
 
       <button
@@ -215,6 +222,12 @@ export function MicButton({ onTranscript }: {
                 </button>
               ))}
           </div>
+
+          {dictation.error && (
+            <div className="mt-1 border-t border-[var(--p-line)] px-2 pt-1.5 text-micro leading-snug text-err">
+              {dictation.error}
+            </div>
+          )}
 
           {mic.error && (
             <div className="mt-1 border-t border-[var(--p-line)] px-2 pt-1.5 text-micro leading-snug text-err">
