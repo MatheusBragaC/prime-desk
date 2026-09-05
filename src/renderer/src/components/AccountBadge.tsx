@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp } from 'lucide-react'
+import {
+  UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle
+} from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
 import { usePopover } from '../lib/usePopover'
@@ -26,6 +28,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   const [userName, setUserName] = useState('')
+  const [update, setUpdate] = useState<{ current: string | null; latest: string | null; available: boolean } | null>(null)
 
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()
@@ -35,7 +38,32 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   useEffect(() => {
     void refresh()
     void window.prime.appInfo().then((i) => setUserName(i?.userName ?? ''))
+    // Fora do caminho de boot e sem barulho: falha de rede aqui não é problema
+    // do usuário, e a checagem cai calada.
+    void window.prime.checkAgentUpdate().then((r) => {
+      if (r?.ok) setUpdate(r.update as typeof update)
+    })
   }, [refresh])
+
+  /*
+    A atualização troca o binário que o app executa e reinicia o daemon, então:
+    confirma, derruba a ponte, e roda à vista numa aba do terminal. Nunca por
+    `execFile` no main — sem TTY o `prime-agent update` desiste quando há sessão
+    ocupada, que é justamente quando o app está em uso.
+  */
+  function askUpdate() {
+    setOpen(false)
+    requestConfirm({
+      title: t('update.title'),
+      message: t('update.msg'),
+      detail: `${update?.current ?? '?'} → ${update?.latest ?? '?'}`,
+      confirmLabel: t('update.run'),
+      onConfirm: async () => {
+        await window.prime.stopBridge()
+        requestTerminal('prime-agent update', t('update.tabTitle'))
+      }
+    })
+  }
 
   /*
     Login e logout acontecem fora daqui — no terminal embutido, ou por `/logout`
@@ -45,6 +73,29 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     O watch é global no main, mas Onboarding e AccountBadge nunca coexistem: o
     Onboarding substitui a árvore inteira quando o ambiente está incompleto.
   */
+  /*
+    Fim de uma aba de terminal com atualização pendente: redescobre o binário e
+    relê o ambiente. A troca de versão não mexe no `auth.json`, então o watch do
+    main não dispara — e o caminho do agente fica memorizado, podendo ter mudado
+    de prefixo. Não dá para saber qual aba fechou, mas o rescan é barato e
+    idempotente, e só roda quando havia update para fazer.
+  */
+  useEffect(() => {
+    if (!update?.available) return
+    const off = window.prime.on('terminal:exit', () => {
+      void window.prime.rescanAgent().then((r) => {
+        if (!r?.ok) return
+        setStatus(r.status as EnvStatus)
+        void window.prime.checkAgentUpdate().then((u) => {
+          if (u?.ok) setUpdate(u.update as typeof update)
+        })
+      })
+    })
+    return () => {
+      off()
+    }
+  }, [update?.available])
+
   useEffect(() => {
     const off = window.prime.on('onboarding:env', (payload) => {
       const next = payload as EnvStatus | undefined
@@ -124,6 +175,12 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
         >
           <UserRound size={13} strokeWidth={1.75} />
         </span>
+        {update?.available && !open && (
+          <span
+            title={t('update.available')}
+            className="absolute left-[26px] top-1.5 h-1.5 w-1.5 rounded-full bg-primary"
+          />
+        )}
         <span className="min-w-0 flex-1 leading-tight">
           <span className="block truncate text-sm text-fg">
             {label ?? t('acct.none')}
@@ -196,6 +253,14 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
               <KeyRound size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
               {t('acct.envHint')}: <span className="font-mono">{envKey}</span>
             </div>
+          )}
+
+          {update?.available && (
+            <button className={item + ' text-primarySoft hover:text-primarySoft'} onClick={askUpdate}>
+              <ArrowUpCircle size={14} strokeWidth={1.75} />
+              <span className="flex-1">{t('update.available')}</span>
+              <span className="font-mono text-micro text-dim">{update.latest}</span>
+            </button>
           )}
 
           <button className={item} onClick={() => void refresh()}>

@@ -72,6 +72,8 @@ const api = {
   pathForFile: (file: File) => webUtils.getPathForFile(file),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
   appInfo: () => ipcRenderer.invoke('app:info'),
+  checkAgentUpdate: () => ipcRenderer.invoke('updates:check'),
+  rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
 
   createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
     ipcRenderer.invoke('terminal:create', spec),
