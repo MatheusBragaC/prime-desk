@@ -76,6 +76,9 @@ const api = {
   rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
   speechStatus: () => ipcRenderer.invoke('speech:status'),
   speechSetupCommand: (modelId: string) => ipcRenderer.invoke('speech:setupCommand', modelId),
+  speechStart: (modelId: string) => ipcRenderer.invoke('speech:start', modelId),
+  speechStop: () => ipcRenderer.invoke('speech:stop'),
+  speechTranscribe: (samples: Float32Array) => ipcRenderer.invoke('speech:transcribe', samples),
 
   createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
     ipcRenderer.invoke('terminal:create', spec),

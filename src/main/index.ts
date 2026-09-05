@@ -24,6 +24,7 @@ import {
 import { generateTitle } from './titles.js'
 import { checkAgentUpdate } from './updates.js'
 import { speechStatus, speechSetupCommand, ensureSpeechDir } from './speech.js'
+import { startSpeech, stopSpeech, transcribe } from './speech-server.js'
 import {
   createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
   killTerminal, killAllTerminals
@@ -360,6 +361,7 @@ function createWindow(): void {
     stopTreePolling()
     // Shells do painel são filhos da janela: sem isso ficam órfãos rodando.
     killAllTerminals()
+    stopSpeech()
     win = null
   })
 }
@@ -932,6 +934,25 @@ handle('speech:setupCommand', async (_e, modelId: string) => {
   if (!valid) return { ok: false, error: `Modelo desconhecido: ${modelId}` }
   return { ok: true, command: speechSetupCommand(modelId) }
 })
+
+/**
+ * Sobe o servidor de voz para a sessao de ditado.
+ *
+ * Um processo por sessao, nao por trecho: carregar o modelo custa segundos e
+ * centenas de megabytes, e refazer isso a cada janela de fala impediria
+ * qualquer coisa parecida com tempo real.
+ */
+handle('speech:start', async (_e, modelId: string) => startSpeech(modelId))
+
+handle('speech:stop', () => {
+  stopSpeech()
+  return { ok: true }
+})
+
+/** Recebe amostras Float32 mono 16 kHz e devolve o texto reconhecido. */
+handle('speech:transcribe', async (_e, samples: Float32Array) =>
+  transcribe(samples instanceof Float32Array ? samples : new Float32Array(samples))
+)
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
 
