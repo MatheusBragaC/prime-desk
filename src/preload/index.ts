@@ -74,6 +74,8 @@ const api = {
   appInfo: () => ipcRenderer.invoke('app:info'),
   checkAgentUpdate: () => ipcRenderer.invoke('updates:check'),
   rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
+  speechStatus: () => ipcRenderer.invoke('speech:status'),
+  speechSetupCommand: (modelId: string) => ipcRenderer.invoke('speech:setupCommand', modelId),
 
   createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
     ipcRenderer.invoke('terminal:create', spec),

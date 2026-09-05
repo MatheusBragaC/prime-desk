@@ -117,6 +117,16 @@ const STUB_JS = `
     pickWorkspaceFile: async () => ({ ok: false }),
     openAgentTerminal: async () => ({ ok: true }),
     generateTitle: async () => ({ ok: true, title: null }),
+    speechStatus: async () => ({ ok: true, status: {
+      ready: false, dir: '/home/dev/.config/prime-desk/speech', server: null,
+      models: [
+        { id: 'tiny', label: 'Tiny', bytes: 77691713, present: false },
+        { id: 'base', label: 'Base', bytes: 147951465, present: false },
+        { id: 'small', label: 'Small', bytes: 487601967, present: false }
+      ],
+      missing: []
+    } }),
+    speechSetupCommand: async () => ({ ok: true, command: 'echo compilando whisper.cpp' }),
     checkAgentUpdate: async () => ({ ok: true, update: { current: '0.8.0', latest: 'v0.9.1', available: true } }),
     rescanAgent: async () => ({ ok: true, status: {
       agent: { installed: true, path: '/usr/bin/prime-agent', version: '0.9.1' },
