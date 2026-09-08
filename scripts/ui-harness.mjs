@@ -44,6 +44,21 @@ const STUB_JS = `
 (() => {
   const listeners = {}
   let currentBranch = 'fix/connection-health-retention'
+  let jobs = [
+    { id: 'j1', status: 'active', activeSessionId: 'a', sessionId: 's', sessionFile: '/tmp/s.jsonl',
+      cwd: '/home/dev/projeto', prompt: 'Revisar os PRs abertos e resumir o que falta em cada um.',
+      schedule: { kind: 'cron', expression: '0 9 * * 1-5' },
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nextRunAt: new Date(Date.now() + 3600e3).toISOString(),
+      lastRunAt: new Date(Date.now() - 86400e3).toISOString(), runCount: 12 },
+    { id: 'j2', status: 'active', activeSessionId: 'a', sessionId: 's', sessionFile: '/tmp/s.jsonl',
+      cwd: '/home/dev/projeto', prompt: 'Rodar a suite de testes e me avisar se algo quebrou.',
+      schedule: { kind: 'interval', expression: 'every 30m', intervalMs: 1800000 },
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      nextRunAt: new Date(Date.now() + 900e3).toISOString(), runCount: 3,
+      lastError: 'npm error code ELIFECYCLE' }
+  ]
+  let heartbeat = null
   const state = {
     model: { id: 'claude-fable-5', name: 'Claude Fable 5', api: 'anthropic', provider: 'anthropic', contextWindow: 1000000 },
     thinkingLevel: 'medium', isStreaming: false, isCompacting: false,
@@ -83,7 +98,37 @@ const STUB_JS = `
     startBridge: async () => ({ ok: true, cwd: '/home/dev/projeto', bridgeId: 'b1', execution: { kind: 'local' } }),
     stopBridge: async () => ({ ok: true }),
     execution: async () => ({ ok: true, execution: { kind: 'local' } }),
-    send: async (type) => ({ ok: true, res: { type: 'response', command: type, success: true, data: rpc[type] ?? {} } }),
+    send: async (type, payload) => {
+      if (type === 'list_schedules') return { ok: true, res: { type: 'response', command: type, success: true, data: { jobs } } }
+      if (type === 'get_heartbeat') return { ok: true, res: { type: 'response', command: type, success: true, data: { heartbeat } } }
+      if (type === 'add_schedule') {
+        const job = { id: 'j' + (jobs.length + 1), status: 'active', activeSessionId: 'a', sessionId: 's',
+          sessionFile: '/tmp/s.jsonl', cwd: '/home/dev/projeto', prompt: payload.prompt,
+          schedule: { kind: 'interval', expression: payload.schedule },
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          nextRunAt: new Date(Date.now() + 300e3).toISOString(), runCount: 0 }
+        jobs = [...jobs, job]
+        return { ok: true, res: { type: 'response', command: type, success: true, data: { job } } }
+      }
+      if (type === 'cancel_schedule') {
+        jobs = jobs.filter((j) => j.id !== payload.jobId)
+        return { ok: true, res: { type: 'response', command: type, success: true, data: {} } }
+      }
+      if (type === 'set_heartbeat') {
+        heartbeat = { id: 'hb', status: 'active', source: 'heartbeat', deliveryMode: payload.deliveryMode,
+          activeSessionId: 'a', sessionId: 's', sessionFile: '/tmp/s.jsonl', cwd: '/home/dev/projeto',
+          prompt: payload.prompt, schedule: { kind: 'interval', expression: payload.schedule },
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+          nextRunAt: new Date(Date.now() + 300e3).toISOString(), runCount: 0 }
+        return { ok: true, res: { type: 'response', command: type, success: true, data: { heartbeat } } }
+      }
+      if (type === 'update_heartbeat') {
+        if (payload.action === 'clear') heartbeat = null
+        else if (heartbeat) heartbeat = { ...heartbeat, status: payload.action === 'pause' ? 'paused' : 'active' }
+        return { ok: true, res: { type: 'response', command: type, success: true, data: { heartbeat } } }
+      }
+      return { ok: true, res: { type: 'response', command: type, success: true, data: rpc[type] ?? {} } }
+    },
     fire: async () => ({ ok: true }),
     listSessions: async () => ({ ok: true, sessions }),
     loadFolders: async () => ({ ok: true, state: { folders: [], assignments: {}, collapsed: {} } }),
