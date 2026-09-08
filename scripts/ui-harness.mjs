@@ -288,6 +288,17 @@ const STUB_JS = `
     pathForFile: () => '',
     revealFile: async () => ({ ok: true }),
     openExternal: async () => ({ ok: true }),
+    /*
+      Copiar de mentira, com falha ligavel por querystring (?copyfail=1). A
+      falha e metade do bug original: o botao copiava nada e nao dizia nada.
+    */
+    copyText: async (text) => {
+      if (new URLSearchParams(location.search).has('copyfail')) {
+        return { ok: false, error: 'area de transferencia indisponivel' }
+      }
+      window.__copiado = text
+      return { ok: true }
+    },
     installCommand: async () => ({ ok: true, command: 'echo stub' }),
     installAgent: async () => ({ ok: true }),
     logoutProvider: async () => ({ ok: true }),
