@@ -45,6 +45,33 @@ export function relTime(iso: string): string {
   return new Date(then).toLocaleDateString('pt-BR')
 }
 
+/**
+ * Quanto falta até um instante futuro.
+ *
+ * Contraparte do `relTime`, que calcula `agora − data` e por isso devolve
+ * "agora" para qualquer data futura — o diff fica negativo e cai no primeiro
+ * ramo. Um agendamento que dispara em uma hora aparecia como "agora".
+ *
+ * Data já vencida também é "agora": o disparo está em atraso e vai acontecer
+ * na próxima verificação, não num futuro que valha contar.
+ */
+export function untilTime(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const diff = then - Date.now()
+  if (diff <= 0) return 'agora'
+
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return `${sec}s`
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} h`
+  const d = Math.floor(h / 24)
+  if (d < 30) return `${d} d`
+  return new Date(then).toLocaleDateString('pt-BR')
+}
+
 export function shortPath(p: string, home: string): string {
   if (!p) return ''
   return home && p.startsWith(home) ? '~' + p.slice(home.length) : p

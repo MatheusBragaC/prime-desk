@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
   Layers, Target, AlertTriangle, Minimize2, PanelLeft,
-  SquareTerminal, FileDiff, FolderTree, GitBranch
+  SquareTerminal, FileDiff, FolderTree, GitBranch, CalendarClock
 } from 'lucide-react'
 import { useAgent, compactNow } from '../store/agent'
 import { usePopover } from '../lib/usePopover'
@@ -143,7 +143,7 @@ function MetricsPopover({ onClose, trigger }: {
   )
 }
 
-export type Dock = 'files' | 'agents' | 'diff' | 'terminal' | null
+export type Dock = 'files' | 'agents' | 'diff' | 'terminal' | 'schedules' | null
 
 /** Botão da barra de ferramentas: mesma caixa de 28px para todos. */
 function ToolButton({
@@ -287,6 +287,12 @@ export function StatusBar({
           title={t('toolbar.terminal')}
           active={dock === 'terminal'}
           onClick={() => onDock('terminal')}
+        />
+        <ToolButton
+          icon={<CalendarClock size={16} strokeWidth={1.75} />}
+          title={t('toolbar.schedules')}
+          active={dock === 'schedules'}
+          onClick={() => onDock('schedules')}
         />
         <ToolButton
           icon={<FileDiff size={16} strokeWidth={1.75} />}
