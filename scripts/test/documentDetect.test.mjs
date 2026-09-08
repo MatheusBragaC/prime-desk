@@ -38,6 +38,36 @@ export default function run({ detectDocument }) {
     detectDocument('# Só um título\n\n' + 'Texto normal explicando uma coisa qualquer. '.repeat(30)),
     null)
 
+  /*
+    O caso real que motivou este arquivo a mudar: uma resposta de conversa
+    comum, que organiza os achados com `##` mas ABRE com uma frase corrida, não
+    com título. A primeira versão da heurística contava só o número de títulos
+    em qualquer lugar do texto e tratava isso como documento — errado, porque
+    "expliquei em tópicos" não é "escrevi um plano".
+  */
+  ok('resposta de conversa com sub-titulos, mas que NAO abre com titulo, nao e documento',
+    detectDocument(
+      'Fui olhar de novo. Você tinha razão — achei três problemas reais no que eu fiz:\n\n' +
+        '## Problema 1 — condição de corrida no transporte\n' +
+        'Texto explicando o primeiro problema com detalhe suficiente para passar do limite. '.repeat(6) +
+        '\n\n## Problema 2 — resposta 405 no GET\n' +
+        'Texto explicando o segundo problema, também com detalhe. '.repeat(6) +
+        '\n\n## Problema 3 — roles não resolvidos\n' +
+        'Texto explicando o terceiro problema. '.repeat(6)
+    ),
+    null)
+
+  // O mesmo conteúdo, mas abrindo com o título: aí sim é documento.
+  ok('o mesmo conteudo, abrindo com titulo, e documento',
+    detectDocument(
+      '# Três problemas encontrados na revisão\n\n' +
+        '## Problema 1 — condição de corrida no transporte\n' +
+        'Texto explicando o primeiro problema com detalhe suficiente para passar do limite. '.repeat(6) +
+        '\n\n## Problema 2 — resposta 405 no GET\n' +
+        'Texto explicando o segundo problema, também com detalhe. '.repeat(6)
+    ) !== null,
+    true)
+
   ok('texto longo sem título nenhum não é documento',
     detectDocument('Isto é uma explicação longa sem nenhuma estrutura de título. '.repeat(30)),
     null)
