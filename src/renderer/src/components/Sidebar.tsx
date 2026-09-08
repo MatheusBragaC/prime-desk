@@ -14,6 +14,18 @@ import { ResizeHandle } from './ResizeHandle'
 import type { SessionSummary } from '../../../shared/protocol'
 import { useT } from '../i18n'
 
+/**
+ * Conversas mostradas por grupo antes do "mostrar mais".
+ *
+ * Um grupo de projeto ativo passa fácil de vinte conversas, e a lista inteira
+ * virava uma parede onde os outros projetos ficavam abaixo da dobra. Doze
+ * linhas de 33px dão ~400px — perto de uma tela de lista na altura típica da
+ * janela, então cada projeto ocupa no máximo uma "página" antes de pedir mais.
+ *
+ * Busca ignora o limite: esconder resultado atrás de um botão seria hostil.
+ */
+const PER_GROUP = 12
+
 function SessionRow({
   s,
   active,
@@ -75,31 +87,66 @@ function SessionRow({
         disabled={busy}
         onClick={onOpen}
         className={
-          'mb-[1px] flex h-8 w-full items-center gap-2 rounded-sm pl-2.5 pr-7 text-left transition-colors disabled:opacity-50 ' +
-          (active ? 'bg-[var(--p-selected)] text-fg' : 'text-muted hover:bg-elevated hover:text-fg')
+          'mb-px flex h-8 w-full items-center gap-2 rounded-md pl-2 pr-2 text-left transition-colors disabled:opacity-50 ' +
+          (active
+            ? 'bg-[var(--p-selected)] text-fg'
+            : 'text-fg/80 hover:bg-elevated hover:text-fg')
         }
         title={s.title}
       >
         {/*
-          A linha ativa é marcada pelo fundo, como no Claude Desktop — o ponto de
-          status só aparece quando carrega informação que o fundo não dá: fixada,
-          ou carregada por outro worker do daemon.
+          Trilho de marcador com largura fixa, em toda linha.
+
+          Antes o marcador só existia quando havia status (fixada, rodando,
+          carregada por outro worker), e a linha sem status não tinha nada: o
+          início do texto pulava alguns pixels conforme o estado, e a lista lia
+          como um bloco de texto solto, sem eixo. Agora o slot é sempre o mesmo
+          e o que muda é o glifo dentro dele — é assim que a sidebar do Claude
+          se mantém alinhada.
+
+          O ponto vazado é o estado normal. Ele não informa nada: existe para
+          dar coluna à lista e para o status ter onde aparecer sem empurrar
+          ninguém.
         */}
-        {running ? (
-          <span
-            title={t('session.runningElsewhere')}
-            className="h-[6px] w-[6px] shrink-0 animate-pulse-soft rounded-full bg-primary"
-          />
-        ) : pinned ? (
-          <Pin size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
-        ) : inUse ? (
-          <span
-            title={t('session.inUse')}
-            className="h-[5px] w-[5px] shrink-0 rounded-full border border-warn bg-warn/40"
-          />
-        ) : null}
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+          {running ? (
+            <span
+              title={t('session.runningElsewhere')}
+              className="h-[6px] w-[6px] animate-pulse-soft rounded-full bg-primary"
+            />
+          ) : pinned ? (
+            <Pin size={13} strokeWidth={1.75} className="text-primarySoft" />
+          ) : inUse ? (
+            <span
+              title={t('session.inUse')}
+              className="h-[5px] w-[5px] rounded-full border border-warn bg-warn/40"
+            />
+          ) : (
+            <span
+              className={
+                'h-[5px] w-[5px] rounded-full border transition-colors ' +
+                (active ? 'border-primarySoft bg-primarySoft/40' : 'border-grid')
+              }
+            />
+          )}
+        </span>
         <span className="min-w-0 flex-1 truncate text-sm leading-snug">{s.title}</span>
       </button>
+
+      {/*
+        O botão de ações flutua sobre o fim do texto em vez de ter coluna
+        própria. Antes a linha reservava 28px de `padding-right` para ele o
+        tempo todo, e o título cortava quatro caracteres antes do necessário em
+        TODA conversa — para um botão que só aparece no hover. O esmaecimento
+        abaixo evita que o texto passe por baixo do ícone.
+      */}
+      <span
+        className={
+          'pointer-events-none absolute right-0 top-0 h-8 w-11 rounded-r-md bg-gradient-to-l to-transparent transition-opacity ' +
+          (active ? 'from-[var(--p-selected)] via-[var(--p-selected)]' : 'from-elevated via-elevated') +
+          (menu ? ' opacity-100' : ' opacity-0 group-hover:opacity-100')
+        }
+      />
 
       <button
         ref={menuBtn}
@@ -185,7 +232,12 @@ function GroupHeader({
   }
 
   return (
-    <div className="group/h flex items-center gap-1 px-2 pb-1 pt-4">
+    /*
+      `pt-5 pb-1.5` em vez de `pt-4 pb-1`: o cabeçalho ficava à mesma distância
+      do próprio grupo e do grupo anterior, então a lista lia como uma coluna
+      única de texto. Com o respiro assimétrico, cada projeto vira um bloco.
+    */
+    <div className="group/h flex items-center gap-1 px-2 pb-1.5 pt-5">
       <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1 text-left">
         <ChevronRight
           size={14} strokeWidth={1.75}
@@ -207,7 +259,19 @@ function GroupHeader({
             className="min-w-0 flex-1 rounded border border-primary/40 bg-black/40 px-1 text-xs text-fg outline-none"
           />
         ) : (
-          <span className="truncate text-xs text-dim">{group.label}</span>
+          <>
+            <span className="truncate text-xs font-medium tracking-wide text-muted">
+              {group.label}
+            </span>
+            {/*
+              Contagem discreta. Vale porque o grupo pode estar recolhido, e
+              porque com dez projetos abertos saber onde está o volume de
+              conversa é mais rápido de ler que contar linha.
+            */}
+            <span className="shrink-0 font-mono text-micro text-dim">
+              {group.sessions.length}
+            </span>
+          </>
         )}
       </button>
 
@@ -263,6 +327,12 @@ export function Sidebar({
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  /*
+    Grupos expandidos além do limite. Não é persistido de propósito: é escolha
+    de momento, e guardar traria mais um estado para sincronizar com pastas que
+    podem deixar de existir.
+  */
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [creating, setCreating] = useState(false)
   const size = useResizable('sidebar', 272, 200, 560, 'right')
   const isMac = useIsMac()
@@ -434,22 +504,48 @@ export function Sidebar({
         )}
         {groups.map((g) => {
           const collapsed = folders.collapsed[g.key] ?? false
+          const searching = query.trim().length > 0
+          const showAll = searching || expanded.has(g.key)
+          const shown = showAll ? g.sessions : g.sessions.slice(0, PER_GROUP)
+          const hidden = g.sessions.length - shown.length
+
           return (
             <div key={g.key}>
               <GroupHeader group={g} collapsed={collapsed} onToggle={() => void toggleGroup(g.key)} />
-              {!collapsed &&
-                g.sessions.map((s) => (
-                  <SessionRow
-                    key={s.id}
-                    s={s}
-                    active={state?.sessionId === s.id}
-                    busy={busy}
-                    inUse={inUseIds.has(s.id)}
-                    running={runningPaths.has(s.path)}
-                    onOpen={() => void open(s.path)}
-                    groups={groups}
-                  />
-                ))}
+              {!collapsed && (
+                <>
+                  {shown.map((s) => (
+                    <SessionRow
+                      key={s.id}
+                      s={s}
+                      active={state?.sessionId === s.id}
+                      busy={busy}
+                      inUse={inUseIds.has(s.id)}
+                      running={runningPaths.has(s.path)}
+                      onOpen={() => void open(s.path)}
+                      groups={groups}
+                    />
+                  ))}
+
+                  {(hidden > 0 || (showAll && !searching && g.sessions.length > PER_GROUP)) && (
+                    <button
+                      onClick={() =>
+                        setExpanded((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(g.key)) next.delete(g.key)
+                          else next.add(g.key)
+                          return next
+                        })
+                      }
+                      /* Alinhado com o texto das linhas, não com o trilho: é
+                         ação da lista, não item dela. */
+                      className="mb-px flex h-7 w-full items-center rounded-md pl-8 pr-2 text-left text-xs text-dim transition-colors hover:bg-elevated hover:text-muted"
+                    >
+                      {hidden > 0 ? t('sidebar.showMore', { n: hidden }) : t('sidebar.showLess')}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           )
         })}
