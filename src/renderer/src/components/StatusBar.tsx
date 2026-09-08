@@ -143,7 +143,7 @@ function MetricsPopover({ onClose, trigger }: {
   )
 }
 
-export type Dock = 'files' | 'agents' | 'diff' | 'terminal' | 'schedules' | null
+export type Dock = 'files' | 'agents' | 'diff' | 'terminal' | 'schedules' | 'document' | null
 
 /** Botão da barra de ferramentas: mesma caixa de 28px para todos. */
 function ToolButton({

@@ -91,6 +91,16 @@ interface AgentStore {
    * o dock é estado do App.
    */
   dockRequest: string | null
+  /**
+   * Documento aberto no painel — plano, relatório, qualquer resposta longa e
+   * estruturada que o card "Abrir documento" trouxe para cá.
+   *
+   * `id` identifica o bloco de origem (`${chave da mensagem}:${índice do
+   * bloco}`), para o card poder atualizar o texto ao vivo enquanto o mesmo
+   * documento ainda está sendo transmitido e o painel já está aberto nele —
+   * sem isso, abrir cedo demais mostraria a resposta parando de crescer.
+   */
+  document: { id: string; title: string; text: string } | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -121,6 +131,10 @@ interface AgentStore {
   clearTerminalRequest: () => void
   requestDock: (kind: string) => void
   clearDockRequest: () => void
+  openDocument: (doc: { id: string; title: string; text: string }) => void
+  /** Só atualiza se `id` já é o documento aberto — chamado a cada quadro de streaming. */
+  updateDocumentIfOpen: (id: string, text: string) => void
+  closeDocument: () => void
   reset: () => void
 }
 
@@ -151,6 +165,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   parkedRuns: [],
   terminalRequest: null,
   dockRequest: null,
+  document: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -165,6 +180,10 @@ export const useAgent = create<AgentStore>((set, get) => ({
   clearTerminalRequest: () => set({ terminalRequest: null }),
   requestDock: (dockRequest) => set({ dockRequest }),
   clearDockRequest: () => set({ dockRequest: null }),
+  openDocument: (document) => set({ document }),
+  updateDocumentIfOpen: (id, text) =>
+    set((s) => (s.document?.id === id ? { document: { ...s.document, text } } : {})),
+  closeDocument: () => set({ document: null }),
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
