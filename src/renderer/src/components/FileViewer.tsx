@@ -3,6 +3,7 @@ import hljs from 'highlight.js'
 import {
   X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
 } from 'lucide-react'
+import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
 import { fmtSize } from '../lib/format'
 
@@ -122,7 +123,7 @@ export function FileViewer({ path, onClose, active = true }: {
         {!meta.binary && state === 'ready' && (
           <>
             <button
-              onClick={() => void navigator.clipboard.writeText(content)}
+              onClick={() => void copyText(content, t('common.copyFailed'))}
               className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
               title={t('viewer.copyContent')}
             >

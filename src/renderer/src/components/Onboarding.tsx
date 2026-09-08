@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
+import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
 
 interface EnvStatus {
@@ -156,7 +157,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   }
 
   async function copyCommand() {
-    await navigator.clipboard.writeText(command)
+    if (!(await copyText(command, t('common.copyFailed')))) return
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
   }
