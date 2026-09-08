@@ -271,6 +271,12 @@ export interface AgentNode {
   cwd: string
   modelName: string
   lastActivityAt: string
+  /**
+   * Gasto próprio deste nó — não soma os filhos. `undefined` quando o daemon
+   * não relata nada (sessão sem uso ainda, ou versão do prime-agent sem esse
+   * campo em `list --json`): trate ausência como "sem dado", não como zero.
+   */
+  usage?: { inputTokens: number; outputTokens: number; cost: number }
   children: AgentNode[]
 }
 

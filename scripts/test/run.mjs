@@ -29,6 +29,11 @@ const SUITES = [
     test: './documentDetect.test.mjs',
     src: 'src/renderer/src/lib/documentDetect.ts',
     needsShims: false
+  },
+  {
+    test: './agentUsage.test.mjs',
+    src: 'src/renderer/src/lib/agentUsage.ts',
+    needsShims: false
   }
 ]
 
