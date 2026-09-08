@@ -6,7 +6,8 @@ import {
 import type { AgentNode } from '../../../shared/protocol'
 import { useAgent, observeSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
-import { relTime } from '../lib/format'
+import { relTime, fmtTokens, fmtCost } from '../lib/format'
+import { sumTreeUsage } from '../lib/agentUsage'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError } from './PanelState'
 import { useT } from '../i18n'
@@ -100,6 +101,23 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             </span>
             {node.modelName && <span className="truncate">{node.modelName}</span>}
             {node.lastActivityAt && <span>{relTime(node.lastActivityAt)}</span>}
+            {/*
+              Gasto próprio do nó — `usage` vem ausente (não zero) em versão do
+              prime-agent que não relata isso, ou sessão que ainda não gastou
+              nada real. Título completo com os dois lados (entrada/saída)
+              porque o número compacto do lado de fora não cabe os dois.
+            */}
+            {node.usage && (
+              <span
+                className="ml-auto shrink-0 font-mono text-primarySoft/80"
+                title={t('tree.usageDetail', {
+                  input: fmtTokens(node.usage.inputTokens),
+                  output: fmtTokens(node.usage.outputTokens)
+                })}
+              >
+                {fmtCost(node.usage.cost)}
+              </span>
+            )}
           </div>
 
           {node.firstMessage && (
@@ -142,6 +160,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
   const { t } = useT()
   const tree = useAgent((s) => s.tree)
   const error = useAgent((s) => s.treeError)
+  const usage = sumTreeUsage(tree)
   return (
     <DockPanel
       storageKey="agent-tree"
@@ -162,10 +181,26 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         </button>
       }
       subheader={
-        <div className="border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
-          {tree
-            ? t('tree.summary', { total: tree.total, subs: tree.subagents })
-            : t('common.loading')}
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
+          <span className="min-w-0 truncate">
+            {tree
+              ? t('tree.summary', { total: tree.total, subs: tree.subagents })
+              : t('common.loading')}
+          </span>
+          {/* Soma de TODA a árvore — o número que faltava depois do incidente
+              do Gnexum, onde três subagentes rodaram e não dava pra saber
+              quanto cada um, nem o total, tinha custado. */}
+          {usage && (
+            <span
+              className="shrink-0 font-mono text-primarySoft"
+              title={t('tree.usageDetail', {
+                input: fmtTokens(usage.inputTokens),
+                output: fmtTokens(usage.outputTokens)
+              })}
+            >
+              {fmtCost(usage.cost)}
+            </span>
+          )}
         </div>
       }
       footer={
