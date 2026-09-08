@@ -133,6 +133,7 @@ export async function listSessions(): Promise<SessionSummary[]> {
         createdAt: header.timestamp ?? info.birthtime.toISOString(),
         updatedAt: info.mtime.toISOString(),
         title: cleanTitle(name || title),
+        named: Boolean(name),
         messageCount: count,
         sizeBytes: info.size
       })

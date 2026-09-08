@@ -58,6 +58,7 @@ const STUB_JS = `
       nextRunAt: new Date(Date.now() + 900e3).toISOString(), runCount: 3,
       lastError: 'npm error code ELIFECYCLE' }
   ]
+  let folderState = { folders: [], assignments: {}, collapsed: {}, titles: {} }
   let heartbeat = null
   const kid = (name, status) => ({ activeSessionId: name, sessionId: name, sessionFile: '', name,
     kind: 'subagent', depth: 1, status, taskState: '', replied: status !== 'working',
@@ -108,19 +109,21 @@ const STUB_JS = `
   */
   const sessions = (() => {
     const iso = (min) => new Date(Date.now() - min * 60000).toISOString()
-    const fazer = (id, cwd, title, min) => ({
+    const fazer = (id, cwd, title, min, named = false) => ({
       id, path: '/tmp/' + id + '.jsonl', cwd,
       createdAt: iso(min + 60), updatedAt: iso(min),
-      title, messageCount: 12 + (min % 30), sizeBytes: 4096
+      // O campo named diz se o nome esta gravado no arquivo. Sem ele, o app
+      // nao distingue nome de verdade do texto do primeiro prompt.
+      title, named, messageCount: 12 + (min % 30), sizeBytes: 4096
     })
     const gnexum = '/home/dev/gnexum-platform'
     const mono = '/home/dev/inteligente-monorepo'
     return [
       fazer('s1', gnexum, 'Analise esses arquivos e veja a estrutura do projeto', 2),
       fazer('s2', gnexum, 'API Gnexum indisponivel sem logs', 14),
-      fazer('s3', gnexum, 'Rotas MCP para Gnexum Vila Porto', 40),
+      fazer('s3', gnexum, 'Rotas MCP para Gnexum Vila Porto', 40, true),
       fazer('s4', gnexum, 'Partner API v1 review', 70),
-      fazer('s5', gnexum, 'Chat GraphQL integration', 95),
+      fazer('s5', gnexum, 'Chat GraphQL integration', 95, true),
       fazer('s6', gnexum, 'Relatorio e teste de velocidade da rede', 130),
       fazer('s7', gnexum, 'Erro ao buscar contagem de usuarios', 170),
       fazer('s8', gnexum, 'Analise de integracao com Teams', 210),
@@ -131,7 +134,7 @@ const STUB_JS = `
       fazer('s13', gnexum, 'Validacao de endpoints da API', 460),
       fazer('s14', gnexum, 'Instancias de acesso a maquina', 520),
       fazer('s15', gnexum, 'Automacao de senha Oracle no GeneXon', 590),
-      fazer('s16', mono, 'Migracao Home para site', 25),
+      fazer('s16', mono, 'Migracao Home para site', 25, true),
       fazer('s17', mono, 'Analise de lawtechs e escritorios', 80),
       fazer('s18', mono, 'Variaveis de ambiente PRD', 150),
       fazer('s19', mono, 'Aja como um Arquiteto de IA Senior especialista em RAG', 240)
@@ -223,8 +226,13 @@ const STUB_JS = `
     },
     fire: async () => ({ ok: true }),
     listSessions: async () => ({ ok: true, sessions }),
-    loadFolders: async () => ({ ok: true, state: { folders: [], assignments: {}, collapsed: {} } }),
-    saveFolders: async (s) => ({ ok: true, state: s }),
+    // Persiste em memoria: sem isso o titulo gravado nao voltava na leitura
+    // seguinte, e o lote parecia nao ter efeito nenhum.
+    loadFolders: async () => ({ ok: true, state: folderState }),
+    saveFolders: async (s) => {
+      folderState = s
+      return { ok: true, state: folderState }
+    },
     usageStats: async () => ({ ok: true, stats: { sessions: 2, messages: 42, tokens: 170398, input: 30, output: 8219, cacheRead: 140436, cacheWrite: 21713, cost: 0.3, activeDays: 3, currentStreak: 2, longestStreak: 5, favoriteModel: 'claude-fable-5', peakHour: 15, days: [] } }),
     agentTree: async () => ({ ok: true, tree: fakeTree }),
     setAgentCadence: async () => ({ ok: true }),
@@ -297,7 +305,19 @@ const STUB_JS = `
     killTerminal: async () => ({ ok: true }),
     pickWorkspaceFile: async () => ({ ok: false }),
     openAgentTerminal: async () => ({ ok: true }),
-    generateTitle: async () => ({ ok: true, title: null }),
+    /*
+      Devolve um nome curto de mentira, com atraso: o real sobe um prime-agent
+      efemero e leva segundos, e sem atraso aqui o progresso do lote passaria
+      voando e nao daria para conferir.
+    */
+    generateTitle: async (convo) => {
+      await new Promise((r) => setTimeout(r, 700))
+      // O prefixo tem acento (usuario:), e o corte por 4 palavras pegava o
+      // rotulo junto. Tira o prefixo por indice, nao por regex com acento.
+      const texto = String(convo).split(':').slice(1).join(':').trim()
+      const palavras = texto.split(/\s+/).filter(Boolean).slice(1, 5)
+      return { ok: true, title: palavras.join(' ') || null }
+    },
     speechStatus: async () => ({ ok: true, status: {
       ready: false, dir: '/home/dev/.config/prime-desk/speech', server: null,
       models: [

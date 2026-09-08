@@ -1,9 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import {
   Plus, Search, RefreshCw, ChevronRight, SquarePen,
-  FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff
+  FolderPlus, MoreHorizontal, Trash2, Pencil, Pin, Eye, EyeOff, WandSparkles
 } from 'lucide-react'
-import { useAgent, newSession, refreshSessions, mutateFolders, openSession } from '../store/agent'
+import {
+  useAgent, newSession, refreshSessions, mutateFolders, openSession, generateTitlesFor
+} from '../store/agent'
 import { Butterfly } from './Butterfly'
 import { groupSessions, withTitles, type Group } from '../lib/grouping'
 import { SessionMenu } from './SessionMenu'
@@ -333,6 +335,8 @@ export function Sidebar({
     podem deixar de existir.
   */
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  /** `null` fora do lote; `{done,total}` durante. */
+  const [titling, setTitling] = useState<{ done: number; total: number } | null>(null)
   const [creating, setCreating] = useState(false)
   const size = useResizable('sidebar', 272, 200, 560, 'right')
   const isMac = useIsMac()
@@ -400,6 +404,44 @@ export function Sidebar({
     }))
   }
 
+  /**
+   * Conversas sem nome: nem gravado no arquivo, nem renomeado à mão.
+   *
+   * O que a lista mostra nesses casos é a primeira frase do prompt, limpa —
+   * legível, mas é o texto de quem digitou, não um nome. Conversa nascida no
+   * terminal cai sempre aqui, porque `maybeGenerateTitle` só dispara no fim do
+   * primeiro turno criado dentro do app.
+   */
+  const untitled = useMemo(
+    () => sessions.filter((s) => !s.named && !folders.titles?.[s.id]),
+    [sessions, folders.titles]
+  )
+
+  function titleAll(): void {
+    const alvo = untitled
+    if (alvo.length === 0) return
+    useAgent.getState().requestConfirm({
+      title: t('sidebar.titleAllTitle'),
+      message: t('sidebar.titleAllMsg', { n: alvo.length }),
+      detail: t('sidebar.titleAllWarn'),
+      confirmLabel: t('sidebar.titleAllConfirm'),
+      /*
+        Sem `await` aqui de propósito. O ConfirmDialog espera o `onConfirm` e
+        fica em estado ocupado até resolver — certo para confirmação curta,
+        errado para um lote de vinte conversas: o diálogo ficava travado em
+        "processando" por minutos, com o véu bloqueando a janela inteira,
+        enquanto o progresso já corria na sidebar atrás dele. Aqui o diálogo
+        fecha na hora e quem acompanha é a linha de progresso.
+      */
+      onConfirm: () => {
+        setTitling({ done: 0, total: alvo.length })
+        void generateTitlesFor(alvo, (done, total) => setTitling({ done, total }))
+          .catch(() => undefined)
+          .finally(() => setTitling(null))
+      }
+    })
+  }
+
   async function toggleGroup(key: string) {
     await mutateFolders((s) => ({
       ...s,
@@ -462,6 +504,34 @@ export function Sidebar({
               {showArchived ? <EyeOff size={16} strokeWidth={1.75} /> : <Eye size={16} strokeWidth={1.75} />}
             </button>
           )}
+          {/*
+            Só aparece quando há conversa sem nome — e some quando não há mais.
+            Um botão permanente que não faz nada na maioria dos cliques seria
+            pior que a ausência dele.
+          */}
+          {(untitled.length > 0 || titling) && (
+            <button
+              onClick={titleAll}
+              disabled={Boolean(titling)}
+              className={
+                'no-drag shrink-0 rounded-sm p-1.5 transition-all hover:bg-elevated hover:text-muted ' +
+                (titling
+                  ? 'text-primary opacity-100'
+                  : 'text-dim opacity-0 group-hover/act:opacity-100')
+              }
+              title={
+                titling
+                  ? t('sidebar.titlingProgress', { done: titling.done, total: titling.total })
+                  : t('sidebar.titleAll', { n: untitled.length })
+              }
+            >
+              <WandSparkles
+                size={16} strokeWidth={1.75}
+                className={titling ? 'animate-pulse-soft' : ''}
+              />
+            </button>
+          )}
+
           <button
             onClick={() => void refreshSessions()}
             className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted group-hover/act:opacity-100"
@@ -483,6 +553,26 @@ export function Sidebar({
           />
         </div>
       </div>
+
+      {/*
+        Progresso do lote, visível sem hover: são alguns segundos por conversa,
+        e num lote de vinte isso passa de dois minutos. Um spinner escondido em
+        `title` de botão não serve para acompanhar.
+      */}
+      {titling && (
+        <div className="mx-2 mb-1 flex items-center gap-2 rounded-sm bg-primary/[0.07] px-2 py-1.5 animate-fade-up">
+          <WandSparkles
+            size={13} strokeWidth={1.75}
+            className="shrink-0 animate-pulse-soft text-primarySoft"
+          />
+          <span className="min-w-0 flex-1 truncate text-xs text-muted">
+            {t('sidebar.titlingProgress', { done: titling.done, total: titling.total })}
+          </span>
+          <span className="shrink-0 font-mono text-micro text-dim">
+            {Math.round((titling.done / titling.total) * 100)}%
+          </span>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         {creating && (
