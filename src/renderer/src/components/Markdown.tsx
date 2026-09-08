@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { memo, useRef, useState, type ReactNode } from 'react'
 import { Check, Copy } from 'lucide-react'
+import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
 
 function openExternal(e: React.MouseEvent<HTMLAnchorElement>) {
@@ -21,7 +22,8 @@ function CodeBlock({ children }: { children?: ReactNode }) {
     // innerText preserva as quebras de linha do bloco renderizado.
     const text = ref.current?.innerText ?? ''
     if (!text) return
-    await navigator.clipboard.writeText(text)
+    // O estado de "copiado" só entra se copiou de fato.
+    if (!(await copyText(text, t('common.copyFailed')))) return
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
   }

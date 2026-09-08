@@ -73,6 +73,7 @@ const api = {
   */
   pathForFile: (file: File) => webUtils.getPathForFile(file),
   openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  copyText: (text: string) => ipcRenderer.invoke('clipboard:write', text),
   appInfo: () => ipcRenderer.invoke('app:info'),
   checkAgentUpdate: () => ipcRenderer.invoke('updates:check'),
   rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
