@@ -76,6 +76,7 @@ export function App() {
   const sessionId = useAgent((s) => s.state?.sessionId)
   const observed = useAgent((s) => s.observed)
   const terminalRequest = useAgent((s) => s.terminalRequest)
+  const dockRequest = useAgent((s) => s.dockRequest)
   const watchedIds = Object.keys(observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
@@ -245,6 +246,13 @@ export function App() {
   useEffect(() => {
     if (terminalRequest) setDock('terminal')
   }, [terminalRequest])
+
+  // Pedido de painel vindo de outro canto (ex.: a fila levando à árvore).
+  useEffect(() => {
+    if (!dockRequest) return
+    setDock(dockRequest as Dock)
+    useAgent.getState().clearDockRequest()
+  }, [dockRequest])
 
   useEffect(() => {
     const block = (e: DragEvent): void => {
