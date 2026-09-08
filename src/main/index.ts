@@ -13,8 +13,8 @@ import { execFile } from 'node:child_process'
 import { agentBinary, agentEnv, invalidateAgentPath } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
-  listDir, gitBranch, gitChanges, gitDiff, realPathInside, readFileSafe, writeFileSafe,
-  deleteSessionFile
+  listDir, gitBranch, gitBranches, gitCheckout, gitChanges, gitDiff, realPathInside,
+  readFileSafe, writeFileSafe, deleteSessionFile
 } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
@@ -23,6 +23,8 @@ import {
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
 import { checkAgentUpdate } from './updates.js'
+import { speechStatus, speechSetupCommand, ensureSpeechDir } from './speech.js'
+import { startSpeech, stopSpeech, transcribe } from './speech-server.js'
 import {
   createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
   killTerminal, killAllTerminals
@@ -359,6 +361,7 @@ function createWindow(): void {
     stopTreePolling()
     // Shells do painel são filhos da janela: sem isso ficam órfãos rodando.
     killAllTerminals()
+    stopSpeech()
     win = null
   })
 }
@@ -803,6 +806,23 @@ handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspac
 
 handle('git:changes', async () => gitChanges(workspaceRoot))
 
+handle('git:branches', async () => gitBranches(workspaceRoot))
+
+/**
+ * Troca de ramo no diretorio onde o agente executa.
+ *
+ * O nome e validado contra a lista de ramos locais antes de chegar ao git: o
+ * renderer nao escolhe argumento de subprocesso.
+ */
+handle('git:checkout', async (_e, branch: string) => {
+  const listed = await gitBranches(workspaceRoot)
+  if (!listed.ok) return { ok: false, error: listed.error ?? 'Nao e um repositorio git.' }
+  if (!listed.branches?.some((b) => b.name === branch)) {
+    return { ok: false, error: `Ramo desconhecido: ${branch}` }
+  }
+  return gitCheckout(workspaceRoot, branch)
+})
+
 handle('git:diff', async (_e, relPath?: string) => gitDiff(workspaceRoot, relPath))
 
 handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
@@ -913,6 +933,43 @@ handle('updates:rescan', async () => {
   const status = await checkEnvironment()
   return { ok: true, status }
 })
+
+// ---------------------------------------------------------- transcricao
+
+handle('speech:status', async () => ({ ok: true, status: await speechStatus() }))
+
+/**
+ * Comando de instalacao do motor local.
+ *
+ * O main so monta o texto; quem executa e o terminal embutido, a vista. O
+ * renderer nunca escolhe o que roda: `modelId` e validado contra a lista.
+ */
+handle('speech:setupCommand', async (_e, modelId: string) => {
+  await ensureSpeechDir()
+  const status = await speechStatus()
+  const valid = status.models.some((m) => m.id === modelId)
+  if (!valid) return { ok: false, error: `Modelo desconhecido: ${modelId}` }
+  return { ok: true, command: speechSetupCommand(modelId) }
+})
+
+/**
+ * Sobe o servidor de voz para a sessao de ditado.
+ *
+ * Um processo por sessao, nao por trecho: carregar o modelo custa segundos e
+ * centenas de megabytes, e refazer isso a cada janela de fala impediria
+ * qualquer coisa parecida com tempo real.
+ */
+handle('speech:start', async (_e, modelId: string) => startSpeech(modelId))
+
+handle('speech:stop', () => {
+  stopSpeech()
+  return { ok: true }
+})
+
+/** Recebe amostras Float32 mono 16 kHz e devolve o texto reconhecido. */
+handle('speech:transcribe', async (_e, samples: Float32Array) =>
+  transcribe(samples instanceof Float32Array ? samples : new Float32Array(samples))
+)
 
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
 

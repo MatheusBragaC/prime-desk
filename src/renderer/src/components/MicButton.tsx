@@ -1,9 +1,19 @@
-import { useRef, useState } from 'react'
-import { Mic, MicOff, ChevronDown, Check, Loader2 } from 'lucide-react'
-import { useMicrophone } from '../lib/useMicrophone'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Mic, MicOff, ChevronDown, Check, Loader2, Download, Wrench } from 'lucide-react'
+import { useDictation } from '../lib/useDictation'
 import { usePopover } from '../lib/usePopover'
 import { useAgent } from '../store/agent'
+import { fmtSize } from '../lib/format'
 import { useT } from '../i18n'
+
+interface SpeechModel { id: string; label: string; bytes: number; present: boolean }
+interface SpeechStatus {
+  ready: boolean
+  dir: string
+  server: string | null
+  models: SpeechModel[]
+  missing: string[]
+}
 
 /**
  * Ditado por voz no composer.
@@ -37,33 +47,73 @@ function LevelMeter({ level }: { level: number }) {
   )
 }
 
-export function MicButton({ onTranscript }: {
-  /** Recebe o texto reconhecido. Sem motor, ainda não é chamado. */
-  onTranscript?: (text: string) => void
+export function MicButton({ onPartial, onFinal }: {
+  /** Texto do trecho em curso, refeito a cada passada. Substitui o anterior. */
+  onPartial: (text: string) => void
+  /** Trecho fechado. A partir daqui o texto não muda mais. */
+  onFinal: (text: string) => void
 }) {
   const { t } = useT()
   const notify = useAgent((s) => s.notify)
+  const requestConfirm = useAgent((s) => s.requestConfirm)
+  const requestTerminal = useAgent((s) => s.requestTerminal)
+  const [speech, setSpeech] = useState<SpeechStatus | null>(null)
   const [menu, setMenu] = useState(false)
   const menuBtn = useRef<HTMLButtonElement>(null)
   const menuRef = usePopover<HTMLDivElement>(() => setMenu(false), menu, menuBtn)
 
-  const mic = useMicrophone(() => {
-    // Aqui entra o motor: blocos de PCM 16 kHz mono chegam continuamente.
-    // Enquanto não existe, os blocos são descartados de propósito.
-    void onTranscript
-  })
+  const dictation = useDictation(onFinal, onPartial)
+  const mic = dictation.mic
 
   const recording = mic.status === 'recording'
   const busy = mic.status === 'starting'
 
-  function toggle() {
-    if (recording) {
-      mic.stop()
+  /** Melhor modelo baixado: qualidade cresce com o tamanho. */
+  const bestModel = speech?.models.filter((m) => m.present).at(-1)?.id ?? null
+
+  const loadSpeech = useCallback(async () => {
+    const r = await window.prime.speechStatus()
+    if (r?.ok) setSpeech(r.status as SpeechStatus)
+  }, [])
+
+  useEffect(() => {
+    void loadSpeech()
+  }, [loadSpeech])
+
+  /*
+    Instalar o motor: compila o whisper.cpp e baixa o modelo, na aba do
+    terminal. Demora minutos e pode falhar por dependencia do sistema — esconder
+    isso num spinner deixaria a pessoa sem saber o que aconteceu.
+  */
+  const install = useCallback(async (modelId: string) => {
+    setMenu(false)
+    const r = await window.prime.speechSetupCommand(modelId)
+    if (!r?.ok) {
+      notify('error', (r?.error as string) ?? t('mic.setupFailed'))
       return
     }
-    void mic.start().then(() => {
-      // Aviso uma vez por sessão de gravação, não a cada bloco.
-      notify('info', t('mic.noEngine'))
+    const model = speech?.models.find((m) => m.id === modelId)
+    requestConfirm({
+      title: t('mic.setupTitle'),
+      message: t('mic.setupMsg'),
+      detail: model ? `${model.label} · ${fmtSize(model.bytes)}` : undefined,
+      confirmLabel: t('mic.setupRun'),
+      onConfirm: () => requestTerminal(r.command as string, t('mic.setupTab'))
+    })
+  }, [notify, requestConfirm, requestTerminal, speech, t])
+
+  function toggle() {
+    if (recording) {
+      void dictation.stop()
+      return
+    }
+    // Sem motor nao adianta captar: leva direto para a instalacao.
+    if (!speech?.ready || !bestModel) {
+      setMenu(true)
+      return
+    }
+    void dictation.start(bestModel).then((up) => {
+      if (!up) notify('error', dictation.error ?? t('mic.startFailed'))
     })
   }
 
@@ -95,6 +145,9 @@ export function MicButton({ onTranscript }: {
           <Mic size={15} strokeWidth={1.75} />
         )}
         {recording && <LevelMeter level={mic.level} />}
+        {dictation.working && (
+          <Loader2 size={12} strokeWidth={1.75} className="animate-spin text-dim" />
+        )}
       </button>
 
       <button
@@ -138,6 +191,43 @@ export function MicButton({ onTranscript }: {
               )}
             </button>
           ))}
+
+          {/* Estado do motor: a parte que decide se ditar funciona. */}
+          <div className="mt-1 border-t border-[var(--p-line)] pt-1">
+            <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
+              {t('mic.engine')}
+            </div>
+
+            {speech?.ready && (
+              <div className="px-2 pb-1 text-xs text-ok">{t('mic.engineReady')}</div>
+            )}
+
+            {speech && !speech.ready && speech.missing.length > 0 && (
+              <div className="flex items-start gap-2 px-2 pb-1.5 text-xs leading-snug text-warn">
+                <Wrench size={13} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+                <span>{t('mic.missingTools', { tools: speech.missing.join(', ') })}</span>
+              </div>
+            )}
+
+            {speech && !speech.ready && speech.missing.length === 0 &&
+              speech.models.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => void install(m.id)}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+                >
+                  <Download size={13} strokeWidth={1.75} className="shrink-0" />
+                  <span className="flex-1">{m.label}</span>
+                  <span className="font-mono text-micro text-dim">{fmtSize(m.bytes)}</span>
+                </button>
+              ))}
+          </div>
+
+          {dictation.error && (
+            <div className="mt-1 border-t border-[var(--p-line)] px-2 pt-1.5 text-micro leading-snug text-err">
+              {dictation.error}
+            </div>
+          )}
 
           {mic.error && (
             <div className="mt-1 border-t border-[var(--p-line)] px-2 pt-1.5 text-micro leading-snug text-err">

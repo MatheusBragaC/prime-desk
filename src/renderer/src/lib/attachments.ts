@@ -58,3 +58,16 @@ export function joinWithPaths(body: string, paths: string[]): string {
 export function baseName(path: string): string {
   return path.split(/[/\\]/).filter(Boolean).pop() ?? path
 }
+
+/**
+ * Junta o texto já escrito com o trecho ditado.
+ *
+ * Um espaço entre os dois, e nenhum quando a caixa está vazia — o Whisper
+ * devolve a frase sem espaço à esquerda, e concatenar cru grudaria palavras.
+ */
+export function joinDictation(base: string, spoken: string): string {
+  const left = base.replace(/\s+$/, '')
+  if (!left) return spoken
+  if (!spoken) return left
+  return left + ' ' + spoken
+}
