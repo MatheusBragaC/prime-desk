@@ -53,6 +53,8 @@ const api = {
   filesRoot: () => ipcRenderer.invoke('files:root'),
   gitBranch: () => ipcRenderer.invoke('files:branch'),
   gitChanges: () => ipcRenderer.invoke('git:changes'),
+  gitBranches: () => ipcRenderer.invoke('git:branches'),
+  gitCheckout: (branch: string) => ipcRenderer.invoke('git:checkout', branch),
   gitDiff: (relPath?: string) => ipcRenderer.invoke('git:diff', relPath),
   revealFile: (relPath: string) => ipcRenderer.invoke('files:reveal', relPath),
   readFile: (relPath: string) => ipcRenderer.invoke('files:read', relPath),
@@ -74,6 +76,11 @@ const api = {
   appInfo: () => ipcRenderer.invoke('app:info'),
   checkAgentUpdate: () => ipcRenderer.invoke('updates:check'),
   rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
+  speechStatus: () => ipcRenderer.invoke('speech:status'),
+  speechSetupCommand: (modelId: string) => ipcRenderer.invoke('speech:setupCommand', modelId),
+  speechStart: (modelId: string) => ipcRenderer.invoke('speech:start', modelId),
+  speechStop: () => ipcRenderer.invoke('speech:stop'),
+  speechTranscribe: (samples: Float32Array) => ipcRenderer.invoke('speech:transcribe', samples),
 
   createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
     ipcRenderer.invoke('terminal:create', spec),
