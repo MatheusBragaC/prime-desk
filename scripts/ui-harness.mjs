@@ -99,6 +99,37 @@ const STUB_JS = `
     { id: 's1', path: '/tmp/s1.jsonl', cwd: '/home/dev/projeto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Configurando GitHub Actions', messageCount: 12, sizeBytes: 4096 },
     { id: 's2', path: '/tmp/s2.jsonl', cwd: '/home/dev/projeto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Otimização de imagem Docker', messageCount: 30, sizeBytes: 8192 }
   ]
+  /*
+    Conversa de mentira, longa o bastante para o botão de "carregar antigas"
+    aparecer (a janela é de 60) e com bloco de código, que é o que faz a altura
+    mudar depois da primeira pintura — o caso que a rolagem aderente trata.
+
+    Sem template literal e sem interpolação: este trecho mora dentro do
+    template literal do STUB_JS, e backtick ou \${} aqui fechariam ele.
+  */
+  const fakeMessages = (() => {
+    const out = []
+    const fence = String.fromCharCode(96, 96, 96)
+    for (let i = 1; i <= 34; i++) {
+      const at = Date.now() - (70 - i) * 60000
+      out.push({
+        role: 'user',
+        content: [{ type: 'text', text: 'Pergunta ' + i + ': por que o build quebrou?' }],
+        timestamp: at
+      })
+      out.push({
+        role: 'assistant',
+        model: 'claude-fable-5',
+        content: [{ type: 'text', text:
+          'Resposta ' + i + '. O erro vem do passo de empacotamento:\\n\\n' +
+          fence + 'bash\\nnpm run build -- --mode=production\\n' + fence +
+          '\\n\\nRodei e confirmei.' }],
+        timestamp: at + 30000
+      })
+    }
+    return out
+  })()
+
   const rpc = {
     get_state: state,
     get_available_models: { models: [state.model] },
@@ -110,7 +141,7 @@ const STUB_JS = `
       cost: 0.3046,
       contextUsage: { tokens: 170398, contextWindow: 1000000, percent: 17 }
     },
-    get_messages: { messages: [] }
+    get_messages: { messages: fakeMessages }
   }
   window.prime = {
     appInfo: async () => ({ version: '0.2.0', home: '/home/dev', platform: 'linux', userName: 'Matheus Carvalho' }),
@@ -183,9 +214,41 @@ const STUB_JS = `
     gitDiff: async () => ({ ok: true, diff: '@@ -1 +1 @@\\n-antes\\n+depois', truncated: false }),
     readFile: async () => ({ ok: true, content: '// exemplo', size: 12, binary: false }),
     writeFile: async () => ({ ok: true }),
-    transcript: async () => ({ ok: true, messages: [] }),
+    // A chave e 'entries', nao 'messages': e a que o loadTranscript le. Com o
+    // nome errado ele estourava em entries.filter e a conversa abria vazia.
+    transcript: async () => ({
+      ok: true,
+      entries: fakeMessages.map((message) => ({ type: 'message', message }))
+    }),
     listParked: async () => ({ ok: true, parked: [] }),
     listSshConnections: async () => ({ ok: true, connections: [] }),
+    saveSshConnections: async (list) => ({ ok: true, connections: list }),
+    testSsh: async () => ({ ok: true }),
+
+    /*
+      Faltavam vinte metodos aqui. O pior era markBridge: switchAndLoad chama
+      ele antes de carregar o transcript, entao abrir qualquer conversa
+      estourava e a tela ficava na saudacao — o andaime so sabia mostrar o
+      estado vazio, que e justamente o menos interessante de conferir.
+    */
+    markBridge: async () => ({ ok: true }),
+    parkBridge: async () => ({ ok: false }),
+    adoptBridge: async () => ({ ok: false }),
+    stopAgent: async () => ({ ok: true }),
+    deleteSession: async () => ({ ok: true }),
+    gitChanges: async () => ({ ok: true, files: [], branch: currentBranch }),
+    pickDirectory: async () => ({ ok: false }),
+    pickAttachment: async () => ({ ok: false }),
+    pathForFile: () => '',
+    revealFile: async () => ({ ok: true }),
+    openExternal: async () => ({ ok: true }),
+    installCommand: async () => ({ ok: true, command: 'echo stub' }),
+    installAgent: async () => ({ ok: true }),
+    logoutProvider: async () => ({ ok: true }),
+    checkLoginPort: async () => ({ ok: true, free: true }),
+    speechStart: async () => ({ ok: false, error: 'motor de transcricao indisponivel no andaime' }),
+    speechStop: async () => ({ ok: true }),
+    speechTranscribe: async () => ({ ok: true, text: '' }),
     setZoom: async () => ({ ok: true, level: 0 }),
     watchEnvironment: async () => ({ ok: true }),
     unwatchEnvironment: async () => ({ ok: true }),
