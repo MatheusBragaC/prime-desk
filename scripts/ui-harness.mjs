@@ -81,7 +81,13 @@ const STUB_JS = `
     isStreaming: new URLSearchParams(location.search).has('streaming'),
     isCompacting: false,
     steeringMode: 'one-at-a-time', followUpMode: 'one-at-a-time',
-    sessionId: 'stub-session', autoCompactionEnabled: true, messageCount: 2,
+    /*
+      Casa com o id da primeira sessao da lista. Antes era 'stub-session', que
+      nao existia em sessao nenhuma, entao nenhuma linha da sidebar ficava ativa
+      e o estado de selecao — o mais importante de uma lista — nao dava para
+      conferir aqui.
+    */
+    sessionId: 's1', autoCompactionEnabled: true, messageCount: 2,
     sessionActions: {
       queuedCount: 2,
       steering: [
@@ -95,10 +101,42 @@ const STUB_JS = `
     },
     goal: { active: false, status: 'idle', tokensUsed: 0, timeUsedSeconds: 0, continuationsUsed: 0 }
   }
-  const sessions = [
-    { id: 's1', path: '/tmp/s1.jsonl', cwd: '/home/dev/projeto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Configurando GitHub Actions', messageCount: 12, sizeBytes: 4096 },
-    { id: 's2', path: '/tmp/s2.jsonl', cwd: '/home/dev/projeto', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), title: 'Otimização de imagem Docker', messageCount: 30, sizeBytes: 8192 }
-  ]
+  /*
+    Duas pastas de projeto, uma delas grande de proposito: e o cenario real de
+    quem trabalha em mais de um repositorio, e o unico jeito de conferir o
+    "mostrar mais" e o recorte por grupo.
+  */
+  const sessions = (() => {
+    const iso = (min) => new Date(Date.now() - min * 60000).toISOString()
+    const fazer = (id, cwd, title, min) => ({
+      id, path: '/tmp/' + id + '.jsonl', cwd,
+      createdAt: iso(min + 60), updatedAt: iso(min),
+      title, messageCount: 12 + (min % 30), sizeBytes: 4096
+    })
+    const gnexum = '/home/dev/gnexum-platform'
+    const mono = '/home/dev/inteligente-monorepo'
+    return [
+      fazer('s1', gnexum, 'Analise esses arquivos e veja a estrutura do projeto', 2),
+      fazer('s2', gnexum, 'API Gnexum indisponivel sem logs', 14),
+      fazer('s3', gnexum, 'Rotas MCP para Gnexum Vila Porto', 40),
+      fazer('s4', gnexum, 'Partner API v1 review', 70),
+      fazer('s5', gnexum, 'Chat GraphQL integration', 95),
+      fazer('s6', gnexum, 'Relatorio e teste de velocidade da rede', 130),
+      fazer('s7', gnexum, 'Erro ao buscar contagem de usuarios', 170),
+      fazer('s8', gnexum, 'Analise de integracao com Teams', 210),
+      fazer('s9', gnexum, 'Keycloak vulnerabilidade autenticacao', 260),
+      fazer('s10', gnexum, 'SQL visibility em rotas com MCP', 300),
+      fazer('s11', gnexum, 'Observabilidade panorama analise', 350),
+      fazer('s12', gnexum, 'Backend Docker logs review', 400),
+      fazer('s13', gnexum, 'Validacao de endpoints da API', 460),
+      fazer('s14', gnexum, 'Instancias de acesso a maquina', 520),
+      fazer('s15', gnexum, 'Automacao de senha Oracle no GeneXon', 590),
+      fazer('s16', mono, 'Migracao Home para site', 25),
+      fazer('s17', mono, 'Analise de lawtechs e escritorios', 80),
+      fazer('s18', mono, 'Variaveis de ambiente PRD', 150),
+      fazer('s19', mono, 'Aja como um Arquiteto de IA Senior especialista em RAG', 240)
+    ]
+  })()
   /*
     Conversa de mentira, longa o bastante para o botão de "carregar antigas"
     aparecer (a janela é de 60) e com bloco de código, que é o que faz a altura
