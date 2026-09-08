@@ -22,6 +22,7 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node scripts/test/run.mjs",
     "check:rpc": "node scripts/checkrpc.cjs",
     "check": "npm run typecheck && npm run check:rpc",
     "dist": "electron-vite build && electron-builder --linux deb AppImage",
