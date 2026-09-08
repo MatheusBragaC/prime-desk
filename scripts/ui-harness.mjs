@@ -72,7 +72,14 @@ const STUB_JS = `
   }] }
   const state = {
     model: { id: 'claude-fable-5', name: 'Claude Fable 5', api: 'anthropic', provider: 'anthropic', contextWindow: 1000000 },
-    thinkingLevel: 'medium', isStreaming: false, isCompacting: false,
+    /*
+      Turno em curso ligavel por querystring: ?streaming=1. Serve para conferir
+      o que a tela faz durante um turno — o aviso de turno silencioso, o relogio
+      dos cards, o seletor de entrega do composer — sem precisar de agente real.
+    */
+    thinkingLevel: 'medium',
+    isStreaming: new URLSearchParams(location.search).has('streaming'),
+    isCompacting: false,
     steeringMode: 'one-at-a-time', followUpMode: 'one-at-a-time',
     sessionId: 'stub-session', autoCompactionEnabled: true, messageCount: 2,
     sessionActions: {

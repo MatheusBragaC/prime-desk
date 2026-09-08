@@ -13,6 +13,7 @@ import { SshModal, type SshForm } from './components/SshModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Onboarding } from './components/Onboarding'
 import { PendingBubble } from './components/PendingBubble'
+import { StalledTurnNotice } from './components/StalledTurnNotice'
 import { useWindowWidth, DOCK_MIN_WIDTH, SIDEBAR_MIN_WIDTH } from './lib/useWindowWidth'
 
 /** Mensagens renderizadas por vez ao abrir uma conversa. */
@@ -590,6 +591,7 @@ export function App() {
         )}
 
         <div className="relative z-10 mx-auto w-full max-w-col">
+          <StalledTurnNotice />
           <Composer
             onOpenPalette={() => setPalette(true)}
             onPickCwd={() => void pickCwd()}
