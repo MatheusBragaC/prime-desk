@@ -118,7 +118,16 @@ export function useMicrophone(onChunk?: (pcm: Float32Array) => void): Microphone
 
       const audio = new AudioContext({ sampleRate: SAMPLE_RATE })
       ctx.current = audio
-      await audio.audioWorklet.addModule('/pcm-worklet.js')
+      /*
+        Caminho RELATIVO ao documento, não absoluto.
+
+        Em desenvolvimento o vite serve `public/` na raiz, e `/pcm-worklet.js`
+        resolvia. No app empacotado o renderer carrega por `file://` de dentro
+        do asar, e a barra inicial aponta para a raiz do sistema de arquivos —
+        `file:///pcm-worklet.js`, que não existe. Funcionava em dev e quebrava
+        no `.deb`; achado ao inspecionar o pacote.
+      */
+      await audio.audioWorklet.addModule('./pcm-worklet.js')
 
       const source = audio.createMediaStreamSource(media)
 
