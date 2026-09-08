@@ -1,10 +1,12 @@
 import { useState, type RefObject } from 'react'
 import {
   FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
-  Trash2, ChevronRight, ExternalLink
+  Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2
 } from 'lucide-react'
 import type { SessionSummary } from '../../../shared/protocol'
-import { useAgent, mutateFolders, refreshSessions, rpc, deleteSession } from '../store/agent'
+import {
+  useAgent, mutateFolders, refreshSessions, rpc, deleteSession, generateTitleFor
+} from '../store/agent'
 import type { Group } from '../lib/grouping'
 import { usePopover } from '../lib/usePopover'
 import { useT } from '../i18n'
@@ -28,6 +30,24 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
   const notify = useAgent((s) => s.notify)
   const { t } = useT()
   const [submenu, setSubmenu] = useState(false)
+  const [titling, setTitling] = useState(false)
+
+  /*
+    O menu fica aberto durante a geração, para o spinner ter onde aparecer: são
+    alguns segundos (sobe um prime-agent efêmero), e fechar antes deixaria o
+    clique sem nenhuma resposta na tela.
+  */
+  async function title(): Promise<void> {
+    setTitling(true)
+    const name = await generateTitleFor(session).catch(() => null)
+    setTitling(false)
+    if (!name) {
+      useAgent.getState().notify('error', t('menu.titleFailed'))
+      return
+    }
+    void refreshSessions()
+    onClose()
+  }
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
@@ -125,6 +145,23 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       <button className={item} onClick={onRename}>
         <Pencil size={14} strokeWidth={1.75} />
         {t('menu.rename')}
+      </button>
+
+      {/*
+        Gerar título fica ao lado do renomear porque é a mesma ação, feita por
+        outro. O nome vai para o mesmo lugar, e continua editável e apagável.
+      */}
+      <button
+        className={item + (titling ? ' pointer-events-none' : '')}
+        onClick={() => void title()}
+        title={session.named ? t('menu.retitleHint') : t('menu.titleHint')}
+      >
+        {titling ? (
+          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
+        ) : (
+          <WandSparkles size={14} strokeWidth={1.75} />
+        )}
+        {session.named ? t('menu.retitle') : t('menu.title')}
       </button>
 
       <button
