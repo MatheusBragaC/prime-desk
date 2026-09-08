@@ -233,6 +233,15 @@ export interface SessionSummary {
   createdAt: string
   updatedAt: string
   title: string
+  /**
+   * A conversa tem nome de verdade, gravado no `session_info`.
+   *
+   * Existe porque `title` não distingue: ele é `nome || primeiro prompt`, e o
+   * renderer não tinha como saber se estava exibindo um nome ou o texto cru da
+   * primeira mensagem. Sem isso não há como oferecer "gerar título" só para
+   * quem precisa.
+   */
+  named: boolean
   messageCount: number
   sizeBytes: number
 }
