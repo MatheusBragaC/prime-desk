@@ -304,6 +304,27 @@ export async function refreshState(): Promise<void> {
   if (state) useAgent.getState().setState(state)
 }
 
+/**
+ * Espera o worker do daemon aceitar comandos.
+ *
+ * O `prime-agent --mode rpc` sobe antes de o worker estar pronto: os primeiros
+ * `get_state` voltam vazios por alguns segundos. Sem esta espera, quem sobe a
+ * ponte conclui que ela falhou.
+ *
+ * Estava copiada em três lugares (boot, troca de destino de execução e troca de
+ * diretório), sempre com os mesmos 30 × 700ms escritos à mão.
+ *
+ * @returns `true` se o estado chegou; `false` se estourou o tempo.
+ */
+export async function waitForState(tries = 30, delayMs = 700): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    await new Promise((res) => setTimeout(res, delayMs))
+    await refreshState()
+    if (useAgent.getState().state) return true
+  }
+  return false
+}
+
 export async function refreshModels(): Promise<void> {
   const data = await rpc<{ models: ModelInfo[] } | ModelInfo[]>('get_available_models')
   if (!data) return
