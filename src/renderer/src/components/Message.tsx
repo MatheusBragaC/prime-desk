@@ -2,6 +2,8 @@ import { memo } from 'react'
 import type { ContentBlock } from '../../../shared/protocol'
 import type { UiMessage, ToolExec } from '../store/agent'
 import { Markdown } from './Markdown'
+import { DocumentCard } from './DocumentCard'
+import { detectDocument } from '../lib/documentDetect'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
 import { fmtTokens } from '../lib/format'
@@ -155,6 +157,23 @@ export const Message = memo(function Message({
             }
             if (block.type === 'text') {
               const live = msg.streaming && i === lastIdx
+              /*
+                Detecção só corre em mensagem finalizada ou no bloco vivo do
+                streaming — não nos blocos de trás, que já pintaram e não vão
+                mudar de opinião sobre serem documento ou não.
+              */
+              const detected = !msg.streaming || live ? detectDocument(block.text) : null
+              if (detected) {
+                return (
+                  <DocumentCard
+                    key={i}
+                    id={`${msg.key}:${i}`}
+                    text={block.text}
+                    detected={detected}
+                    streaming={live}
+                  />
+                )
+              }
               return <StreamingText key={i} text={block.text} live={live} />
             }
             if (block.type === 'toolCall') {

@@ -2,13 +2,12 @@
 /*
   Roda os testes de lógica pura do renderer.
 
-  O projeto não tem framework de teste, e não é hora de escolher um: aqui há um
-  caso só, e ele existe porque os limiares do aviso de turno silencioso são de
-  minutos — conferir na tela exigiria esperar minutos, e no painel onde a
-  inspeção acontece os timers são estrangulados.
-
-  O módulo real é empacotado pelo esbuild (já dependência do vite) com `react` e
-  a store trocados por casca, para o teste rodar em Node sem DOM.
+  O projeto não tem framework de teste. Cada suíte aqui existe porque a lógica
+  que ela cobre é difícil de conferir na tela: os limiares do aviso de turno
+  silencioso são de minutos, e a detecção de documento precisa rodar contra
+  texto de conversa real sem levantar o Electron. Empacota cada módulo com o
+  esbuild (já dependência do vite), trocando `react`/store por casca quando o
+  módulo precisa — a maioria não precisa.
 */
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
@@ -16,24 +15,42 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'prime-desk-test-'))
-
 writeFileSync(join(dir, 'react.js'), 'export const useState=()=>[0,()=>{}]\nexport const useEffect=()=>{}\n')
 writeFileSync(join(dir, 'storeShim.ts'), 'export const useAgent=()=>undefined\nexport type ToolExec=any\n')
 
-const src = 'src/renderer/src/lib/useTurnActivity.ts'
-writeFileSync(
-  join(dir, 'useTurnActivity.ts'),
-  readFileSync(src, 'utf8').replaceAll("from '../store/agent'", "from './storeShim'")
-)
+/** Cada suíte diz que módulo precisa e se ele depende de react/store. */
+const SUITES = [
+  {
+    test: './stall.test.mjs',
+    src: 'src/renderer/src/lib/useTurnActivity.ts',
+    needsShims: true
+  },
+  {
+    test: './documentDetect.test.mjs',
+    src: 'src/renderer/src/lib/documentDetect.ts',
+    needsShims: false
+  }
+]
 
-execFileSync('./node_modules/.bin/esbuild', [
-  join(dir, 'useTurnActivity.ts'),
-  '--bundle', '--format=esm',
-  `--alias:react=${join(dir, 'react.js')}`,
-  `--outfile=${join(dir, 'turnActivity.mjs')}`,
-  '--log-level=error'
-], { stdio: 'inherit' })
+let allOk = true
+for (const suite of SUITES) {
+  const name = suite.src.split('/').pop().replace(/\.ts$/, '')
+  const entry = join(dir, name + '.ts')
+  const out = join(dir, name + '.mjs')
 
-const { stallOf, NOTICE_AFTER_MS } = await import(join(dir, 'turnActivity.mjs'))
-const { default: run } = await import('./stall.test.mjs')
-process.exit(run({ stallOf, NOTICE_AFTER_MS }) ? 0 : 1)
+  const source = suite.needsShims
+    ? readFileSync(suite.src, 'utf8').replaceAll("from '../store/agent'", "from './storeShim'")
+    : readFileSync(suite.src, 'utf8')
+  writeFileSync(entry, source)
+
+  const args = [entry, '--bundle', '--format=esm', `--outfile=${out}`, '--log-level=error']
+  if (suite.needsShims) args.push(`--alias:react=${join(dir, 'react.js')}`)
+  execFileSync('./node_modules/.bin/esbuild', args, { stdio: 'inherit' })
+
+  const mod = await import(out)
+  const { default: run } = await import(suite.test)
+  const ok = run(mod)
+  if (!ok) allOk = false
+}
+
+process.exit(allOk ? 0 : 1)

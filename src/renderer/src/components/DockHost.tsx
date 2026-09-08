@@ -3,6 +3,7 @@ import { FilesPanel } from './FilesPanel'
 import { DiffPanel } from './DiffPanel'
 import { TerminalPanel } from './TerminalPanel'
 import { SchedulesPanel } from './SchedulesPanel'
+import { DocumentPanel } from './DocumentPanel'
 import type { Dock } from './StatusBar'
 
 /**
@@ -36,6 +37,8 @@ export function DockHost({ dock, onClose, onOpenFile, onQuoteFile }: DockHostPro
       return <SchedulesPanel onClose={onClose} />
     case 'agents':
       return <AgentTree onClose={onClose} />
+    case 'document':
+      return <DocumentPanel onClose={onClose} />
     default:
       return null
   }
