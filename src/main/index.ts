@@ -1,5 +1,6 @@
 import {
-  app, BrowserWindow, ipcMain, shell, dialog, nativeImage, type IpcMainInvokeEvent
+  app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard,
+  type IpcMainInvokeEvent
 } from 'electron'
 import { basename, join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -617,6 +618,26 @@ handle('agents:cadence', (_e, ms: number) => {
 
 handle('agents:refresh', () => {
   void tickTree()
+  return { ok: true }
+})
+
+/*
+  Copiar vai pelo processo main, não pelo `navigator.clipboard`.
+
+  O motivo é concreto: o handler de permissões acima libera só `media`, e a
+  Async Clipboard API do Chromium pede `clipboard-sanitized-write` — então
+  `writeText` era negado e os três botões de copiar do app (bloco de código,
+  comando de instalação no onboarding, conteúdo de arquivo) falhavam calados.
+
+  Dava para abrir a permissão, mas por aqui é melhor: não amplia a superfície
+  do renderer, funciona independente de contexto seguro, e devolve erro de
+  verdade em vez de uma promessa rejeitada que ninguém pega.
+
+  Só escrita. Ler a área de transferência do usuário o app não precisa.
+*/
+handle('clipboard:write', (_e, text: string) => {
+  if (typeof text !== 'string' || !text) return { ok: false, error: 'Nada para copiar.' }
+  clipboard.writeText(text)
   return { ok: true }
 })
 
