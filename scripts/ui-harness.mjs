@@ -59,6 +59,17 @@ const STUB_JS = `
       lastError: 'npm error code ELIFECYCLE' }
   ]
   let heartbeat = null
+  const kid = (name, status) => ({ activeSessionId: name, sessionId: name, sessionFile: '', name,
+    kind: 'subagent', depth: 1, status, taskState: '', replied: status !== 'working',
+    hasRunningChildren: false, messageCount: 4, firstMessage: '', cwd: '/home/dev/projeto',
+    modelName: 'claude-fable-5', lastActivityAt: new Date().toISOString(), children: [] })
+  const fakeTree = { total: 4, subagents: 3, at: Date.now(), roots: [{
+    activeSessionId: 'root', sessionId: 'root', sessionFile: '', name: '', kind: 'root', depth: 0,
+    status: 'working', taskState: '', replied: false, hasRunningChildren: true, messageCount: 20,
+    firstMessage: '', cwd: '/home/dev/projeto', modelName: 'claude-opus-5',
+    lastActivityAt: new Date().toISOString(),
+    children: [kid('typeorm', 'working'), kid('docker', 'working'), kid('migrations', 'idle')]
+  }] }
   const state = {
     model: { id: 'claude-fable-5', name: 'Claude Fable 5', api: 'anthropic', provider: 'anthropic', contextWindow: 1000000 },
     thinkingLevel: 'medium', isStreaming: false, isCompacting: false,
@@ -66,7 +77,12 @@ const STUB_JS = `
     sessionId: 'stub-session', autoCompactionEnabled: true, messageCount: 2,
     sessionActions: {
       queuedCount: 2,
-      steering: ['Confere o teste que quebrou no CI'],
+      steering: [
+        'Confere o teste que quebrou no CI',
+        // Relatório de subagente: rótulo do agente + caminho longo sem espaço.
+        // Os dois casos que a fila precisa saber desenhar.
+        'Agent message received from child docker: RELATÓRIO 02 — transaction mode: /home/dev/projeto/analise_migrations/02_transaction_mode.md'
+      ],
       followUps: ['Depois disso, atualiza o README'],
       active: { kind: 'turn', phase: 'running' }
     },
@@ -134,9 +150,12 @@ const STUB_JS = `
     loadFolders: async () => ({ ok: true, state: { folders: [], assignments: {}, collapsed: {} } }),
     saveFolders: async (s) => ({ ok: true, state: s }),
     usageStats: async () => ({ ok: true, stats: { sessions: 2, messages: 42, tokens: 170398, input: 30, output: 8219, cacheRead: 140436, cacheWrite: 21713, cost: 0.3, activeDays: 3, currentStreak: 2, longestStreak: 5, favoriteModel: 'claude-fable-5', peakHour: 15, days: [] } }),
-    agentTree: async () => ({ ok: true, tree: { roots: [], total: 0, subagents: 0, at: Date.now() } }),
+    agentTree: async () => ({ ok: true, tree: fakeTree }),
     setAgentCadence: async () => ({ ok: true }),
-    refreshAgentTree: async () => ({ ok: true }),
+    refreshAgentTree: async () => {
+      setTimeout(() => window.__harness.emit('agents:tree', fakeTree), 60)
+      return { ok: true }
+    },
     filesRoot: async () => ({ ok: true, root: '/home/dev/projeto' }),
     listFiles: async () => ({ ok: true, entries: [
       { name: 'src', path: 'src', isDir: true, size: 0 },

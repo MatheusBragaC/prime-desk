@@ -83,6 +83,14 @@ interface AgentStore {
    * callback por toda a hierarquia para isso seria pior que um recado no store.
    */
   terminalRequest: { command: string; title: string } | null
+  /**
+   * Pedido para abrir um painel do dock.
+   *
+   * Mesmo motivo do `terminalRequest`: quem pede está longe de quem decide. O
+   * popover da fila mostra relatórios de subagentes e quer levar à árvore, mas
+   * o dock é estado do App.
+   */
+  dockRequest: string | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -111,6 +119,8 @@ interface AgentStore {
   ingestObserved: (id: string, ev: AgentEvent) => void
   requestTerminal: (command: string, title: string) => void
   clearTerminalRequest: () => void
+  requestDock: (kind: string) => void
+  clearDockRequest: () => void
   reset: () => void
 }
 
@@ -140,6 +150,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   activeBridgeId: null,
   parkedRuns: [],
   terminalRequest: null,
+  dockRequest: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -152,6 +163,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setContext: (context) => set({ context }),
   requestTerminal: (command, title) => set({ terminalRequest: { command, title } }),
   clearTerminalRequest: () => set({ terminalRequest: null }),
+  requestDock: (dockRequest) => set({ dockRequest }),
+  clearDockRequest: () => set({ dockRequest: null }),
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
@@ -313,6 +326,17 @@ export async function refreshSessions(): Promise<void> {
     exatamente nos momentos em que ela importa: abrir, criar ou renomear conversa.
   */
   void bridge().refreshAgentTree()
+}
+
+/**
+ * Pede um ciclo da árvore de agentes agora.
+ *
+ * O main empurra o resultado por `agents:tree`, o mesmo canal do poller — então
+ * quem chama não precisa do retorno. Serve para telas que aparecem fora do
+ * ritmo do poller, que fica desligado quando nada roda.
+ */
+export async function refreshTree(): Promise<void> {
+  await bridge().refreshAgentTree()
 }
 
 export async function refreshFolders(): Promise<void> {
