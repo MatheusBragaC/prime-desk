@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
-  Square, X, Command, Folder, GitBranch, Monitor, Plus, ArrowUp, FileText,
+  Square, X, Command, Folder, Monitor, Plus, ArrowUp, FileText,
   Check, Terminal, Trash2
 } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
@@ -11,6 +11,7 @@ import { joinWithPaths, baseName, joinDictation } from '../lib/attachments'
 import { usePopover } from '../lib/usePopover'
 import { QueuePopover } from './QueuePopover'
 import { MicButton } from './MicButton'
+import { BranchPicker } from './BranchPicker'
 import type { DeliveryBehavior } from '../../../shared/protocol'
 import { useT } from '../i18n'
 
@@ -174,7 +175,6 @@ function ContextChips({
 }) {
   const { t } = useT()
   const cwd = useAgent((s) => s.cwd)
-  const [branch, setBranch] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const execBtn = useRef<HTMLButtonElement>(null)
   const [execution, setExecution] = useState<{ kind: 'local' | 'ssh'; target?: string }>({
@@ -185,16 +185,6 @@ function ContextChips({
     void window.prime.execution().then((r) => {
       if (r?.ok) setExecution(r.execution as { kind: 'local' | 'ssh'; target?: string })
     })
-  }, [cwd])
-
-  useEffect(() => {
-    let alive = true
-    void window.prime.gitBranch().then((r) => {
-      if (alive) setBranch(r?.ok ? (r.branch as string | null) : null)
-    })
-    return () => {
-      alive = false
-    }
   }, [cwd])
 
   const short = cwd
@@ -253,15 +243,7 @@ function ContextChips({
         {short}
       </button>
 
-      {branch && (
-        <>
-          <span className="select-none text-xs text-grid">·</span>
-          <span className={chip.replace('hover:bg-elevated hover:text-muted', '')} title={t('chips.branch')}>
-            <GitBranch size={14} strokeWidth={1.75} />
-            <span className="max-w-[180px] truncate">{branch}</span>
-          </span>
-        </>
-      )}
+      <BranchPicker chipClass={chip} />
 
     </div>
   )

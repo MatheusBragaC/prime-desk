@@ -13,8 +13,8 @@ import { execFile } from 'node:child_process'
 import { agentBinary, agentEnv, invalidateAgentPath } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
-  listDir, gitBranch, gitChanges, gitDiff, realPathInside, readFileSafe, writeFileSafe,
-  deleteSessionFile
+  listDir, gitBranch, gitBranches, gitCheckout, gitChanges, gitDiff, realPathInside,
+  readFileSafe, writeFileSafe, deleteSessionFile
 } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
@@ -805,6 +805,23 @@ handle('files:root', () => ({ ok: true, root: workspaceRoot }))
 handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspaceRoot) }))
 
 handle('git:changes', async () => gitChanges(workspaceRoot))
+
+handle('git:branches', async () => gitBranches(workspaceRoot))
+
+/**
+ * Troca de ramo no diretorio onde o agente executa.
+ *
+ * O nome e validado contra a lista de ramos locais antes de chegar ao git: o
+ * renderer nao escolhe argumento de subprocesso.
+ */
+handle('git:checkout', async (_e, branch: string) => {
+  const listed = await gitBranches(workspaceRoot)
+  if (!listed.ok) return { ok: false, error: listed.error ?? 'Nao e um repositorio git.' }
+  if (!listed.branches?.some((b) => b.name === branch)) {
+    return { ok: false, error: `Ramo desconhecido: ${branch}` }
+  }
+  return gitCheckout(workspaceRoot, branch)
+})
 
 handle('git:diff', async (_e, relPath?: string) => gitDiff(workspaceRoot, relPath))
 

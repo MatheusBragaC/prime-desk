@@ -43,6 +43,7 @@ const TYPES = {
 const STUB_JS = `
 (() => {
   const listeners = {}
+  let currentBranch = 'fix/connection-health-retention'
   const state = {
     model: { id: 'claude-fable-5', name: 'Claude Fable 5', api: 'anthropic', provider: 'anthropic', contextWindow: 1000000 },
     thinkingLevel: 'medium', isStreaming: false, isCompacting: false,
@@ -97,9 +98,17 @@ const STUB_JS = `
       { name: 'package.json', path: 'package.json', isDir: false, size: 2148 }
     ] }),
     gitBranch: async () => ({ ok: true, branch: 'main' }),
-    gitChanges: async () => ({ ok: true, changes: [
-      { path: 'src/App.tsx', status: ' M', added: 12, removed: 3 }
-    ] }),
+    gitBranches: async () => ({ ok: true, dirty: true, branches: [
+      'fix/connection-health-retention', 'main', 'feat/redesign-claude-desktop', 'fix/security-hardening'
+    ].map((name) => ({ name, current: name === currentBranch })) }),
+    gitCheckout: async (b) => {
+      // A branch main recusa de proposito, para exercitar a mensagem real do git.
+      if (b === 'main') {
+        return { ok: false, error: 'error: Your local changes to the following files would be overwritten by checkout:\\n\\tsrc/App.tsx\\nPlease commit your changes or stash them before you switch branches.\\nAborting' }
+      }
+      currentBranch = b
+      return { ok: true }
+    },
     gitDiff: async () => ({ ok: true, diff: '@@ -1 +1 @@\\n-antes\\n+depois', truncated: false }),
     readFile: async () => ({ ok: true, content: '// exemplo', size: 12, binary: false }),
     writeFile: async () => ({ ok: true }),
