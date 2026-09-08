@@ -10,6 +10,7 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { Onboarding } from './components/Onboarding'
 import { FileViewer } from './components/FileViewer'
 import { Transcript } from './components/Transcript'
+import { StalledTurnNotice } from './components/StalledTurnNotice'
 import { DockHost } from './components/DockHost'
 import { useBridge } from './lib/useBridge'
 import { useWindowChrome } from './lib/useWindowChrome'
@@ -141,6 +142,7 @@ export function App() {
           />
 
           <div className="relative z-10 mx-auto w-full max-w-col">
+            <StalledTurnNotice />
             <Composer
               onOpenPalette={() => setPalette(true)}
               onPickCwd={() => void exec.pickDirectory()}

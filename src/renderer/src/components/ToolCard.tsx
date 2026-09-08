@@ -1,35 +1,12 @@
 import { useState } from 'react'
 import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
 import type { ToolExec } from '../store/agent'
-import { fmtDuration } from '../lib/format'
+import { fmtDuration, fmtElapsed } from '../lib/format'
+import { summary, codeFrom } from '../lib/toolSummary'
+import { useTurnClock, WARN_AFTER_MS } from '../lib/useTurnActivity'
 import { useT } from '../i18n'
 
 const MAX_PREVIEW = 4000
-
-function codeFrom(args: Record<string, unknown>): string | null {
-  const code = args?.code
-  if (typeof code === 'string') return code
-  const cmd = args?.command
-  if (typeof cmd === 'string') return cmd
-  return null
-}
-
-function summary(name: string, args: Record<string, unknown>): string {
-  const code = codeFrom(args)
-  if (code) {
-    const isBash = code.trimStart().startsWith('%%bash')
-    // A linha da magic `%%bash` não informa nada: mostra o primeiro comando real.
-    const meaningful = code
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith('%%') && !l.startsWith('#'))
-    const first = meaningful[0] ?? code.trim()
-    const label = isBash ? 'shell' : name
-    return `${label} · ${first.slice(0, 74)}`
-  }
-  const keys = Object.keys(args ?? {})
-  return keys.length ? `${name} · ${keys.slice(0, 3).join(', ')}` : name
-}
 
 export function ToolCard({
   exec,
@@ -43,6 +20,12 @@ export function ToolCard({
 }) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
+  /*
+    Relógio compartilhado, e ligado só enquanto ESTA chamada roda: card de
+    chamada terminada não se inscreve e não re-renderiza. Fica antes de
+    qualquer retorno antecipado porque hook não pode ser condicional.
+  */
+  const now = useTurnClock(exec?.status === 'running' && exec.startedAt !== undefined)
 
   if (!exec) {
     /*
@@ -78,6 +61,18 @@ export function ToolCard({
   const code = codeFrom(exec.args)
 
   /*
+    Relógio ao vivo enquanto roda. Antes o card mostrava o mesmo spinner para
+    uma chamada de dois segundos e para uma de quarenta minutos: a única
+    diferença perceptível era a paciência de quem olhava.
+
+    `startedAt` só existe em chamada vista ao vivo — conversa carregada do disco
+    não tem evento de início, e ali o spinner some sozinho ao chegar o
+    resultado, então não há relógio a mostrar.
+  */
+  const elapsed = running && exec.startedAt ? Math.max(0, now - exec.startedAt) : undefined
+  const slow = elapsed !== undefined && elapsed >= WARN_AFTER_MS
+
+  /*
     Um fundo só, para os três estados. Pintar o card inteiro de verde ou vermelho
     dava a uma chamada de ferramenta o mesmo peso visual da resposta — o status
     cabe no ícone à direita.
@@ -111,7 +106,20 @@ export function ToolCard({
         {exec.durationMs !== undefined && !running && (
           <span className="shrink-0 font-mono text-xs text-dim">{fmtDuration(exec.durationMs)}</span>
         )}
-        {running && <Loader2 size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-primary" />}
+        {elapsed !== undefined && (
+          <span
+            className={'shrink-0 font-mono text-xs tabular-nums ' + (slow ? 'text-warn' : 'text-dim')}
+            title={slow ? t('tool.slowHint') : undefined}
+          >
+            {fmtElapsed(elapsed)}
+          </span>
+        )}
+        {running && (
+          <Loader2
+            size={14} strokeWidth={1.75}
+            className={'shrink-0 animate-spin ' + (slow ? 'text-warn' : 'text-primary')}
+          />
+        )}
         {exec.status === 'ok' && <Check size={14} strokeWidth={1.75} className="shrink-0 text-ok" />}
         {failed && <X size={14} strokeWidth={1.75} className="shrink-0 text-err" />}
       </button>
