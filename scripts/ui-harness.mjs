@@ -60,16 +60,26 @@ const STUB_JS = `
   ]
   let folderState = { folders: [], assignments: {}, collapsed: {}, titles: {} }
   let heartbeat = null
-  const kid = (name, status) => ({ activeSessionId: name, sessionId: name, sessionFile: '', name,
+  const kid = (name, status, usage) => ({ activeSessionId: name, sessionId: name, sessionFile: '', name,
     kind: 'subagent', depth: 1, status, taskState: '', replied: status !== 'working',
     hasRunningChildren: false, messageCount: 4, firstMessage: '', cwd: '/home/dev/projeto',
-    modelName: 'claude-fable-5', lastActivityAt: new Date().toISOString(), children: [] })
+    modelName: 'claude-fable-5', lastActivityAt: new Date().toISOString(), usage, children: [] })
   const fakeTree = { total: 4, subagents: 3, at: Date.now(), roots: [{
     activeSessionId: 'root', sessionId: 'root', sessionFile: '', name: '', kind: 'root', depth: 0,
     status: 'working', taskState: '', replied: false, hasRunningChildren: true, messageCount: 20,
     firstMessage: '', cwd: '/home/dev/projeto', modelName: 'claude-opus-5',
     lastActivityAt: new Date().toISOString(),
-    children: [kid('typeorm', 'working'), kid('docker', 'working'), kid('migrations', 'idle')]
+    /*
+      Custos diferentes de proposito, e o 'typeorm' sem usage nenhum: e o caso
+      real do incidente do Gnexum, onde tres subagentes rodaram e nao dava pra
+      ver quanto cada um tinha gastado. O sem-usage confere que o card daquele
+      no fica mudo, sem mostrar $0.00 como se fosse dado de verdade.
+    */
+    children: [
+      kid('typeorm', 'working', undefined),
+      kid('docker', 'working', { inputTokens: 8400, outputTokens: 2100, cost: 0.1234 }),
+      kid('migrations', 'idle', { inputTokens: 15200, outputTokens: 3800, cost: 0.2156 })
+    ]
   }] }
   const state = {
     model: { id: 'claude-fable-5', name: 'Claude Fable 5', api: 'anthropic', provider: 'anthropic', contextWindow: 1000000 },
