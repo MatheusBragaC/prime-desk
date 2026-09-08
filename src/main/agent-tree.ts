@@ -37,6 +37,14 @@ interface RawSession {
   cwd?: string
   lastActivityAt?: string
   model?: { name?: string }
+  /**
+   * Confirmado no `dist/modes/daemon/daemon-session-list.js` do 0.9.3: vem de
+   * `session.getOwnUsageSummary()` (residente) ou `session.usage` (persistido em
+   * disco) — os dois passam por `sessionUsageSummaryFrom` em `core/usage.js`, que
+   * devolve exatamente este formato ou `undefined` quando tudo é zero. Gasto
+   * PRÓPRIO do nó, não soma dos filhos — quem soma é o renderer.
+   */
+  usage?: { inputTokens: number; outputTokens: number; cost: number }
 }
 
 const LIST_TIMEOUT_MS = 12_000
@@ -81,6 +89,7 @@ function toNode(raw: RawSession): AgentNode {
     cwd: raw.cwd ?? '',
     modelName: raw.model?.name ?? '',
     lastActivityAt: raw.lastActivityAt ?? '',
+    usage: raw.usage,
     children: []
   }
 }
