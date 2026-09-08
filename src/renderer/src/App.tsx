@@ -21,6 +21,7 @@ import { useT } from './i18n'
 import { FilesPanel } from './components/FilesPanel'
 import { DiffPanel } from './components/DiffPanel'
 import { TerminalPanel } from './components/TerminalPanel'
+import { SchedulesPanel } from './components/SchedulesPanel'
 import { FileViewer } from './components/FileViewer'
 import {
   useAgent, refreshState, refreshModels, refreshCommands, refreshSessions,
@@ -275,6 +276,10 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         setDock((d) => (d === 'diff' ? null : 'diff'))
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        setDock((d) => (d === 'schedules' ? null : 'schedules'))
       }
       // Crase é onde VS Code e Claude Desktop põem o terminal.
       if ((e.ctrlKey || e.metaKey) && e.key === '`') {
@@ -610,6 +615,8 @@ export function App() {
       {dock === 'diff' && <DiffPanel onClose={() => setDock(null)} />}
 
       {dock === 'terminal' && <TerminalPanel onClose={() => setDock(null)} />}
+
+      {dock === 'schedules' && <SchedulesPanel onClose={() => setDock(null)} />}
 
       {treeOpen && <AgentTree onClose={() => setDock(null)} />}
 

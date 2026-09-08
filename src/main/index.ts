@@ -136,10 +136,11 @@ async function isRiskyToOpen(target: string): Promise<boolean> {
  * o esquecimento não virar bug silencioso.
  */
 const RPC_SEND_ALLOWED = new Set([
-  'clone', 'compact', 'get_available_models', 'get_commands', 'get_messages',
-  'get_session_stats', 'get_state', 'new_session', 'observe', 'prompt',
-  'set_follow_up_mode', 'set_model', 'set_session_name', 'set_steering_mode',
-  'set_thinking_level', 'switch_session'
+  'add_schedule', 'cancel_schedule', 'clone', 'compact', 'get_available_models',
+  'get_commands', 'get_heartbeat', 'get_messages', 'get_session_stats',
+  'get_state', 'list_schedules', 'new_session', 'observe', 'prompt',
+  'set_follow_up_mode', 'set_heartbeat', 'set_model', 'set_session_name',
+  'set_steering_mode', 'set_thinking_level', 'switch_session', 'update_heartbeat'
 ])
 
 /** `fire` não espera resposta: só o que precisa furar a fila. */
