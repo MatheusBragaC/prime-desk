@@ -140,6 +140,79 @@ export function gitBranch(cwd: string): Promise<string | null> {
   })
 }
 
+export interface GitBranchInfo {
+  name: string
+  current: boolean
+  /** Ramo remoto que ela acompanha, quando existe. */
+  upstream?: string
+}
+
+/**
+ * Ramos locais, do mais recente para o mais antigo.
+ *
+ * Ordenado por data do último commit e não por nome: em repositório com dezenas
+ * de ramos, o que interessa está entre os últimos que você tocou, e ordem
+ * alfabética enterraria isso.
+ *
+ * Só ramos locais. Trocar para um ramo que existe apenas no remoto exigiria
+ * criar rastreamento, que é outra operação — melhor não fingir que é a mesma.
+ */
+export async function gitBranches(cwd: string): Promise<{
+  ok: boolean
+  branches?: GitBranchInfo[]
+  /** Há alteração não commitada. O checkout pode ser recusado pelo git. */
+  dirty?: boolean
+  error?: string
+}> {
+  const out = await git(cwd, [
+    'for-each-ref',
+    '--sort=-committerdate',
+    '--format=%(HEAD)%09%(refname:short)%09%(upstream:short)',
+    'refs/heads'
+  ])
+  if (out === null) return { ok: false, error: 'not-a-repo' }
+
+  const branches: GitBranchInfo[] = []
+  for (const line of out.split('\n')) {
+    if (!line.trim()) continue
+    const [head, name, upstream] = line.split('\t')
+    if (!name) continue
+    branches.push({
+      name,
+      current: head === '*',
+      ...(upstream ? { upstream } : {})
+    })
+  }
+
+  const porcelain = await git(cwd, ['status', '--porcelain=v1'])
+  return { ok: true, branches, dirty: Boolean(porcelain?.trim()) }
+}
+
+/**
+ * Troca de ramo.
+ *
+ * Sem `-f` e sem `stash` automático, de propósito: com alteração que seria
+ * sobrescrita, o git recusa e diz quais arquivos são — e essa mensagem é
+ * devolvida à interface. Descartar trabalho da pessoa em nome da conveniência
+ * não é decisão que o app deva tomar.
+ */
+export function gitCheckout(cwd: string, branch: string): Promise<{ ok: boolean; error?: string }> {
+  return new Promise((res) => {
+    // Nome vem da lista que o próprio main montou, mas `--` fecha a porta para
+    // um nome que comece com `-` ser lido como opção.
+    execFile(
+      'git',
+      ['checkout', branch, '--'],
+      { cwd, timeout: 20_000 },
+      (err, _stdout, stderr) => {
+        if (!err) return res({ ok: true })
+        const message = (stderr || (err as Error).message || '').trim()
+        res({ ok: false, error: message || 'Não foi possível trocar de ramo.' })
+      }
+    )
+  })
+}
+
 const MAX_READ_BYTES = 1_000_000
 
 export interface FileRead {

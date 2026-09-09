@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import {
   ChevronRight, GitBranch, Loader2, CheckCircle2, Circle, CornerDownRight,
-  MessageSquare, X, Code2, RefreshCw, Eye, Radio
+  MessageSquare, Code2, RefreshCw, Eye, Radio
 } from 'lucide-react'
 import type { AgentNode } from '../../../shared/protocol'
 import { useAgent, observeSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
-import { relTime } from '../lib/format'
-import { useResizable } from '../lib/useResizable'
-import { ResizeHandle } from './ResizeHandle'
+import { relTime, fmtTokens, fmtCost } from '../lib/format'
+import { sumTreeUsage } from '../lib/agentUsage'
+import { DockPanel } from './DockPanel'
+import { PanelEmpty, PanelError } from './PanelState'
 import { useT } from '../i18n'
 
 function StatusDot({ node }: { node: AgentNode }) {
@@ -100,6 +101,23 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             </span>
             {node.modelName && <span className="truncate">{node.modelName}</span>}
             {node.lastActivityAt && <span>{relTime(node.lastActivityAt)}</span>}
+            {/*
+              Gasto próprio do nó — `usage` vem ausente (não zero) em versão do
+              prime-agent que não relata isso, ou sessão que ainda não gastou
+              nada real. Título completo com os dois lados (entrada/saída)
+              porque o número compacto do lado de fora não cabe os dois.
+            */}
+            {node.usage && (
+              <span
+                className="ml-auto shrink-0 font-mono text-primarySoft/80"
+                title={t('tree.usageDetail', {
+                  input: fmtTokens(node.usage.inputTokens),
+                  output: fmtTokens(node.usage.outputTokens)
+                })}
+              >
+                {fmtCost(node.usage.cost)}
+              </span>
+            )}
           </div>
 
           {node.firstMessage && (
@@ -142,22 +160,18 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
   const { t } = useT()
   const tree = useAgent((s) => s.tree)
   const error = useAgent((s) => s.treeError)
-  const size = useResizable('agent-tree', 310, 240, 680, 'left')
-
+  const usage = sumTreeUsage(tree)
   return (
-    <aside
-      style={{ width: size.width }}
-      className="relative flex shrink-0 flex-col border-l border-[var(--p-line)] bg-[var(--p-surface)]"
-    >
-      <ResizeHandle
-        side="left"
-        dragging={size.dragging}
-        onMouseDown={size.onMouseDown}
-        onReset={size.reset}
-      />
-      <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-2 border-b border-[var(--p-line)] px-4">
-        <GitBranch size={16} strokeWidth={1.75} className="text-primarySoft" />
-        <span className="flex-1 text-sm font-semibold">{t('tree.title')}</span>
+    <DockPanel
+      storageKey="agent-tree"
+      defaultWidth={310}
+      min={240}
+      max={680}
+      icon={<GitBranch size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      title={t('tree.title')}
+      onClose={onClose}
+      bodyClassName="min-h-0 flex-1 overflow-y-auto py-1.5"
+      actions={
         <button
           onClick={() => void window.prime.refreshAgentTree()}
           className="no-drag text-dim transition-colors hover:text-muted"
@@ -165,38 +179,41 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         >
           <RefreshCw size={14} strokeWidth={1.75} />
         </button>
-        <button onClick={onClose} className="no-drag text-dim transition-colors hover:text-fg">
-          <X size={16} strokeWidth={1.75} />
-        </button>
-      </div>
-
-      <div className="border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
-        {tree ? (
-          t('tree.summary', { total: tree.total, subs: tree.subagents })
-        ) : (
-          t('common.loading')
-        )}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
-        {error && (
-          <div className="mx-3 my-2 rounded-lg border border-err/25 bg-err/[0.07] p-2.5 text-xs text-err">
-            {error}
-          </div>
-        )}
-        {tree?.roots.length === 0 && !error && (
-          <div className="px-4 py-8 text-center text-sm text-dim">
-            {t('tree.none')}
-          </div>
-        )}
-        {tree?.roots.map((r) => (
-          <Node key={r.activeSessionId} node={r} level={0} />
-        ))}
-      </div>
-
-      <div className="border-t border-[var(--p-line)] px-4 py-2.5 text-micro leading-snug text-dim">
-        {t('tree.note')}
-      </div>
-    </aside>
+      }
+      subheader={
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
+          <span className="min-w-0 truncate">
+            {tree
+              ? t('tree.summary', { total: tree.total, subs: tree.subagents })
+              : t('common.loading')}
+          </span>
+          {/* Soma de TODA a árvore — o número que faltava depois do incidente
+              do Gnexum, onde três subagentes rodaram e não dava pra saber
+              quanto cada um, nem o total, tinha custado. */}
+          {usage && (
+            <span
+              className="shrink-0 font-mono text-primarySoft"
+              title={t('tree.usageDetail', {
+                input: fmtTokens(usage.inputTokens),
+                output: fmtTokens(usage.outputTokens)
+              })}
+            >
+              {fmtCost(usage.cost)}
+            </span>
+          )}
+        </div>
+      }
+      footer={
+        <div className="border-t border-[var(--p-line)] px-4 py-2.5 text-micro leading-snug text-dim">
+          {t('tree.note')}
+        </div>
+      }
+    >
+      {error && <PanelError message={error} />}
+      {tree?.roots.length === 0 && !error && <PanelEmpty message={t('tree.none')} />}
+      {tree?.roots.map((r) => (
+        <Node key={r.activeSessionId} node={r} level={0} />
+      ))}
+    </DockPanel>
   )
 }

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
+import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
 
 interface EnvStatus {
@@ -156,7 +157,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   }
 
   async function copyCommand() {
-    await navigator.clipboard.writeText(command)
+    if (!(await copyText(command, t('common.copyFailed')))) return
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
   }
@@ -170,7 +171,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
         Faixa de arraste: sem a barra de título nativa, esta tela não tinha
         nenhuma região `-webkit-app-region: drag` e a janela ficava presa.
       */}
-      <div className="drag-region absolute inset-x-0 top-0 z-20 h-[var(--p-titlebar)]" />
+      <div className="drag-region absolute inset-x-0 top-0 z-chrome h-[var(--p-titlebar)]" />
       <div className="aurora pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 w-full max-w-[520px]">

@@ -1,9 +1,15 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'electron-vite'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
+    /**
+     * `node-pty` é módulo nativo: o `.node` tem que ser carregado do disco em
+     * runtime, não pode ser bundlado pelo rollup. O plugin deixa as deps do
+     * package.json como `require` externo.
+     */
+    plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: { input: { index: resolve('src/main/index.ts') } },
       outDir: 'out/main'
