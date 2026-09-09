@@ -63,12 +63,16 @@ const STUB_JS = `
   const kid = (name, status, usage) => ({ activeSessionId: name, sessionId: name, sessionFile: '', name,
     kind: 'subagent', depth: 1, status, taskState: '', replied: status !== 'working',
     hasRunningChildren: false, messageCount: 4, firstMessage: '', cwd: '/home/dev/projeto',
-    modelName: 'claude-fable-5', lastActivityAt: new Date().toISOString(), usage, children: [] })
+    modelName: 'claude-fable-5', lastActivityAt: new Date().toISOString(), usage,
+    // Origem 'disk': e o caso comum (conversa fora do daemon). O botao de
+    // acompanhar nao deve aparecer nesses nos.
+    source: 'disk', children: [] })
   const fakeTree = { total: 4, subagents: 3, at: Date.now(), roots: [{
     activeSessionId: 'root', sessionId: 'root', sessionFile: '', name: '', kind: 'root', depth: 0,
     status: 'working', taskState: '', replied: false, hasRunningChildren: true, messageCount: 20,
     firstMessage: '', cwd: '/home/dev/projeto', modelName: 'claude-opus-5',
     lastActivityAt: new Date().toISOString(),
+    source: 'disk',
     /*
       Custos diferentes de proposito, e o 'typeorm' sem usage nenhum: e o caso
       real do incidente do Gnexum, onde tres subagentes rodaram e nao dava pra

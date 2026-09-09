@@ -5,6 +5,12 @@ import type { SessionSummary } from '../shared/protocol.js'
 
 const AGENT_DIR = join(homedir(), '.prime', 'agent')
 const SESSIONS_DIR = join(AGENT_DIR, 'sessions')
+/*
+  Onde vive o trabalho de RLM: um diretório por sessão, e dentro dele um
+  `sub-<id>/` por subagente, aninhando netos do mesmo jeito. É a única fonte de
+  árvore que não depende do daemon — ver `agent-tree-disk.ts`.
+*/
+const ARTIFACTS_DIR = join(AGENT_DIR, 'session-artifacts')
 
 /** Quantos bytes ler do início do arquivo para inferir título. */
 const HEAD_BYTES = 64_000
@@ -146,4 +152,4 @@ export async function listSessions(): Promise<SessionSummary[]> {
   return out
 }
 
-export const paths = { AGENT_DIR, SESSIONS_DIR }
+export const paths = { AGENT_DIR, SESSIONS_DIR, ARTIFACTS_DIR }
