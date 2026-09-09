@@ -206,7 +206,6 @@ const STUB_JS = `
     }}),
     startBridge: async () => ({ ok: true, cwd: '/home/dev/projeto', bridgeId: 'b1', execution: { kind: 'local' } }),
     stopBridge: async () => ({ ok: true }),
-    execution: async () => ({ ok: true, execution: { kind: 'local' } }),
     send: async (type, payload) => {
       if (type === 'list_schedules') return { ok: true, res: { type: 'response', command: type, success: true, data: { jobs } } }
       if (type === 'get_heartbeat') return { ok: true, res: { type: 'response', command: type, success: true, data: { heartbeat } } }
