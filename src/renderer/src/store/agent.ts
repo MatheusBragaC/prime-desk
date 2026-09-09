@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
-  ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState
+  ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
+  ContextUsage, SessionStats, DeliveryBehavior, QueueMode, AgentCronJob,
+  AgentHeartbeatDeliveryMode
 } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
@@ -57,6 +59,8 @@ interface AgentStore {
   messages: UiMessage[]
   tools: Record<string, ToolExec>
   totals: Totals
+  /** Ocupação da janela, vinda do agente. `null` enquanto não foi consultada. */
+  context: ContextUsage | null
   cwd: string
   platform: string
   loadingSession: boolean
@@ -71,6 +75,32 @@ interface AgentStore {
   /** Ponte cujos eventos alimentam a tela. As demais são descartadas. */
   activeBridgeId: string | null
   parkedRuns: ParkedRun[]
+  /**
+   * Pedido para abrir um comando numa aba do terminal embutido.
+   *
+   * Existe porque quem pede (o menu da conta, no rodapé da sidebar) está longe
+   * de quem atende (o painel de terminal, do outro lado da árvore). Passar
+   * callback por toda a hierarquia para isso seria pior que um recado no store.
+   */
+  terminalRequest: { command: string; title: string } | null
+  /**
+   * Pedido para abrir um painel do dock.
+   *
+   * Mesmo motivo do `terminalRequest`: quem pede está longe de quem decide. O
+   * popover da fila mostra relatórios de subagentes e quer levar à árvore, mas
+   * o dock é estado do App.
+   */
+  dockRequest: string | null
+  /**
+   * Documento aberto no painel — plano, relatório, qualquer resposta longa e
+   * estruturada que o card "Abrir documento" trouxe para cá.
+   *
+   * `id` identifica o bloco de origem (`${chave da mensagem}:${índice do
+   * bloco}`), para o card poder atualizar o texto ao vivo enquanto o mesmo
+   * documento ainda está sendo transmitido e o painel já está aberto nele —
+   * sem isso, abrir cedo demais mostraria a resposta parando de crescer.
+   */
+  document: { id: string; title: string; text: string } | null
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -83,6 +113,7 @@ interface AgentStore {
   applyStderr: (chunk: string) => void
   setFatal: (m: string | null) => void
   setState: (s: AgentState) => void
+  setContext: (c: ContextUsage | null) => void
   setModels: (m: ModelInfo[]) => void
   setCommands: (c: CommandInfo[]) => void
   setSessions: (s: SessionSummary[]) => void
@@ -96,6 +127,14 @@ interface AgentStore {
   upsertObserved: (id: string, patch: Partial<Observed>) => void
   dropObserved: (id: string) => void
   ingestObserved: (id: string, ev: AgentEvent) => void
+  requestTerminal: (command: string, title: string) => void
+  clearTerminalRequest: () => void
+  requestDock: (kind: string) => void
+  clearDockRequest: () => void
+  openDocument: (doc: { id: string; title: string; text: string }) => void
+  /** Só atualiza se `id` já é o documento aberto — chamado a cada quadro de streaming. */
+  updateDocumentIfOpen: (id: string, text: string) => void
+  closeDocument: () => void
   reset: () => void
 }
 
@@ -110,6 +149,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   messages: [],
   tools: {},
   totals: { tokens: 0, cost: 0 },
+  context: null,
   cwd: '',
   platform: '',
   loadingSession: false,
@@ -123,6 +163,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
   confirm: null,
   activeBridgeId: null,
   parkedRuns: [],
+  terminalRequest: null,
+  dockRequest: null,
+  document: null,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -132,6 +175,15 @@ export const useAgent = create<AgentStore>((set, get) => ({
   setLoadingSession: (loadingSession) => set({ loadingSession }),
   setFatal: (m) => set({ fatal: m, status: m ? 'error' : get().status }),
   setState: (s) => set({ state: s }),
+  setContext: (context) => set({ context }),
+  requestTerminal: (command, title) => set({ terminalRequest: { command, title } }),
+  clearTerminalRequest: () => set({ terminalRequest: null }),
+  requestDock: (dockRequest) => set({ dockRequest }),
+  clearDockRequest: () => set({ dockRequest: null }),
+  openDocument: (document) => set({ document }),
+  updateDocumentIfOpen: (id, text) =>
+    set((s) => (s.document?.id === id ? { document: { ...s.document, text } } : {})),
+  closeDocument: () => set({ document: null }),
   setModels: (models) => set({ models }),
   setCommands: (commands) => set({ commands }),
   setSessions: (sessions) => set({ sessions }),
@@ -144,7 +196,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   closeConfirm: () => set({ confirm: null }),
   applyStderr: (chunk) => set((st) => ({ stderr: (st.stderr + chunk).slice(-20000) })),
 
-  reset: () => set({ ...emptyTranscript(), retry: null }),
+  reset: () => set({ ...emptyTranscript(), context: null, retry: null }),
 
   loadHistory: (messages) => set(hydrate(messages)),
 
@@ -160,6 +212,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
         break
       case 'agent_end':
         set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
+        // A ocupação só muda quando o turno fecha; consultar durante o stream
+        // seria pedir o mesmo número várias vezes.
+        void refreshContext()
         break
       case 'session_action_update': {
         const a = (ev as { actions?: AgentState['sessionActions'] }).actions
@@ -171,6 +226,9 @@ export const useAgent = create<AgentStore>((set, get) => ({
         break
       case 'compaction_end':
         set({ compacting: false })
+        // Aqui o agente devolve `tokens: null` de propósito, até a próxima
+        // resposta. A UI mostra "desconhecido" em vez do número velho.
+        void refreshContext()
         break
       case 'auto_retry_start': {
         const e = ev as unknown as { attempt: number; maxAttempts: number; errorMessage: string }
@@ -247,9 +305,43 @@ export async function rpc<T = unknown>(type: string, payload?: Record<string, un
   return out.data
 }
 
+/**
+ * Ocupação da janela de contexto.
+ *
+ * Vem de `get_session_stats`, não de soma local: `totals.tokens` é consumo
+ * acumulado (recontando `cacheRead` a cada turno) e nunca desce, então dividir
+ * aquilo pela janela dava um indicador que saturava em 100% e não voltava nem
+ * depois de compactar. Aqui o número é o do próprio agente.
+ */
+export async function refreshContext(): Promise<void> {
+  const data = await rpc<SessionStats>('get_session_stats')
+  useAgent.getState().setContext(data?.contextUsage ?? null)
+}
+
 export async function refreshState(): Promise<void> {
-  const data = await rpc<AgentState>('get_state')
-  if (data) useAgent.getState().setState(data)
+  const [state] = await Promise.all([rpc<AgentState>('get_state'), refreshContext()])
+  if (state) useAgent.getState().setState(state)
+}
+
+/**
+ * Espera o worker do daemon aceitar comandos.
+ *
+ * O `prime-agent --mode rpc` sobe antes de o worker estar pronto: os primeiros
+ * `get_state` voltam vazios por alguns segundos. Sem esta espera, quem sobe a
+ * ponte conclui que ela falhou.
+ *
+ * Estava copiada em três lugares (boot, troca de destino de execução e troca de
+ * diretório), sempre com os mesmos 30 × 700ms escritos à mão.
+ *
+ * @returns `true` se o estado chegou; `false` se estourou o tempo.
+ */
+export async function waitForState(tries = 30, delayMs = 700): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    await new Promise((res) => setTimeout(res, delayMs))
+    await refreshState()
+    if (useAgent.getState().state) return true
+  }
+  return false
 }
 
 export async function refreshModels(): Promise<void> {
@@ -276,6 +368,17 @@ export async function refreshSessions(): Promise<void> {
   void bridge().refreshAgentTree()
 }
 
+/**
+ * Pede um ciclo da árvore de agentes agora.
+ *
+ * O main empurra o resultado por `agents:tree`, o mesmo canal do poller — então
+ * quem chama não precisa do retorno. Serve para telas que aparecem fora do
+ * ritmo do poller, que fica desligado quando nada roda.
+ */
+export async function refreshTree(): Promise<void> {
+  await bridge().refreshAgentTree()
+}
+
 export async function refreshFolders(): Promise<void> {
   const r = await bridge().loadFolders()
   if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
@@ -289,15 +392,32 @@ export async function mutateFolders(fn: (state: FolderState) => FolderState): Pr
   if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
 }
 
+/**
+ * Envia um prompt. Devolve `false` quando o agente recusou.
+ *
+ * `streamingBehavior` vai SEMPRE, e isso é correção de bug. O agente exige o
+ * campo em qualquer estado com trabalho enfileirado — não só streaming, mas
+ * também compactando ou com bash rodando, quando `isStreaming` é `false`
+ * (`core/agent-session.js`: "Specify streamingBehavior ... to queue the
+ * message"). Sem o campo o send era recusado, o erro morria num `console.warn`
+ * e o composer já havia limpado o texto: a mensagem da pessoa sumia sem aviso.
+ *
+ * O retorno existe pelo mesmo motivo — quem chama só pode limpar a caixa
+ * depois de saber que foi aceito.
+ */
 export async function sendPrompt(
   message: string,
-  images?: { data: string; mimeType: string }[]
-): Promise<void> {
-  const streaming = useAgent.getState().state?.isStreaming
-  const payload: Record<string, unknown> = { message }
+  images?: { data: string; mimeType: string }[],
+  behavior: DeliveryBehavior = 'steer'
+): Promise<boolean> {
+  const payload: Record<string, unknown> = { message, streamingBehavior: behavior }
   if (images?.length) payload.images = images.map((i) => ({ type: 'image', ...i }))
-  if (streaming) payload.streamingBehavior = 'steer'
-  await rpc('prompt', payload)
+
+  const out = await rpcCall('prompt', payload)
+  if (!out.ok) {
+    useAgent.getState().notify('error', out.error ?? t('composer.sendFailed'))
+    return false
+  }
   void refreshState()
 
   /*
@@ -307,21 +427,95 @@ export async function sendPrompt(
     primeira mensagem; a resposta raramente muda o nome.
   */
   void maybeGenerateTitle()
+  return true
 }
 
+/**
+ * Aborta o turno em andamento.
+ *
+ * NÃO limpa a fila: o que estiver enfileirado roda em seguida. Limpar exigiria
+ * `abort_and_clear_queue`, que só existe no protocolo interno do daemon e não
+ * está no RPC. A UI precisa dizer isso, senão o botão promete o que não faz.
+ */
 export async function abortTurn(): Promise<void> {
   await bridge().fire('abort')
   void refreshState()
 }
 
-export async function setModel(model: ModelInfo): Promise<void> {
-  /*
-    O daemon do prime-agent espera `{ provider, modelId }` (ver case "set_model"
-    em AgentDaemon.handleCommand). Enviar `{ model: id }` fazia o daemon ler
-    provider/modelId como undefined e falhar com "Model not found:
-    undefined/undefined", sem feedback na interface.
-  */
-  await rpc('set_model', { provider: model.provider, modelId: model.id })
+/*
+  Agendamentos e heartbeats.
+
+  Funções finas de propósito, sem estado no store: o painel é o único
+  interessado e é dono dos dados via `useAsync`. Guardar aqui só criaria uma
+  cópia para sincronizar.
+
+  `rpcCall` e não `rpc`: o erro importa. Sem daemon, `add_schedule` responde
+  "Cron jobs require daemon mode", e essa mensagem é a diferença entre a UI
+  explicar o que aconteceu e mostrar uma lista vazia mentirosa.
+*/
+export async function listSchedules(): Promise<RpcOutcome<{ jobs: AgentCronJob[] }>> {
+  return rpcCall<{ jobs: AgentCronJob[] }>('list_schedules')
+}
+
+export async function addSchedule(
+  schedule: string,
+  prompt: string
+): Promise<RpcOutcome<{ job: AgentCronJob }>> {
+  return rpcCall<{ job: AgentCronJob }>('add_schedule', { schedule, prompt })
+}
+
+export async function cancelSchedule(jobId: string): Promise<RpcOutcome<{ job: AgentCronJob }>> {
+  return rpcCall<{ job: AgentCronJob }>('cancel_schedule', { jobId })
+}
+
+export async function getHeartbeat(): Promise<RpcOutcome<{ heartbeat: AgentCronJob | null }>> {
+  return rpcCall<{ heartbeat: AgentCronJob | null }>('get_heartbeat')
+}
+
+export async function setHeartbeat(
+  schedule: string,
+  prompt: string,
+  deliveryMode: AgentHeartbeatDeliveryMode
+): Promise<RpcOutcome<{ heartbeat: AgentCronJob | null }>> {
+  return rpcCall<{ heartbeat: AgentCronJob | null }>('set_heartbeat', {
+    schedule,
+    prompt,
+    deliveryMode
+  })
+}
+
+/** `clear` remove o heartbeat; `pause`/`resume` só mudam o estado. */
+export async function updateHeartbeat(
+  action: 'pause' | 'resume' | 'clear'
+): Promise<RpcOutcome<{ heartbeat: AgentCronJob | null }>> {
+  return rpcCall<{ heartbeat: AgentCronJob | null }>('update_heartbeat', { action })
+}
+
+export async function setSteeringMode(mode: QueueMode): Promise<void> {
+  await rpc('set_steering_mode', { mode })
+  void refreshState()
+}
+
+export async function setFollowUpMode(mode: QueueMode): Promise<void> {
+  await rpc('set_follow_up_mode', { mode })
+  void refreshState()
+}
+
+/**
+ * Troca o modelo ativo.
+ *
+ * O RPC do prime-agent exige `provider` e `modelId` como campos separados
+ * (`docs/rpc.md`: `{"type":"set_model","provider":"anthropic","modelId":"..."}`)
+ * — nunca existiu um campo `model` só. A primeira versão da GUI mandava
+ * `{ model: id }`, que o daemon rejeitava com "Model not found" a cada troca;
+ * o erro só ia para o console, então a interface simplesmente não reagia.
+ */
+export async function setModel(provider: string, id: string): Promise<void> {
+  const out = await rpcCall('set_model', { provider, modelId: id })
+  if (!out.ok) {
+    useAgent.getState().notify('error', out.error ?? t('model.switchFailed'))
+    return
+  }
   void refreshState()
 }
 
@@ -667,6 +861,94 @@ function plainText(m: UiMessage): string {
     .map((b) => b.text)
     .join(' ')
     .trim()
+}
+
+/**
+ * Gera título para uma conversa qualquer, sem abrir ela.
+ *
+ * Lê o transcript do disco (`transcript`, o mesmo canal que o carregamento
+ * usa) em vez de trocar a ponte de sessão: trocar mataria o turno em andamento
+ * e promoveria a conversa a residente no daemon — preço absurdo para dar nome
+ * a uma linha da lista.
+ *
+ * O nome vai para `folders.titles`, o MESMO lugar onde o renomear manual grava.
+ * Duas razões: `set_session_name` só age na sessão ativa, então não serviria
+ * para o lote; e assim o título gerado é editável e apagável exatamente como um
+ * renomeado à mão, sem virar um estado especial que a pessoa não consegue
+ * desfazer.
+ *
+ * @returns o título gravado, ou `null` se não deu para gerar.
+ */
+export async function generateTitleFor(session: {
+  id: string
+  path: string
+}): Promise<string | null> {
+  const tail = await bridge().transcript(session.path, 40)
+  if (!tail?.ok) return null
+
+  const entries = tail.entries as { type?: string; message?: AgentMessage }[]
+  const msgs = entries.filter((e) => e.type === 'message' && e.message).map((e) => e.message!)
+
+  const user = msgs.find((m) => m.role === 'user')
+  if (!user) return null
+  const assistant = msgs.find((m) => m.role === 'assistant')
+
+  const flat = (m: AgentMessage): string => {
+    const c = m.content
+    if (typeof c === 'string') return c.trim()
+    return c
+      .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+      .map((b) => b.text)
+      .join(' ')
+      .trim()
+  }
+
+  const convo =
+    `usuário: ${flat(user).slice(0, 900)}` +
+    (assistant ? `\nassistente: ${flat(assistant).slice(0, 700)}` : '')
+
+  const r = await bridge().generateTitle(convo)
+  const title = r?.ok ? (r.title as string | null) : null
+  if (!title) return null
+
+  await mutateFolders((st) => ({
+    ...st,
+    titles: { ...(st.titles ?? {}), [session.id]: title }
+  }))
+  return title
+}
+
+/**
+ * Gera título para várias conversas, uma por vez.
+ *
+ * **Sequencial por necessidade, não por preguiça.** Cada título sobe um
+ * `prime-agent --mode rpc` efêmero (ver `src/main/titles.ts`); disparar vinte
+ * em paralelo abriria vinte processos do agente na máquina de quem clicou.
+ *
+ * `onProgress` recebe quantas já foram e o total, para a interface poder dizer
+ * onde está em vez de só girar. Falha em uma não interrompe as outras: uma
+ * conversa sem mensagem de usuário, ou um arquivo ilegível, não é motivo para
+ * abandonar as dezoito restantes.
+ *
+ * @returns quantas receberam nome.
+ */
+export async function generateTitlesFor(
+  sessions: readonly { id: string; path: string }[],
+  onProgress?: (done: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<number> {
+  let ok = 0
+  for (let i = 0; i < sessions.length; i++) {
+    if (signal?.aborted) break
+    try {
+      if (await generateTitleFor(sessions[i])) ok++
+    } catch {
+      // Segue para a próxima: ver o comentário acima.
+    }
+    onProgress?.(i + 1, sessions.length)
+  }
+  void refreshSessions()
+  return ok
 }
 
 let titling = false

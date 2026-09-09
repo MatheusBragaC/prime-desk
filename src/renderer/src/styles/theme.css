@@ -35,7 +35,15 @@
   --p-info: #38bdf8;
   --p-mint: #8ba888;
 
-  --p-selected: #22222a;
+  /*
+    Seleção tem tom próprio, e não pode empatar com `--p-elevated`.
+
+    Empatava: as duas eram #22222a, então a conversa aberta e qualquer conversa
+    sob o mouse ficavam idênticas — a lista inteira perdia hierarquia, e não
+    havia como saber onde você estava. Agora a seleção é um degrau acima e puxa
+    de leve para o destaque, para ler como "aqui" e não como "passando".
+  */
+  --p-selected: #2b2a36;
   --p-user-bg: #17171d;
   --p-diff-added: #3fb950;
   --p-diff-removed: #f85149;

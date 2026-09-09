@@ -1,20 +1,21 @@
 import {
-  app, BrowserWindow, ipcMain, shell, dialog, nativeImage, type IpcMainInvokeEvent
+  app, BrowserWindow, ipcMain, shell, dialog, nativeImage, clipboard,
+  type IpcMainInvokeEvent
 } from 'electron'
-import { basename, join, dirname } from 'node:path'
+import { basename, join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { homedir } from 'node:os'
+import { homedir, userInfo } from 'node:os'
 import { readFile, stat, open } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { RpcClient } from './rpc-client.js'
 import { listSessions } from './session-catalog.js'
 import { getAgentTree } from './agent-tree.js'
 import { execFile } from 'node:child_process'
-import { agentBinary, agentEnv } from './agent-path.js'
+import { agentBinary, agentEnv, invalidateAgentPath } from './agent-path.js'
 import { loadFolders, saveFolders } from './folders.js'
 import {
-  listDir, gitBranch, gitChanges, gitDiff, realPathInside, readFileSafe, writeFileSafe,
-  deleteSessionFile
+  listDir, gitBranch, gitBranches, gitCheckout, gitChanges, gitDiff, realPathInside,
+  readFileSafe, writeFileSafe, deleteSessionFile
 } from './files.js'
 import { getUsageStats } from './usage.js'
 import {
@@ -22,6 +23,13 @@ import {
   startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
+import { checkAgentUpdate } from './updates.js'
+import { speechStatus, speechSetupCommand, ensureSpeechDir } from './speech.js'
+import { startSpeech, stopSpeech, transcribe } from './speech-server.js'
+import {
+  createTerminal, writeTerminal, resizeTerminal, terminalScrollback,
+  killTerminal, killAllTerminals
+} from './terminal.js'
 import {
   resolveSshExtension, isValidSshTarget, testConnection, prepareSshShim,
   loadConnections, saveConnections, type SshConnection, type SshShim
@@ -129,9 +137,11 @@ async function isRiskyToOpen(target: string): Promise<boolean> {
  * o esquecimento não virar bug silencioso.
  */
 const RPC_SEND_ALLOWED = new Set([
-  'clone', 'compact', 'get_available_models', 'get_commands', 'get_messages',
-  'get_state', 'new_session', 'observe', 'prompt', 'set_model',
-  'set_session_name', 'set_thinking_level', 'switch_session'
+  'add_schedule', 'cancel_schedule', 'clone', 'compact', 'get_available_models',
+  'get_commands', 'get_heartbeat', 'get_messages', 'get_session_stats',
+  'get_state', 'list_schedules', 'new_session', 'observe', 'prompt',
+  'set_follow_up_mode', 'set_heartbeat', 'set_model', 'set_session_name',
+  'set_steering_mode', 'set_thinking_level', 'switch_session', 'update_heartbeat'
 ])
 
 /** `fire` não espera resposta: só o que precisa furar a fila. */
@@ -294,6 +304,27 @@ function createWindow(): void {
     }
   })
 
+  /*
+    Permissões do renderer.
+
+    Sem handler o Electron concede tudo por padrão, o que destoa do resto do
+    app — que tem guarda de origem no IPC, allowlist de RPC e CSP fechado. Aqui
+    a lista é explícita: microfone para o ditado, nada mais. Câmera,
+    geolocalização, notificação e afins ficam de fora porque o app não usa.
+
+    A checagem de origem é a mesma do IPC: só o frame principal da janela.
+  */
+  win.webContents.session.setPermissionRequestHandler((contents, permission, done) => {
+    const trusted = win !== null && !win.isDestroyed() && contents === win.webContents
+    done(trusted && permission === 'media')
+  })
+
+  win.webContents.session.setPermissionCheckHandler((contents, permission) => {
+    // `contents` é nulo em checagem sem frame associado; aí a resposta é não.
+    const trusted = win !== null && !win.isDestroyed() && contents === win.webContents
+    return trusted && permission === 'media'
+  })
+
   win.once('ready-to-show', () => {
     // No Linux a opção `icon` do construtor nem sempre pega; setIcon é confiável.
     if (icon) {
@@ -330,6 +361,9 @@ function createWindow(): void {
 
   win.on('closed', () => {
     stopTreePolling()
+    // Shells do painel são filhos da janela: sem isso ficam órfãos rodando.
+    killAllTerminals()
+    stopSpeech()
     win = null
   })
 }
@@ -587,6 +621,26 @@ handle('agents:refresh', () => {
   return { ok: true }
 })
 
+/*
+  Copiar vai pelo processo main, não pelo `navigator.clipboard`.
+
+  O motivo é concreto: o handler de permissões acima libera só `media`, e a
+  Async Clipboard API do Chromium pede `clipboard-sanitized-write` — então
+  `writeText` era negado e os três botões de copiar do app (bloco de código,
+  comando de instalação no onboarding, conteúdo de arquivo) falhavam calados.
+
+  Dava para abrir a permissão, mas por aqui é melhor: não amplia a superfície
+  do renderer, funciona independente de contexto seguro, e devolve erro de
+  verdade em vez de uma promessa rejeitada que ninguém pega.
+
+  Só escrita. Ler a área de transferência do usuário o app não precisa.
+*/
+handle('clipboard:write', (_e, text: string) => {
+  if (typeof text !== 'string' || !text) return { ok: false, error: 'Nada para copiar.' }
+  clipboard.writeText(text)
+  return { ok: true }
+})
+
 handle('folders:load', async () => ({ ok: true, state: await loadFolders() }))
 
 handle('folders:save', async (_e, state: FolderState) => ({
@@ -774,6 +828,23 @@ handle('files:branch', async () => ({ ok: true, branch: await gitBranch(workspac
 
 handle('git:changes', async () => gitChanges(workspaceRoot))
 
+handle('git:branches', async () => gitBranches(workspaceRoot))
+
+/**
+ * Troca de ramo no diretorio onde o agente executa.
+ *
+ * O nome e validado contra a lista de ramos locais antes de chegar ao git: o
+ * renderer nao escolhe argumento de subprocesso.
+ */
+handle('git:checkout', async (_e, branch: string) => {
+  const listed = await gitBranches(workspaceRoot)
+  if (!listed.ok) return { ok: false, error: listed.error ?? 'Nao e um repositorio git.' }
+  if (!listed.branches?.some((b) => b.name === branch)) {
+    return { ok: false, error: `Ramo desconhecido: ${branch}` }
+  }
+  return gitCheckout(workspaceRoot, branch)
+})
+
 handle('git:diff', async (_e, relPath?: string) => gitDiff(workspaceRoot, relPath))
 
 handle('files:read', async (_e, relPath: string) => readFileSafe(workspaceRoot, relPath))
@@ -807,12 +878,160 @@ handle('files:reveal', async (_e, relPath: string) => {
   return err ? { ok: false, error: err } : { ok: true }
 })
 
+/**
+ * Seletor de arquivo para abrir como aba no painel.
+ *
+ * Devolve caminho RELATIVO à raiz do workspace, porque é o que `files:read` e
+ * `files:write` aceitam. A confinação usa a mesma `realPathInside` do resto do
+ * explorador: escolher algo fora da raiz — ou um symlink que aponte pra fora —
+ * é recusado aqui, não lá na leitura.
+ */
+handle('dialog:pickWorkspaceFile', async () => {
+  if (!win) return { ok: false }
+  const r = await dialog.showOpenDialog(win, {
+    properties: ['openFile'],
+    defaultPath: workspaceRoot,
+    title: 'Abrir arquivo'
+  })
+  if (r.canceled || r.filePaths.length === 0) return { ok: false }
+
+  const real = await realPathInside(workspaceRoot, r.filePaths[0])
+  if (!real) return { ok: false, error: 'O arquivo está fora da pasta de trabalho.' }
+
+  return { ok: true, path: relative(workspaceRoot, real) }
+})
+
+// ------------------------------------------------------- terminal embutido
+
+handle('terminal:create', (e, spec: { id: string; cwd?: string; command?: string }) =>
+  createTerminal(
+    { id: spec.id, cwd: spec.cwd || workspaceRoot, command: spec.command },
+    e.sender
+  )
+)
+
+handle('terminal:write', (_e, args: { id: string; data: string }) => {
+  writeTerminal(args.id, args.data)
+  return { ok: true }
+})
+
+handle('terminal:resize', (_e, args: { id: string; cols: number; rows: number }) => {
+  resizeTerminal(args.id, args.cols, args.rows)
+  return { ok: true }
+})
+
+handle('terminal:scrollback', (_e, id: string) => ({
+  ok: true,
+  scrollback: terminalScrollback(id)
+}))
+
+handle('terminal:kill', (_e, id: string) => {
+  killTerminal(id)
+  return { ok: true }
+})
+
+/**
+ * Existe versão nova do prime-agent?
+ *
+ * Só compara números — quem instala é o `prime-agent update` rodando no
+ * terminal embutido, à vista do usuário. Nunca automático: trocar um binário
+ * que executa `bash` é ação que precisa de gesto explícito no momento.
+ */
+handle('updates:check', async () => {
+  const env = await checkEnvironment()
+  const result = await checkAgentUpdate(env.agent.version)
+  return { ok: true, update: result }
+})
+
+/**
+ * Redescobre o agente depois de uma atualização.
+ *
+ * O caminho é memorizado, e a atualização pode mover o binário de prefixo. O
+ * `startEnvWatch` não ajuda aqui: ele compara a assinatura do `auth.json`, e
+ * troca de versão não mexe em credencial.
+ */
+handle('updates:rescan', async () => {
+  invalidateAgentPath()
+  const status = await checkEnvironment()
+  return { ok: true, status }
+})
+
+// ---------------------------------------------------------- transcricao
+
+handle('speech:status', async () => ({ ok: true, status: await speechStatus() }))
+
+/**
+ * Comando de instalacao do motor local.
+ *
+ * O main so monta o texto; quem executa e o terminal embutido, a vista. O
+ * renderer nunca escolhe o que roda: `modelId` e validado contra a lista.
+ */
+handle('speech:setupCommand', async (_e, modelId: string) => {
+  await ensureSpeechDir()
+  const status = await speechStatus()
+  const valid = status.models.some((m) => m.id === modelId)
+  if (!valid) return { ok: false, error: `Modelo desconhecido: ${modelId}` }
+  return { ok: true, command: speechSetupCommand(modelId) }
+})
+
+/**
+ * Sobe o servidor de voz para a sessao de ditado.
+ *
+ * Um processo por sessao, nao por trecho: carregar o modelo custa segundos e
+ * centenas de megabytes, e refazer isso a cada janela de fala impediria
+ * qualquer coisa parecida com tempo real.
+ */
+handle('speech:start', async (_e, modelId: string) => startSpeech(modelId))
+
+handle('speech:stop', () => {
+  stopSpeech()
+  return { ok: true }
+})
+
+/** Recebe amostras Float32 mono 16 kHz e devolve o texto reconhecido. */
+handle('speech:transcribe', async (_e, samples: Float32Array) =>
+  transcribe(samples instanceof Float32Array ? samples : new Float32Array(samples))
+)
+
 handle('shell:openExternal', (_e, url: string) => ({ ok: openExternalSafe(url) }))
+
+/**
+ * Nome de exibição da pessoa, vindo do sistema operacional.
+ *
+ * Não vem da conta do provedor: o `auth.json` do prime-agent guarda só `type`,
+ * `refresh`, `access` e `expires` — nome e e-mail não estão lá. Buscá-los
+ * exigiria chamar a API do provedor com o token do usuário, e credencial não
+ * sai do processo principal por decisão de projeto.
+ *
+ * No Linux/macOS o nome completo mora no campo GECOS do `/etc/passwd`, que
+ * costuma trazer "Nome Sobrenome". Sem ele, sobra o login.
+ */
+function displayName(): string {
+  let username = ''
+  try {
+    username = userInfo().username
+  } catch {
+    return ''
+  }
+  if (process.platform === 'win32') return username
+
+  try {
+    const line = readFileSync('/etc/passwd', 'utf-8')
+      .split('\n')
+      .find((l) => l.startsWith(username + ':'))
+    const gecos = (line ?? '').split(':')[4]?.split(',')[0]?.trim()
+    if (gecos) return gecos
+  } catch {
+    // Sem /etc/passwd legível: o login serve.
+  }
+  return username
+}
 
 handle('app:info', () => ({
   version: app.getVersion(),
   home: homedir(),
-  platform: process.platform
+  platform: process.platform,
+  userName: displayName()
 }))
 
 // ---------------------------------------------------------------- lifecycle

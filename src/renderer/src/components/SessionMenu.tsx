@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, type RefObject } from 'react'
 import {
   FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
-  Trash2, ChevronRight, ExternalLink
+  Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2
 } from 'lucide-react'
 import type { SessionSummary } from '../../../shared/protocol'
-import { useAgent, mutateFolders, refreshSessions, rpc, deleteSession } from '../store/agent'
+import {
+  useAgent, mutateFolders, refreshSessions, rpc, deleteSession, generateTitleFor
+} from '../store/agent'
 import type { Group } from '../lib/grouping'
+import { usePopover } from '../lib/usePopover'
 import { useT } from '../i18n'
 
 interface Props {
@@ -15,36 +18,41 @@ interface Props {
   onClose: () => void
   onOpen: () => void
   onRename: () => void
+  /** Botão "⋯" da linha: fica fora do menu, então precisa ser excluído do clique fora. */
+  trigger: RefObject<HTMLElement | null>
 }
 
 const item =
   'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
 
-export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename }: Props) {
+export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename, trigger }: Props) {
   const folders = useAgent((s) => s.folders)
   const notify = useAgent((s) => s.notify)
   const { t } = useT()
   const [submenu, setSubmenu] = useState(false)
+  const [titling, setTitling] = useState(false)
+
+  /*
+    O menu fica aberto durante a geração, para o spinner ter onde aparecer: são
+    alguns segundos (sobe um prime-agent efêmero), e fechar antes deixaria o
+    clique sem nenhuma resposta na tela.
+  */
+  async function title(): Promise<void> {
+    setTitling(true)
+    const name = await generateTitleFor(session).catch(() => null)
+    setTitling(false)
+    if (!name) {
+      useAgent.getState().notify('error', t('menu.titleFailed'))
+      return
+    }
+    void refreshSessions()
+    onClose()
+  }
   const requestConfirm = useAgent((s) => s.requestConfirm)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
   const pinned = Boolean(folders.pinned?.[session.id])
   const archived = Boolean(folders.archived?.[session.id])
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
 
   async function moveTo(folderId: string | null) {
     await mutateFolders((s) => {
@@ -122,7 +130,7 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
   return (
     <div
       ref={ref}
-      className="absolute right-1 top-7 z-50 w-[218px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
     >
       <button className={item} onClick={onOpen}>
         <ExternalLink size={14} strokeWidth={1.75} />
@@ -137,6 +145,23 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       <button className={item} onClick={onRename}>
         <Pencil size={14} strokeWidth={1.75} />
         {t('menu.rename')}
+      </button>
+
+      {/*
+        Gerar título fica ao lado do renomear porque é a mesma ação, feita por
+        outro. O nome vai para o mesmo lugar, e continua editável e apagável.
+      */}
+      <button
+        className={item + (titling ? ' pointer-events-none' : '')}
+        onClick={() => void title()}
+        title={session.named ? t('menu.retitleHint') : t('menu.titleHint')}
+      >
+        {titling ? (
+          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
+        ) : (
+          <WandSparkles size={14} strokeWidth={1.75} />
+        )}
+        {session.named ? t('menu.retitle') : t('menu.title')}
       </button>
 
       <button

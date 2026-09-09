@@ -15,6 +15,16 @@ export interface ToolExec {
   args: Record<string, unknown>
   status: 'running' | 'ok' | 'error'
   text: string
+  /**
+   * Quando a execução começou, em epoch ms.
+   *
+   * Só existe para chamada vista ao vivo: conversa carregada do disco não tem
+   * evento de início, e inventar um faria uma chamada antiga parecer estar
+   * rodando agora. `durationMs` cobre o caso terminado; este cobre o em curso,
+   * que antes não tinha relógio nenhum — o card girava o mesmo spinner por dois
+   * segundos ou por quarenta minutos.
+   */
+  startedAt?: number
   durationMs?: number
   stderr?: string
   kernelRestarted?: boolean
@@ -166,7 +176,14 @@ export function applyEvent(t: Transcript, ev: AgentEvent): Transcript {
       ...t,
       tools: {
         ...t.tools,
-        [e.toolCallId]: { id: e.toolCallId, name: e.toolName, args: e.args ?? {}, status: 'running', text: '' }
+        [e.toolCallId]: {
+          id: e.toolCallId,
+          name: e.toolName,
+          args: e.args ?? {},
+          status: 'running',
+          text: '',
+          startedAt: Date.now()
+        }
       }
     }
   }
@@ -199,7 +216,13 @@ export function applyEvent(t: Transcript, ev: AgentEvent): Transcript {
           args: cur?.args ?? {},
           status: e.isError || e.result?.isError ? 'error' : 'ok',
           text: textOf(e.result),
-          durationMs: d?.durationMs,
+          startedAt: cur?.startedAt,
+          /*
+            O agente informa a duração; quando não informa, e a chamada foi
+            vista ao vivo, o relógio local serve. Sem isso uma chamada de
+            quarenta minutos terminava sem deixar registro de quanto durou.
+          */
+          durationMs: d?.durationMs ?? (cur?.startedAt ? Date.now() - cur.startedAt : undefined),
           stderr: d?.stderr,
           kernelRestarted: d?.kernelRestarted
         }
