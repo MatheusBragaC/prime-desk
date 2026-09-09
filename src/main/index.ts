@@ -493,8 +493,6 @@ handle('bridge:mark', (_e, args: { sessionPath?: string; sessionId?: string }) =
   return { ok: true }
 })
 
-handle('bridge:execution', () => ({ ok: true, execution: executionTarget }))
-
 handle('bridge:stop', () => {
   // Só a ativa: as estacionadas seguem até o fim do turno delas.
   active?.client.stop()

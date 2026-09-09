@@ -36,8 +36,6 @@ const api = {
   saveSshConnections: (
     list: readonly SshConnection[]
   ): Promise<Envelope<{ connections: SshConnection[] }>> => ipcRenderer.invoke('ssh:save', list),
-  execution: (): Promise<Envelope<{ execution: ExecutionInfo }>> =>
-    ipcRenderer.invoke('bridge:execution'),
   stopBridge: (): Promise<Envelope> => ipcRenderer.invoke('bridge:stop'),
   parkBridge: (): Promise<Envelope<{
     parkedId: string
