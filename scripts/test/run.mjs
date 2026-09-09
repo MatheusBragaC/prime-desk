@@ -34,6 +34,23 @@ const SUITES = [
     test: './agentUsage.test.mjs',
     src: 'src/renderer/src/lib/agentUsage.ts',
     needsShims: false
+  },
+  {
+    test: './agentTreeDisk.test.mjs',
+    src: 'src/main/agent-tree-disk.ts',
+    needsShims: false,
+    // Módulo do processo principal: usa `node:fs/promises`. Sem isto o esbuild
+    // assume plataforma browser e tenta empacotar os builtins do Node.
+    platform: 'node',
+    /*
+      O módulo é copiado para um diretório temporário, então o import relativo
+      não resolve mais. A casca também mantém o teste honesto: os diretórios
+      reais nunca são tocados — cada caso injeta os seus.
+    */
+    shims: {
+      'session-catalog.js':
+        "export const paths = { AGENT_DIR: '/nao-usado', SESSIONS_DIR: '/nao-usado/sessions', ARTIFACTS_DIR: '/nao-usado/session-artifacts' }\n"
+    }
   }
 ]
 
@@ -48,13 +65,19 @@ for (const suite of SUITES) {
     : readFileSync(suite.src, 'utf8')
   writeFileSync(entry, source)
 
+  for (const [nome, conteudo] of Object.entries(suite.shims ?? {})) {
+    writeFileSync(join(dir, nome), conteudo)
+  }
+
   const args = [entry, '--bundle', '--format=esm', `--outfile=${out}`, '--log-level=error']
+  if (suite.platform) args.push(`--platform=${suite.platform}`)
   if (suite.needsShims) args.push(`--alias:react=${join(dir, 'react.js')}`)
   execFileSync('./node_modules/.bin/esbuild', args, { stdio: 'inherit' })
 
   const mod = await import(out)
   const { default: run } = await import(suite.test)
-  const ok = run(mod)
+  // `await` serve para as duas formas: suíte síncrona devolve boolean.
+  const ok = await run(mod)
   if (!ok) allOk = false
 }
 

@@ -77,7 +77,13 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             <StatusDot node={node} />
             <span className="truncate text-sm text-fg">{label}</span>
             <TaskBadge node={node} />
-            {watching ? (
+            {/*
+              O botão de acompanhar depende do `activeSessionId` que só o daemon
+              tem: `observe` é comando de RPC e não aceita o id de arquivo. Nó
+              lido do disco não tem esse id, então em vez de oferecer um botão
+              que falha, ele não aparece.
+            */}
+            {node.source === 'disk' ? null : watching ? (
               <span className="ml-auto flex shrink-0 items-center gap-1 text-micro text-ok">
                 <Radio size={12} strokeWidth={1.75} className="animate-pulse-soft" />
                 {t('tree.watching')}
