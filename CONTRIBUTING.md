@@ -11,9 +11,23 @@ npm run dev
 ## Antes de abrir PR
 
 ```bash
-npm run typecheck
+npm run check   # lint + typecheck + check:rpc + check:ui
+npm run test
 npm run build
 ```
+
+`npm run check` é a catraca contra regressão. Cada verificação existe por causa de
+um defeito real deste repositório; o mapa de regras, a dívida congelada e como
+atualizar o baseline estão em `docs/auditoria/README.md` ("Lacuna de processo").
+
+- `npm run lint` — ESLint. Direção das camadas (`lib/` não importa de
+  `components/`, renderer não importa de `src/main`), `rules-of-hooks`, `any`
+  proibido na fronteira IPC (`preload`/`shared`), nenhum `@ts-ignore` novo.
+  Teto de avisos congelado: aviso novo derruba o build.
+- `npm run check:rpc` — todo comando RPC chamado no renderer está na allowlist do main.
+- `npm run check:ui` — byte NUL no fonte (tolerância zero) e a dívida de UI
+  (alphas crus, escala tipográfica, i18n hardcoded) contra
+  `scripts/ui-baseline.json`. Falha só se a dívida aumentar.
 
 ## Princípios do projeto
 
