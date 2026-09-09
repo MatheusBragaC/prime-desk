@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarClock, RefreshCw, Plus, Trash2, Pause, Play, HeartPulse,
   AlertTriangle, Zap, Clock
@@ -134,17 +134,21 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
     { pollMs: 15_000, keepPrevious: true }
   )
 
+  /*
+    `heartbeats_changed` chega pelo assinante único de `lib/useBridge.ts`, que
+    já descarta evento de ponte estacionada; o store só conta as mudanças. Um
+    `window.prime.on('agent:event')` aqui recarregaria a lista com evento de
+    outra ponte.
+  */
+  const heartbeatsRev = useAgent((s) => s.heartbeatsRev)
+  const seenRev = useRef(heartbeatsRev)
   useEffect(() => {
-    const off = window.prime.on('agent:event', (payload) => {
-      const ev = payload as { type?: string }
-      if (ev?.type === 'heartbeats_changed') void data.reload()
-    })
-    return () => {
-      off()
-    }
+    if (seenRev.current === heartbeatsRev) return
+    seenRev.current = heartbeatsRev
+    void data.reload()
     // `data.reload` é estável no hook.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [heartbeatsRev])
 
   /**
    * Primeiro agendamento da sessão avisa que ela vira residente.

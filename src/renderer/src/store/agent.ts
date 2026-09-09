@@ -96,6 +96,15 @@ interface AgentStore {
    * sem isso, abrir cedo demais mostraria a resposta parando de crescer.
    */
   document: { id: string; title: string; text: string } | null
+  /**
+   * Contador de `heartbeats_changed`.
+   *
+   * O evento não carrega dado: quem mostra heartbeat precisa saber apenas que
+   * a lista mudou e recarregar. Um contador no store deixa o painel reagir sem
+   * abrir um segundo assinante de `agent:event` — o único assinante, em
+   * `lib/useBridge.ts`, é quem aplica a guarda de `bridgeId`.
+   */
+  heartbeatsRev: number
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -161,6 +170,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   terminalRequest: null,
   dockRequest: null,
   document: null,
+  heartbeatsRev: 0,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -228,6 +238,8 @@ export const useAgent = create<AgentStore>((set, get) => ({
       set({ retry: { attempt: ev.attempt, max: ev.maxAttempts, message: ev.errorMessage } })
     } else if (isAgentEvent(ev, 'auto_retry_end')) {
       set({ retry: null })
+    } else if (isAgentEvent(ev, 'heartbeats_changed')) {
+      set((s) => ({ heartbeatsRev: s.heartbeatsRev + 1 }))
     }
   },
 
