@@ -37,12 +37,12 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
 
   const reload = useCallback(async () => {
     const r = await window.prime.gitBranches()
-    if (!r?.ok) {
+    if (!r.ok) {
       setBranches(null)
       return
     }
-    setBranches(r.branches as GitBranchInfo[])
-    setDirty(Boolean(r.dirty))
+    setBranches(r.branches)
+    setDirty(r.dirty)
   }, [])
 
   useEffect(() => {
@@ -59,10 +59,10 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
     setSwitching(null)
     await reload()
 
-    if (!r?.ok) {
+    if (!r.ok) {
       // A mensagem do git nomeia os arquivos em conflito: vale mais que um
       // "falhou" nosso, e por isso vai inteira para o aviso.
-      const message = (r?.error as string) ?? t('branch.failed')
+      const message = r.error ?? t('branch.failed')
       setError(message)
       notify('error', message)
       return

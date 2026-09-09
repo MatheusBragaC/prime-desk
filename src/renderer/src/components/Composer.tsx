@@ -176,7 +176,7 @@ function ContextChips({
 
   useEffect(() => {
     void window.prime.execution().then((r) => {
-      if (r?.ok) setExecution(r.execution as { kind: 'local' | 'ssh'; target?: string })
+      if (r.ok) setExecution(r.execution)
     })
   }, [cwd])
 
@@ -478,14 +478,13 @@ export function Composer({
 
   async function attach() {
     const r = await window.prime.pickAttachment()
-    if (!r?.ok) return
-    const picked = r.picked as { path: string; isImage: boolean; data?: string; mimeType?: string }[]
+    if (!r.ok) return
 
     setAtts((a) => [
       ...a,
-      ...picked.map((p): Attachment =>
+      ...r.picked.map((p): Attachment =>
         p.isImage
-          ? { kind: 'image', path: p.path, data: p.data!, mimeType: p.mimeType! }
+          ? { kind: 'image', path: p.path, data: p.data, mimeType: p.mimeType }
           : { kind: 'file', path: p.path }
       )
     ])

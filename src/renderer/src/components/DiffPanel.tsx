@@ -55,7 +55,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
   const [open, setOpen] = useState<string | null>(null)
 
   const list = useAsync<GitChange[]>(
-    () => unwrap(window.prime.gitChanges(), (r) => r.changes as GitChange[], t('diff.noRepo')),
+    () => unwrap(window.prime.gitChanges(), (r) => r.changes, t('diff.noRepo')),
     [],
     { keepPrevious: true }
   )
@@ -71,7 +71,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
       if (!open) return null
       return unwrap(
         window.prime.gitDiff(open),
-        (r) => ({ diff: r.diff as string, truncated: Boolean(r.truncated) }),
+        (r) => ({ diff: r.diff, truncated: Boolean(r.truncated) }),
         t('diff.empty')
       )
     },

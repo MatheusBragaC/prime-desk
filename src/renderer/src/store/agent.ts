@@ -3,7 +3,7 @@ import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
   ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
   ContextUsage, SessionStats, DeliveryBehavior, QueueMode, AgentCronJob,
-  AgentHeartbeatDeliveryMode
+  AgentHeartbeatDeliveryMode, ParkedRun
 } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
@@ -28,14 +28,8 @@ export interface CommandInfo {
   source: string
 }
 
-/** Conversa que segue executando numa ponte estacionada, fora da tela. */
-export interface ParkedRun {
-  id: string
-  cwd: string
-  running: boolean
-  sessionId?: string
-  sessionPath?: string
-}
+// Payload do canal `bridge:parked`: é protocolo, não estado inventado aqui.
+export type { ParkedRun }
 
 /** Uma sessão de outro agente acompanhada ao vivo via `observe`. */
 export interface Observed {
@@ -358,7 +352,7 @@ export async function refreshCommands(): Promise<void> {
 
 export async function refreshSessions(): Promise<void> {
   const r = await bridge().listSessions()
-  if (r?.ok) useAgent.getState().setSessions(r.sessions as SessionSummary[])
+  if (r.ok) useAgent.getState().setSessions(r.sessions)
 
   /*
     Um ciclo da árvore junto com o catálogo. Com o poller desligado em repouso, é
@@ -381,7 +375,7 @@ export async function refreshTree(): Promise<void> {
 
 export async function refreshFolders(): Promise<void> {
   const r = await bridge().loadFolders()
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+  if (r.ok) useAgent.getState().setFolders(r.state)
 }
 
 /** Atualiza pastas de forma otimista; o main sanitiza e devolve a verdade final. */
@@ -389,7 +383,7 @@ export async function mutateFolders(fn: (state: FolderState) => FolderState): Pr
   const next = fn(useAgent.getState().folders)
   useAgent.getState().setFolders(next)
   const r = await bridge().saveFolders(next)
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+  if (r.ok) useAgent.getState().setFolders(r.state)
 }
 
 /**
@@ -658,8 +652,8 @@ async function adoptParked(id: string, sessionPath: string): Promise<void> {
     }
 
     store.reset()
-    store.setActiveBridge(r.bridgeId as string)
-    store.setCwd(r.cwd as string)
+    store.setActiveBridge(r.bridgeId)
+    store.setCwd(r.cwd)
     await loadTranscript(sessionPath, store)
     await refreshState()
     void refreshSessions()
@@ -703,7 +697,7 @@ async function startBridgeAt(cwd: string): Promise<boolean> {
     return false
   }
   store.setCwd(r.cwd ?? cwd)
-  store.setActiveBridge((r.bridgeId as string) ?? null)
+  store.setActiveBridge(r.bridgeId ?? null)
 
   for (let i = 0; i < 60; i++) {
     await new Promise((res) => setTimeout(res, 250))
@@ -741,7 +735,7 @@ async function syncCwdToSession(sessionPath: string): Promise<void> {
   if (!target || target === store.cwd) return
 
   const exec = await window.prime.execution()
-  if (exec?.ok && (exec.execution as { kind?: string })?.kind === 'ssh') return
+  if (exec.ok && exec.execution.kind === 'ssh') return
 
   await restartBridgeAt(target)
 }
@@ -908,7 +902,7 @@ export async function generateTitleFor(session: {
     (assistant ? `\nassistente: ${flat(assistant).slice(0, 700)}` : '')
 
   const r = await bridge().generateTitle(convo)
-  const title = r?.ok ? (r.title as string | null) : null
+  const title = r.ok ? r.title : null
   if (!title) return null
 
   await mutateFolders((st) => ({
@@ -978,7 +972,7 @@ export async function maybeGenerateTitle(): Promise<void> {
       (assistant ? `\nassistente: ${plainText(assistant).slice(0, 700)}` : '')
 
     const r = await bridge().generateTitle(convo)
-    const title = r?.ok ? (r.title as string | null) : null
+    const title = r.ok ? r.title : null
     if (!title) return
 
     await rpc('set_session_name', { name: title })

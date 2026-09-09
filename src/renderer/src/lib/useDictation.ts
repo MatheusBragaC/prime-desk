@@ -81,10 +81,10 @@ export function useDictation(onFinal: (text: string) => void, onPartial: (text: 
 
     try {
       const r = await window.prime.speechTranscribe(audio)
-      if (!r?.ok) {
-        setError((r?.error as string) ?? null)
+      if (!r.ok) {
+        setError(r.error ?? null)
       } else {
-        const text = ((r.text as string) ?? '').trim()
+        const text = r.text.trim()
         setError(null)
         if (close) {
           if (text) finalRef.current(text)
@@ -135,8 +135,8 @@ export function useDictation(onFinal: (text: string) => void, onPartial: (text: 
     // O modelo demora a carregar; subir antes de captar evita perder o começo
     // da fala enquanto o servidor ainda está de pé.
     const up = await window.prime.speechStart(modelId)
-    if (!up?.ok) {
-      setError((up?.error as string) ?? null)
+    if (!up.ok) {
+      setError(up.error ?? null)
       return false
     }
     reset()

@@ -38,7 +38,7 @@ export function SshModal({
       identity: form.identity.trim() || undefined
     })
     setTesting(false)
-    setResult(r as { ok: boolean; message: string })
+    setResult(r)
   }
 
   function submit() {

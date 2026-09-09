@@ -34,12 +34,12 @@ export function useExecutionTarget(): ExecutionTarget {
 
   const load = useCallback(async () => {
     const res = await window.prime.listSshConnections()
-    if (res?.ok) setConnections(res.connections as SshConnection[])
+    if (res.ok) setConnections(res.connections)
   }, [])
 
   const persist = useCallback(async (list: SshConnection[]) => {
     const r = await window.prime.saveSshConnections(list)
-    if (r?.ok) setConnections(r.connections as SshConnection[])
+    if (r.ok) setConnections(r.connections)
   }, [])
 
   const use = useCallback(
