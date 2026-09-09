@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { X, Plus, SquareTerminal, FileCode2, FolderOpen } from 'lucide-react'
 import { useAgent } from '../store/agent'
+import { useTerminalTabs } from '../store/terminal'
 import { DockPanel } from './DockPanel'
 import { TerminalView } from './TerminalView'
 import { FileViewer } from './FileViewer'
@@ -14,24 +15,10 @@ import { useT } from '../i18n'
  * (destaque de sintaxe, edição, Ctrl+S), só vivia preso a um overlay de tela
  * cheia. Aqui ele divide o painel com o terminal, que é o arranjo esperado —
  * abrir um arquivo não deveria cobrir a conversa.
+ *
+ * As abas ficam em `store/terminal.ts`: este componente é desmontado toda vez
+ * que o dock fecha, e o PTY não pode depender de estado que morre junto.
  */
-
-interface Tab {
-  id: string
-  kind: 'shell' | 'file'
-  title: string
-  /** Caminho relativo à raiz do workspace. Só em abas de arquivo. */
-  path?: string
-  /** Digitado no shell assim que ele sobe. Só em abas de shell. */
-  command?: string
-}
-
-let seq = 0
-const nextId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${seq++}`
-
-function shellTab(n: number): Tab {
-  return { id: nextId('sh'), kind: 'shell', title: `Shell ${n}` }
-}
 
 export function TerminalPanel({ onClose }: { onClose: () => void }) {
   const { t } = useT()
@@ -40,19 +27,17 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   const request = useAgent((s) => s.terminalRequest)
   const clearRequest = useAgent((s) => s.clearTerminalRequest)
 
-  const [tabs, setTabs] = useState<Tab[]>(() => [shellTab(1)])
-  const [active, setActive] = useState<string>(() => '')
+  const tabs = useTerminalTabs((s) => s.tabs)
+  const activeId = useTerminalTabs((s) => s.activeId)
+  const setActive = useTerminalTabs((s) => s.setActive)
+  const addShell = useTerminalTabs((s) => s.addShell)
+  const ensureShell = useTerminalTabs((s) => s.ensureShell)
 
-  const activeId = active || tabs[0]?.id || ''
-
-  const addShell = useCallback(() => {
-    setTabs((prev) => {
-      const n = prev.filter((tb) => tb.kind === 'shell').length + 1
-      const tab = shellTab(n)
-      setActive(tab.id)
-      return [...prev, tab]
-    })
-  }, [])
+  // Painel aberto sem nenhuma aba (primeira abertura, ou depois de fechar a
+  // última) começa com um shell, como antes.
+  useEffect(() => {
+    ensureShell()
+  }, [ensureShell])
 
   /*
     Pedido vindo de outro canto da UI — hoje só o "trocar de conta", que precisa
@@ -61,28 +46,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
   */
   useEffect(() => {
     if (!request) return
-    setTabs((prev) => {
-      /*
-        Mesmo comando pedido de novo reusa a aba: pedir "atualizar" duas vezes
-        empilhava duas abas idênticas. O shell continua vivo depois que o
-        processo termina, então reenviar o comando ali é a repetição natural —
-        e o histórico da tentativa anterior fica à vista logo acima.
-      */
-      const found = prev.find((tb) => tb.kind === 'shell' && tb.command === request.command)
-      if (found) {
-        setActive(found.id)
-        void window.prime.writeTerminal(found.id, request.command + '\r')
-        return prev
-      }
-      const tab: Tab = {
-        id: nextId('sh'),
-        kind: 'shell',
-        title: request.title,
-        command: request.command
-      }
-      setActive(tab.id)
-      return [...prev, tab]
-    })
+    useTerminalTabs.getState().runCommand(request.command, request.title)
     clearRequest()
   }, [request, clearRequest])
 
@@ -92,44 +56,13 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
       if (r?.error) notify('error', r.error)
       return
     }
-    const path = r.path as string
-    setTabs((prev) => {
-      // Reabrir o mesmo arquivo foca a aba existente em vez de duplicar.
-      const found = prev.find((tb) => tb.kind === 'file' && tb.path === path)
-      if (found) {
-        setActive(found.id)
-        return prev
-      }
-      const tab: Tab = {
-        id: nextId('file'),
-        kind: 'file',
-        title: path.split('/').pop() ?? path,
-        path
-      }
-      setActive(tab.id)
-      return [...prev, tab]
-    })
+    useTerminalTabs.getState().openFile(r.path)
   }, [notify])
 
+  // Fechar a última aba fecha o dock: painel de abas vazio não tem o que
+  // mostrar. O `ensureShell` da montagem repõe o shell na próxima abertura.
   const closeTab = useCallback((id: string) => {
-    setTabs((prev) => {
-      const tab = prev.find((tb) => tb.id === id)
-      // Fechar a aba encerra o shell: deixá-lo vivo sem superfície only vazaria
-      // processo, já que não há como voltar a ele.
-      if (tab?.kind === 'shell') void window.prime.killTerminal(id)
-
-      const next = prev.filter((tb) => tb.id !== id)
-      if (next.length === 0) {
-        onClose()
-        return prev
-      }
-      setActive((cur) => {
-        if (cur !== id) return cur
-        const wasAt = prev.findIndex((tb) => tb.id === id)
-        return (next[wasAt] ?? next[next.length - 1]).id
-      })
-      return next
-    })
+    if (useTerminalTabs.getState().closeTab(id) === 0) onClose()
   }, [onClose])
 
   return (
