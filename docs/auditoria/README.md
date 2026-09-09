@@ -58,8 +58,59 @@ dependencias entre camadas**.
 6. Fatiar `store/agent.ts` (1023 linhas) em 8 fatias com barrel; extrair `Composer` e `Sidebar`.
 7. Tokens `line`/`hover`/`scrim` no `tailwind.config.js` (81 alphas crus) e migrar imports para `@/`+`@shared/`.
 
-## Lacuna de processo
+## Lacuna de processo — fechada pela catraca
 
-O projeto **nao tem ESLint**. Nenhuma das convencoes acima e verificavel automaticamente hoje.
-Sugestao dos auditores: ESLint com `import/no-restricted-paths` (proibir `lib/` -> `components/`)
-mais um `scripts/checkui.cjs` no molde do `scripts/checkrpc.cjs`, ligados ao `npm run check`.
+O projeto **nao tinha ESLint**: nenhuma das convencoes acima era verificavel automaticamente.
+Hoje `npm run check` roda `lint` + `typecheck` + `check:rpc` + `check:ui`.
+
+### ESLint (`eslint.config.mjs`)
+
+Preset deliberadamente pequeno. Cada regra `error` corresponde a um defeito que ja aconteceu aqui:
+
+| Regra | Escopo | Sev. | Defeito de origem |
+|---|---|---|---|
+| `import/no-restricted-paths` + `no-restricted-imports` | `renderer/src/lib/**` | error | achado 2 (inversao `lib/` -> `components/`) |
+| `no-restricted-imports` (grupo `main`) | `renderer/**` | error | renderer arrastando codigo de Node para o bundle |
+| `react-hooks/rules-of-hooks` | `renderer/**` | error | hook condicional |
+| `@typescript-eslint/no-explicit-any` | `preload/**`, `shared/**` | error | achado 1 (`Promise<any>` -> ~25 casts) |
+| `@typescript-eslint/consistent-type-assertions` | `preload/**`, `shared/**` | error | cast de objeto literal na fronteira |
+| `@typescript-eslint/ban-ts-comment` | `src/**` | error | repo tem zero `@ts-ignore`; a regra preserva isso |
+| `no-control-regex`, `no-irregular-whitespace` | `src/**` | error | achado D (bytes de controle no fonte) |
+
+Dívida deixada como `warn` para nao exigir reescrita em massa — **7 avisos**, congelados pelo
+`--max-warnings 7` do script `lint`:
+
+- `react-hooks/exhaustive-deps` (6): 5 sao a dependencia `t` do i18n, que muda a cada render de
+  idioma; 1 e lista de deps nao literal em `useStickyScroll.ts:93`. Corrigir exige mexer no ciclo
+  de vida dos hooks — fora do escopo da catraca.
+- `@typescript-eslint/no-explicit-any` (1): `src/main/index.ts:83`, a assinatura generica do
+  dispatcher do `ipcMain.handle`. No `preload`/`shared` a mesma regra e `error`.
+
+Quem pagar parte da divida baixa o numero no `--max-warnings` junto, no mesmo commit.
+
+### `scripts/checkui.cjs` — baseline versionado
+
+Pega o que o ESLint nao ve. Uma medida e tolerancia zero; as outras quatro sao **catraca**: o
+numero atual esta congelado em `scripts/ui-baseline.json` e o script falha **apenas se piorar**.
+
+| Medida | Modo | Hoje | Como pagar |
+|---|---|---|---|
+| `nul` — byte NUL literal (todo `src/`) | zero | 0 | trocar por `\u0000` no literal |
+| `alpha` — alpha cru de cor (`white/[0.06]`) | ratchet | 95 | tokens `line`/`hover`/`scrim` no `tailwind.config.js` |
+| `offscale` — `text-[Npx]` fora da escala do REDESIGN 3.1 | ratchet | 2 | `text-xs/sm/base/lg/xl/display` |
+| `i18nInline` — i18n por ternario inline no JSX | ratchet | 2 | chave em `src/renderer/src/i18n` + `t()` |
+| `hardcoded` — string de UI hardcoded em componente | ratchet | 12 | passar pelo `t()` |
+
+O `alpha` conta 95 e nao os 81 do relatorio de padroes: o relatorio contou ocorrencias distintas,
+o script conta todas as ocorrencias. O `offscale` 2 e o outro lado do "escala tipografica 238/240".
+
+**Atualizar o baseline quando a divida for paga:**
+
+```bash
+npm run check:ui -- --update   # re-mede e reescreve scripts/ui-baseline.json
+git diff scripts/ui-baseline.json
+```
+
+O baseline **so pode descer**. Se o diff subir algum numero, a mudanca introduziu divida nova e o
+`--update` esta sendo usado para esconder regressao — reverta. O script avisa sozinho quando uma
+medida cai abaixo do limite, para o baseline nao ficar folgado.
