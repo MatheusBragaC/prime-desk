@@ -40,7 +40,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
   const load = useCallback(async () => {
     setLoading(true)
     const r = await window.prime.listFiles(entry.path)
-    setChildren(r?.ok ? (r.entries as DirEntry[]) : [])
+    setChildren(r.ok ? r.entries : [])
     setLoading(false)
   }, [entry.path])
 
@@ -153,10 +153,10 @@ export function FilesPanel({
   const tree = useAsync<{ root: string; entries: DirEntry[] }>(async () => {
     // A raiz vem do main: evita o explorador divergir do agente.
     const rootRes = await window.prime.filesRoot()
-    const root = rootRes?.ok ? (rootRes.root as string) : ''
+    const root = rootRes.ok ? rootRes.root : ''
     const entries = await unwrap(
       window.prime.listFiles(''),
-      (r) => r.entries as DirEntry[],
+      (r) => r.entries,
       t('files.nothing')
     )
     return { root, entries }

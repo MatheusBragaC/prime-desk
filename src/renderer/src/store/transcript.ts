@@ -1,3 +1,4 @@
+import { isAgentEvent } from '../../../shared/protocol'
 import type { AgentEvent, AgentMessage, ContentBlock, ToolResult, Usage } from '../../../shared/protocol'
 
 export interface UiMessage {
@@ -155,31 +156,38 @@ function upsertMessage(t: Transcript, msg: AgentMessage, finished: boolean, coun
   return { ...t, messages, tools, totals }
 }
 
-/** Aplica um evento. Retorna o mesmo objeto se nada mudou. */
+/**
+ * Aplica um evento. Retorna o mesmo objeto se nada mudou.
+ *
+ * Evento fora do protocolo cai no fim e não muda nada: versão nova do agente
+ * não pode quebrar a tela.
+ */
 export function applyEvent(t: Transcript, ev: AgentEvent): Transcript {
-  const type = ev.type
-
-  if (type === 'message_start' || type === 'message_update' || type === 'message_end' || type === 'turn_end') {
-    const msg = (ev as { message?: AgentMessage }).message
+  if (
+    isAgentEvent(ev, 'message_start') ||
+    isAgentEvent(ev, 'message_update') ||
+    isAgentEvent(ev, 'message_end') ||
+    isAgentEvent(ev, 'turn_end')
+  ) {
+    const msg = ev.message
     if (!msg?.role) return t
     if (msg.role === 'toolResult') {
       return { ...t, tools: applyToolResultMessage(t.tools, msg) }
     }
-    const finished = type === 'message_end' || type === 'turn_end'
+    const finished = ev.type === 'message_end' || ev.type === 'turn_end'
     // Custo consolida só em turn_end, para não contar o mesmo turno duas vezes.
-    return upsertMessage(t, msg, finished, type === 'turn_end')
+    return upsertMessage(t, msg, finished, ev.type === 'turn_end')
   }
 
-  if (type === 'tool_execution_start') {
-    const e = ev as unknown as { toolCallId: string; toolName: string; args: Record<string, unknown> }
+  if (isAgentEvent(ev, 'tool_execution_start')) {
     return {
       ...t,
       tools: {
         ...t.tools,
-        [e.toolCallId]: {
-          id: e.toolCallId,
-          name: e.toolName,
-          args: e.args ?? {},
+        [ev.toolCallId]: {
+          id: ev.toolCallId,
+          name: ev.toolName,
+          args: ev.args ?? {},
           status: 'running',
           text: '',
           startedAt: Date.now()
@@ -188,34 +196,27 @@ export function applyEvent(t: Transcript, ev: AgentEvent): Transcript {
     }
   }
 
-  if (type === 'tool_execution_update') {
-    const e = ev as unknown as { toolCallId: string; partialResult?: ToolResult }
-    const cur = t.tools[e.toolCallId]
+  if (isAgentEvent(ev, 'tool_execution_update')) {
+    const cur = t.tools[ev.toolCallId]
     if (!cur) return t
-    const text = textOf(e.partialResult) || cur.text
+    const text = textOf(ev.partialResult) || cur.text
     if (text === cur.text) return t
-    return { ...t, tools: { ...t.tools, [e.toolCallId]: { ...cur, text } } }
+    return { ...t, tools: { ...t.tools, [ev.toolCallId]: { ...cur, text } } }
   }
 
-  if (type === 'tool_execution_end') {
-    const e = ev as unknown as {
-      toolCallId: string
-      toolName: string
-      result: ToolResult
-      isError?: boolean
-    }
-    const cur = t.tools[e.toolCallId]
-    const d = e.result?.details
+  if (isAgentEvent(ev, 'tool_execution_end')) {
+    const cur = t.tools[ev.toolCallId]
+    const d = ev.result?.details
     return {
       ...t,
       tools: {
         ...t.tools,
-        [e.toolCallId]: {
-          id: e.toolCallId,
-          name: e.toolName ?? cur?.name ?? 'tool',
+        [ev.toolCallId]: {
+          id: ev.toolCallId,
+          name: ev.toolName ?? cur?.name ?? 'tool',
           args: cur?.args ?? {},
-          status: e.isError || e.result?.isError ? 'error' : 'ok',
-          text: textOf(e.result),
+          status: ev.isError || ev.result?.isError ? 'error' : 'ok',
+          text: textOf(ev.result),
           startedAt: cur?.startedAt,
           /*
             O agente informa a duração; quando não informa, e a chamada foi
@@ -230,13 +231,14 @@ export function applyEvent(t: Transcript, ev: AgentEvent): Transcript {
     }
   }
 
-  if (type === 'agent_end') {
+  if (isAgentEvent(ev, 'agent_end')) {
     if (!t.messages.some((m) => m.streaming)) return t
     return { ...t, messages: t.messages.map((m) => (m.streaming ? { ...m, streaming: false } : m)) }
   }
 
   return t
 }
+
 
 /** Reconstrói uma transcrição a partir de um histórico de mensagens. */
 export function hydrate(messages: AgentMessage[]): Transcript {

@@ -3,8 +3,9 @@ import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
   ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
   ContextUsage, SessionStats, DeliveryBehavior, QueueMode, AgentCronJob,
-  AgentHeartbeatDeliveryMode
+  AgentHeartbeatDeliveryMode, ParkedRun
 } from '../../../shared/protocol'
+import { isAgentEvent } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
 } from './transcript'
@@ -28,14 +29,8 @@ export interface CommandInfo {
   source: string
 }
 
-/** Conversa que segue executando numa ponte estacionada, fora da tela. */
-export interface ParkedRun {
-  id: string
-  cwd: string
-  running: boolean
-  sessionId?: string
-  sessionPath?: string
-}
+// Payload do canal `bridge:parked`: é protocolo, não estado inventado aqui.
+export type { ParkedRun }
 
 /** Uma sessão de outro agente acompanhada ao vivo via `observe`. */
 export interface Observed {
@@ -101,6 +96,15 @@ interface AgentStore {
    * sem isso, abrir cedo demais mostraria a resposta parando de crescer.
    */
   document: { id: string; title: string; text: string } | null
+  /**
+   * Contador de `heartbeats_changed`.
+   *
+   * O evento não carrega dado: quem mostra heartbeat precisa saber apenas que
+   * a lista mudou e recarregar. Um contador no store deixa o painel reagir sem
+   * abrir um segundo assinante de `agent:event` — o único assinante, em
+   * `lib/useBridge.ts`, é quem aplica a guarda de `bridgeId`.
+   */
+  heartbeatsRev: number
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
@@ -166,6 +170,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   terminalRequest: null,
   dockRequest: null,
   document: null,
+  heartbeatsRev: 0,
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
@@ -206,40 +211,35 @@ export const useAgent = create<AgentStore>((set, get) => ({
     const after = applyEvent(before, ev)
     if (after !== before) set(after)
 
-    switch (ev.type) {
-      case 'agent_start':
-        set((s) => ({ state: s.state ? { ...s.state, isStreaming: true } : s.state }))
-        break
-      case 'agent_end':
-        set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
-        // A ocupação só muda quando o turno fecha; consultar durante o stream
-        // seria pedir o mesmo número várias vezes.
-        void refreshContext()
-        break
-      case 'session_action_update': {
-        const a = (ev as { actions?: AgentState['sessionActions'] }).actions
-        set((s) => ({ state: s.state && a ? { ...s.state, sessionActions: a } : s.state }))
-        break
-      }
-      case 'compaction_start':
-        set({ compacting: true })
-        break
-      case 'compaction_end':
-        set({ compacting: false })
-        // Aqui o agente devolve `tokens: null` de propósito, até a próxima
-        // resposta. A UI mostra "desconhecido" em vez do número velho.
-        void refreshContext()
-        break
-      case 'auto_retry_start': {
-        const e = ev as unknown as { attempt: number; maxAttempts: number; errorMessage: string }
-        set({ retry: { attempt: e.attempt, max: e.maxAttempts, message: e.errorMessage } })
-        break
-      }
-      case 'auto_retry_end':
-        set({ retry: null })
-        break
-      default:
-        break
+    /*
+      Cadeia de guardas em vez de `switch (ev.type)`: `AgentEvent` inclui o
+      evento ainda não mapeado (`type: string`), e num `switch` ele acompanha
+      todo `case` — o campo lido voltaria a ser `unknown`. Evento desconhecido
+      não casa com nenhuma guarda e é ignorado, como antes.
+    */
+    if (isAgentEvent(ev, 'agent_start')) {
+      set((s) => ({ state: s.state ? { ...s.state, isStreaming: true } : s.state }))
+    } else if (isAgentEvent(ev, 'agent_end')) {
+      set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
+      // A ocupação só muda quando o turno fecha; consultar durante o stream
+      // seria pedir o mesmo número várias vezes.
+      void refreshContext()
+    } else if (isAgentEvent(ev, 'session_action_update')) {
+      const a = ev.actions
+      set((s) => ({ state: s.state && a ? { ...s.state, sessionActions: a } : s.state }))
+    } else if (isAgentEvent(ev, 'compaction_start')) {
+      set({ compacting: true })
+    } else if (isAgentEvent(ev, 'compaction_end')) {
+      set({ compacting: false })
+      // Aqui o agente devolve `tokens: null` de propósito, até a próxima
+      // resposta. A UI mostra "desconhecido" em vez do número velho.
+      void refreshContext()
+    } else if (isAgentEvent(ev, 'auto_retry_start')) {
+      set({ retry: { attempt: ev.attempt, max: ev.maxAttempts, message: ev.errorMessage } })
+    } else if (isAgentEvent(ev, 'auto_retry_end')) {
+      set({ retry: null })
+    } else if (isAgentEvent(ev, 'heartbeats_changed')) {
+      set((s) => ({ heartbeatsRev: s.heartbeatsRev + 1 }))
     }
   },
 
@@ -358,7 +358,7 @@ export async function refreshCommands(): Promise<void> {
 
 export async function refreshSessions(): Promise<void> {
   const r = await bridge().listSessions()
-  if (r?.ok) useAgent.getState().setSessions(r.sessions as SessionSummary[])
+  if (r.ok) useAgent.getState().setSessions(r.sessions)
 
   /*
     Um ciclo da árvore junto com o catálogo. Com o poller desligado em repouso, é
@@ -381,7 +381,7 @@ export async function refreshTree(): Promise<void> {
 
 export async function refreshFolders(): Promise<void> {
   const r = await bridge().loadFolders()
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+  if (r.ok) useAgent.getState().setFolders(r.state)
 }
 
 /** Atualiza pastas de forma otimista; o main sanitiza e devolve a verdade final. */
@@ -389,7 +389,7 @@ export async function mutateFolders(fn: (state: FolderState) => FolderState): Pr
   const next = fn(useAgent.getState().folders)
   useAgent.getState().setFolders(next)
   const r = await bridge().saveFolders(next)
-  if (r?.ok) useAgent.getState().setFolders(r.state as FolderState)
+  if (r.ok) useAgent.getState().setFolders(r.state)
 }
 
 /**
@@ -658,8 +658,8 @@ async function adoptParked(id: string, sessionPath: string): Promise<void> {
     }
 
     store.reset()
-    store.setActiveBridge(r.bridgeId as string)
-    store.setCwd(r.cwd as string)
+    store.setActiveBridge(r.bridgeId)
+    store.setCwd(r.cwd)
     await loadTranscript(sessionPath, store)
     await refreshState()
     void refreshSessions()
@@ -703,7 +703,7 @@ async function startBridgeAt(cwd: string): Promise<boolean> {
     return false
   }
   store.setCwd(r.cwd ?? cwd)
-  store.setActiveBridge((r.bridgeId as string) ?? null)
+  store.setActiveBridge(r.bridgeId ?? null)
 
   for (let i = 0; i < 60; i++) {
     await new Promise((res) => setTimeout(res, 250))
@@ -741,7 +741,7 @@ async function syncCwdToSession(sessionPath: string): Promise<void> {
   if (!target || target === store.cwd) return
 
   const exec = await window.prime.execution()
-  if (exec?.ok && (exec.execution as { kind?: string })?.kind === 'ssh') return
+  if (exec.ok && exec.execution.kind === 'ssh') return
 
   await restartBridgeAt(target)
 }
@@ -908,7 +908,7 @@ export async function generateTitleFor(session: {
     (assistant ? `\nassistente: ${flat(assistant).slice(0, 700)}` : '')
 
   const r = await bridge().generateTitle(convo)
-  const title = r?.ok ? (r.title as string | null) : null
+  const title = r.ok ? r.title : null
   if (!title) return null
 
   await mutateFolders((st) => ({
@@ -978,7 +978,7 @@ export async function maybeGenerateTitle(): Promise<void> {
       (assistant ? `\nassistente: ${plainText(assistant).slice(0, 700)}` : '')
 
     const r = await bridge().generateTitle(convo)
-    const title = r?.ok ? (r.title as string | null) : null
+    const title = r.ok ? r.title : null
     if (!title) return
 
     await rpc('set_session_name', { name: title })

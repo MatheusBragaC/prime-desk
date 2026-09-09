@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
-import type { SshConnection } from '../components/Composer'
-import type { SshForm } from '../components/SshModal'
+import type { SshConnection } from '../../../shared/protocol'
+import type { SshForm } from './types'
 import { useAgent, refreshSessions } from '../store/agent'
 import { restartBridge, fallbackToLocal } from './useBridge'
 import { useT } from '../i18n'
@@ -34,12 +34,12 @@ export function useExecutionTarget(): ExecutionTarget {
 
   const load = useCallback(async () => {
     const res = await window.prime.listSshConnections()
-    if (res?.ok) setConnections(res.connections as SshConnection[])
+    if (res.ok) setConnections(res.connections)
   }, [])
 
   const persist = useCallback(async (list: SshConnection[]) => {
     const r = await window.prime.saveSshConnections(list)
-    if (r?.ok) setConnections(r.connections as SshConnection[])
+    if (r.ok) setConnections(r.connections)
   }, [])
 
   const use = useCallback(

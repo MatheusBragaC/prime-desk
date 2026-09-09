@@ -10,6 +10,8 @@
  * terminal embutido, à vista do usuário.
  */
 
+import type { UpdateCheck } from '../shared/protocol.js'
+
 const DEFAULT_BASE = 'https://pub-728493de92a943e2a9b2d17b4719f318.r2.dev'
 
 /** Manifesto: `{ package, version, tarball, tarballs[] }`. Só a versão interessa. */
@@ -18,14 +20,8 @@ interface Manifest {
   package?: string
 }
 
-export interface UpdateCheck {
-  current: string | null
-  latest: string | null
-  available: boolean
-  /** Por que não checou. Não é erro: é estado esperado. */
-  skipped?: 'offline' | 'disabled' | 'unknown-version'
-  error?: string
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { UpdateCheck }
 
 /**
  * Compara duas versões semver.

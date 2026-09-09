@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { AgentEvent, AgentTreeSnapshot } from '../../../shared/protocol'
 import {
   useAgent, refreshModels, refreshCommands, refreshSessions,
   refreshFolders, maybeGenerateTitle, waitForState
@@ -34,14 +33,7 @@ export function useBridge(onReady: () => void): BridgeBoot {
   useEffect(() => {
     const store = useAgent.getState()
 
-    const offEvent = window.prime.on('agent:event', (p) => {
-      const ev = p as AgentEvent & {
-        activeSessionId?: string
-        event?: AgentEvent
-        error?: string
-        bridgeId?: string
-      }
-
+    const offEvent = window.prime.on('agent:event', (ev) => {
       /*
         Evento de ponte estacionada: aquele turno continua rodando fora da tela e
         não pode escrever na conversa que está aberta. O aviso de término chega
@@ -73,21 +65,17 @@ export function useBridge(onReady: () => void): BridgeBoot {
         void maybeGenerateTitle()
       }
     })
-    const offParked = window.prime.on('bridge:parked', (p) =>
-      store.setParkedRuns(p as Parameters<typeof store.setParkedRuns>[0])
-    )
-    const offEnded = window.prime.on('bridge:run-ended', (p) => {
-      const info = p as { sessionPath?: string }
+    const offParked = window.prime.on('bridge:parked', (runs) => store.setParkedRuns(runs))
+    const offEnded = window.prime.on('bridge:run-ended', (info) => {
       const title = useAgent.getState().sessions.find((x) => x.path === info.sessionPath)?.title
       store.notify('info', t('session.runFinished', { name: title ?? '' }).trim())
       void refreshSessions()
     })
-    const offErr = window.prime.on('agent:stderr', (p) => store.applyStderr(String(p)))
-    const offFatal = window.prime.on('agent:fatal', (p) => store.setFatal(String(p)))
-    const offTree = window.prime.on('agents:tree', (p) => store.setTree(p as AgentTreeSnapshot))
-    const offTreeErr = window.prime.on('agents:tree-error', (p) => store.setTreeError(String(p)))
-    const offExit = window.prime.on('agent:exit', (p) => {
-      const info = p as { expected?: boolean; code?: number; stderr?: string }
+    const offErr = window.prime.on('agent:stderr', (chunk) => store.applyStderr(chunk))
+    const offFatal = window.prime.on('agent:fatal', (msg) => store.setFatal(msg))
+    const offTree = window.prime.on('agents:tree', (tree) => store.setTree(tree))
+    const offTreeErr = window.prime.on('agents:tree-error', (msg) => store.setTreeError(msg))
+    const offExit = window.prime.on('agent:exit', (info) => {
       if (info?.expected) {
         store.setStatus('stopped')
       } else {
@@ -105,19 +93,19 @@ export function useBridge(onReady: () => void): BridgeBoot {
 
       // Ambiente incompleto: onboarding assume a tela antes de tentar a ponte.
       const env = await window.prime.checkEnvironment()
-      const ready = env?.ok && env.status.agent.installed && env.status.auth.ok
+      const ready = env.ok && env.status.agent.installed && env.status.auth.ok
       setNeedsSetup(!ready)
       if (!ready) return
 
       const r = await window.prime.startBridge({ cwd: info.home })
-      if (!r?.ok) {
+      if (!r.ok) {
         store.setFatal(t('bridge.cantStart'))
         return
       }
       // O cwd efetivo vem do main, não do que pedimos: se a ponte já estava de
       // pé (recarga do renderer), o diretório real é o dela.
       store.setCwd(r.cwd ?? info.home)
-      store.setActiveBridge((r.bridgeId as string) ?? null)
+      store.setActiveBridge(r.bridgeId ?? null)
 
       if (!(await waitForState())) {
         store.setFatal(t('bridge.noState'))
@@ -172,10 +160,10 @@ export async function restartBridge(
   await window.prime.stopBridge()
 
   const r = await window.prime.startBridge(opts)
-  if (!r?.ok) return { ok: false, error: r?.error as string | undefined }
+  if (!r.ok) return { ok: false, error: r.error }
 
-  store.setActiveBridge((r.bridgeId as string) ?? null)
-  onStarted?.(r.cwd as string | undefined)
+  store.setActiveBridge(r.bridgeId ?? null)
+  onStarted?.(r.cwd)
 
   // Sem checar o retorno, como antes: aqui a ponte já subiu, e um worker lento
   // não é motivo para declarar a troca de destino como falha.
@@ -187,5 +175,5 @@ export async function restartBridge(
 /** Usado quando o destino escolhido falha e é preciso voltar para o local. */
 export async function fallbackToLocal(cwd: string): Promise<void> {
   const back = await window.prime.startBridge({ cwd })
-  useAgent.getState().setActiveBridge((back?.bridgeId as string) ?? null)
+  useAgent.getState().setActiveBridge(back.ok ? back.bridgeId : null)
 }

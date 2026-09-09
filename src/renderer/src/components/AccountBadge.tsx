@@ -5,11 +5,7 @@ import {
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
 import { usePopover } from '../lib/usePopover'
-
-interface EnvStatus {
-  agent: { installed: boolean; path: string | null; version: string | null }
-  auth: { ok: boolean; providers: string[]; envKeys: string[] }
-}
+import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -28,20 +24,20 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   const [userName, setUserName] = useState('')
-  const [update, setUpdate] = useState<{ current: string | null; latest: string | null; available: boolean } | null>(null)
+  const [update, setUpdate] = useState<UpdateCheck | null>(null)
 
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()
-    if (r?.ok) setStatus(r.status as EnvStatus)
+    if (r.ok) setStatus(r.status)
   }, [])
 
   useEffect(() => {
     void refresh()
-    void window.prime.appInfo().then((i) => setUserName(i?.userName ?? ''))
+    void window.prime.appInfo().then((i) => setUserName(i.userName))
     // Fora do caminho de boot e sem barulho: falha de rede aqui não é problema
     // do usuário, e a checagem cai calada.
     void window.prime.checkAgentUpdate().then((r) => {
-      if (r?.ok) setUpdate(r.update as typeof update)
+      if (r.ok) setUpdate(r.update)
     })
   }, [refresh])
 
@@ -84,10 +80,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     if (!update?.available) return
     const off = window.prime.on('terminal:exit', () => {
       void window.prime.rescanAgent().then((r) => {
-        if (!r?.ok) return
-        setStatus(r.status as EnvStatus)
+        if (!r.ok) return
+        setStatus(r.status)
         void window.prime.checkAgentUpdate().then((u) => {
-          if (u?.ok) setUpdate(u.update as typeof update)
+          if (u.ok) setUpdate(u.update)
         })
       })
     })
@@ -97,9 +93,9 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   }, [update?.available])
 
   useEffect(() => {
-    const off = window.prime.on('onboarding:env', (payload) => {
-      const next = payload as EnvStatus | undefined
-      if (next?.auth) setStatus(next)
+    const off = window.prime.on('onboarding:env', (status) => {
+      // Guarda de sanidade mantida: payload sem `auth` não descreve ambiente.
+      if (status?.auth) setStatus(status)
     })
     void window.prime.watchEnvironment()
     return () => {
