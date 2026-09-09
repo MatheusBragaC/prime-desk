@@ -1,21 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import {
-  Square, X, Command, Folder, Monitor, Plus, ArrowUp, FileText,
-  Check, Terminal, Trash2
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Square, X, Command, Plus, ArrowUp, FileText } from 'lucide-react'
 import { useAgent, sendPrompt, abortTurn } from '../store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
 import { useMod } from '../lib/platform'
 import { joinWithPaths, baseName, joinDictation } from '../lib/attachments'
-import { usePopover } from '../lib/usePopover'
 import { QueuePopover } from './QueuePopover'
 import { MicButton } from './MicButton'
-import { BranchPicker } from './BranchPicker'
-import type { DeliveryBehavior, SshConnection } from '../../../shared/protocol'
+import type { DeliveryBehavior } from '../../../shared/protocol'
 import { useT } from '../i18n'
-
-export type { SshConnection }
 
 /**
  * Anexo pendente na caixa de entrada.
@@ -59,207 +52,12 @@ function fileToAttachment(file: File): Promise<Attachment | null> {
   })
 }
 
-/**
- * Menu de contexto de execução.
- *
- * Só existem duas opções reais: local (padrão) e SSH, esta última fornecida pela
- * extensão `examples/extensions/ssh.ts` do próprio prime-agent, que troca as
- * operações de `bash` e `edit` por execução remota. Não há modo "Cloud" nem
- * "Remote Control" no prime-agent — não seriam botões, seriam enfeite.
- */
-function ExecutionMenu({
-  execution,
-  connections,
-  onLocal,
-  onConnect,
-  onRemove,
-  onAdd,
-  onClose,
-  trigger
-}: {
-  execution: { kind: 'local' | 'ssh'; target?: string }
-  connections: SshConnection[]
-  onLocal: () => void
-  onConnect: (c: SshConnection) => void
-  onRemove: (id: string) => void
-  onAdd: () => void
-  onClose: () => void
-  trigger: RefObject<HTMLElement | null>
-}) {
-  const { t } = useT()
-  const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
-
-  const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
-
-  return (
-    <div
-      ref={ref}
-      className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
-    >
-      <button className={item} onClick={onLocal}>
-        <Monitor size={14} strokeWidth={1.75} />
-        <span className="flex-1">{t('exec.local')}</span>
-        {execution.kind === 'local' && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
-      </button>
-
-      {connections.length > 0 && (
-        <>
-          <div className="mt-1 px-2 py-1 text-micro uppercase tracking-wider text-dim">
-            {t('exec.connections')}
-          </div>
-          {connections.map((c) => {
-            const active = execution.kind === 'ssh' && execution.target === c.host
-            return (
-              <div key={c.id} className="group/conn relative">
-                <button className={item + ' pr-7'} onClick={() => onConnect(c)}>
-                  <Terminal size={14} strokeWidth={1.75} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate">{c.name}</span>
-                    <span className="block truncate font-mono text-micro text-dim">
-                      {c.host}
-                      {c.port ? `:${c.port}` : ''}
-                    </span>
-                  </span>
-                  {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
-                </button>
-                <button
-                  onClick={() => onRemove(c.id)}
-                  title={t('exec.removeConn')}
-                  className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/conn:opacity-100"
-                >
-                  <Trash2 size={14} strokeWidth={1.75} />
-                </button>
-              </div>
-            )
-          })}
-        </>
-      )}
-
-      <div className="mt-1 border-t border-[var(--p-line)] pt-1">
-        <button className={item} onClick={onAdd}>
-          <Plus size={14} strokeWidth={1.75} />
-          {t('exec.addSsh')}
-        </button>
-      </div>
-
-      <div className="px-2 pb-1 pt-1 text-micro leading-snug text-dim">
-        {t('exec.note')}
-      </div>
-    </div>
-  )
-}
-
-/** Barra de contexto: onde o agente está executando. */
-function ContextChips({
-  home,
-  onPickCwd,
-  onSetExecution,
-  connections,
-  onOpenSshModal,
-  onRemoveConnection
-}: {
-  home: string
-  onPickCwd: () => void
-  onSetExecution: (conn: SshConnection | null) => void
-  connections: SshConnection[]
-  onOpenSshModal: () => void
-  onRemoveConnection: (id: string) => void
-}) {
-  const { t } = useT()
-  const cwd = useAgent((s) => s.cwd)
-  const [menu, setMenu] = useState(false)
-  const execBtn = useRef<HTMLButtonElement>(null)
-  const [execution, setExecution] = useState<{ kind: 'local' | 'ssh'; target?: string }>({
-    kind: 'local'
-  })
-
-  useEffect(() => {
-    void window.prime.execution().then((r) => {
-      if (r.ok) setExecution(r.execution)
-    })
-  }, [cwd])
-
-  const short = cwd
-    ? cwd === home
-      ? 'Home'
-      : (cwd.split('/').filter(Boolean).pop() ?? cwd)
-    : '—'
-
-  /*
-    Contexto é informação de apoio, não comando: sai da forma de pílula com
-    borda — que competia com o composer logo abaixo — e vira uma linha de texto
-    fraca. O affordance de clique aparece no hover.
-  */
-  const chip =
-    'flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-dim transition-colors hover:bg-elevated hover:text-muted'
-
-  return (
-    <div className="mb-1.5 flex flex-wrap items-center gap-0.5 px-1">
-      <div className="relative">
-        <button
-          ref={execBtn}
-          onClick={() => setMenu((v) => !v)}
-          className={chip}
-          title={t('chips.execTitle')}
-        >
-          {execution.kind === 'ssh' ? <Terminal size={14} strokeWidth={1.75} /> : <Monitor size={14} strokeWidth={1.75} />}
-          {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : t('exec.local')}
-        </button>
-        {menu && (
-          <ExecutionMenu
-            execution={execution}
-            connections={connections}
-            onLocal={() => {
-              setMenu(false)
-              onSetExecution(null)
-            }}
-            onConnect={(conn) => {
-              setMenu(false)
-              onSetExecution(conn)
-            }}
-            onRemove={(id) => onRemoveConnection(id)}
-            onAdd={() => {
-              setMenu(false)
-              onOpenSshModal()
-            }}
-            onClose={() => setMenu(false)}
-            trigger={execBtn}
-          />
-        )}
-      </div>
-
-      <span className="select-none text-xs text-grid">·</span>
-
-      <button onClick={onPickCwd} className={chip} title={cwd || t('chips.pickDir')}>
-        <Folder size={14} strokeWidth={1.75} />
-        {short}
-      </button>
-
-      <BranchPicker chipClass={chip} />
-
-    </div>
-  )
-}
-
 export function Composer({
   onOpenPalette,
-  onPickCwd,
-  onSetExecution,
-  connections,
-  onOpenSshModal,
-  onRemoveConnection,
-  home,
   draft,
   onDraftConsumed
 }: {
   onOpenPalette: () => void
-  onPickCwd: () => void
-  onSetExecution: (conn: SshConnection | null) => void
-  connections: SshConnection[]
-  onOpenSshModal: () => void
-  onRemoveConnection: (id: string) => void
-  home: string
   draft?: string
   onDraftConsumed?: () => void
 }) {
@@ -491,18 +289,7 @@ export function Composer({
   }
 
   return (
-    <div className="relative shrink-0 px-6 pb-4 pt-1">
-      <div className="pointer-events-none absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[var(--p-bg)] to-transparent" />
-
-      <ContextChips
-        home={home}
-        onPickCwd={onPickCwd}
-        onSetExecution={onSetExecution}
-        connections={connections}
-        onOpenSshModal={onOpenSshModal}
-        onRemoveConnection={onRemoveConnection}
-      />
-
+    <div className="relative shrink-0 px-6 pb-4">
       {/*
         Chip da fila: era só um contador morto. Agora abre o conteúdo, e ao lado
         fica a escolha de como a próxima mensagem entra — que é a decisão que a
