@@ -12,17 +12,10 @@ import { usePopover } from '../lib/usePopover'
 import { QueuePopover } from './QueuePopover'
 import { MicButton } from './MicButton'
 import { BranchPicker } from './BranchPicker'
-import type { DeliveryBehavior } from '../../../shared/protocol'
+import type { DeliveryBehavior, SshConnection } from '../../../shared/protocol'
 import { useT } from '../i18n'
 
-export interface SshConnection {
-  id: string
-  name: string
-  host: string
-  port?: number
-  identity?: string
-  remotePath?: string
-}
+export type { SshConnection }
 
 /**
  * Anexo pendente na caixa de entrada.

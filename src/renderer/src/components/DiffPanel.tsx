@@ -5,13 +5,7 @@ import { unwrap } from '../lib/ipc'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError, PanelLoading } from './PanelState'
 import { useT } from '../i18n'
-
-interface GitChange {
-  path: string
-  status: string
-  added: number
-  removed: number
-}
+import type { GitChange } from '../../../shared/protocol'
 
 /**
  * Letra de estado do `git status --porcelain`, traduzida para uma marca de uma

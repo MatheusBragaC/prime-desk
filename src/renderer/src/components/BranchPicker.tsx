@@ -3,12 +3,7 @@ import { GitBranch, Check, Loader2, AlertTriangle } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { usePopover } from '../lib/usePopover'
 import { useT } from '../i18n'
-
-interface Branch {
-  name: string
-  current: boolean
-  upstream?: string
-}
+import type { GitBranchInfo } from '../../../shared/protocol'
 
 /**
  * Ramo do git na barra de contexto, agora clicável.
@@ -31,7 +26,7 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
   const notify = useAgent((s) => s.notify)
   const requestConfirm = useAgent((s) => s.requestConfirm)
 
-  const [branches, setBranches] = useState<Branch[] | null>(null)
+  const [branches, setBranches] = useState<GitBranchInfo[] | null>(null)
   const [dirty, setDirty] = useState(false)
   const [open, setOpen] = useState(false)
   const [switching, setSwitching] = useState<string | null>(null)
@@ -46,7 +41,7 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
       setBranches(null)
       return
     }
-    setBranches(r.branches as Branch[])
+    setBranches(r.branches as GitBranchInfo[])
     setDirty(Boolean(r.dirty))
   }, [])
 

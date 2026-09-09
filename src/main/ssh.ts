@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { resolveAgentPath } from './agent-path.js'
+import type { SshConnection } from '../shared/protocol.js'
 
 /**
  * Execução remota via SSH.
@@ -75,14 +76,8 @@ export function isValidIdentityPath(p: unknown): p is string {
 
 // ---------------------------------------------------------------- conexões
 
-export interface SshConnection {
-  id: string
-  name: string
-  host: string
-  port?: number
-  identity?: string
-  remotePath?: string
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { SshConnection }
 
 function connectionsFile(): string {
   return join(app.getPath('userData'), 'ssh-connections.json')

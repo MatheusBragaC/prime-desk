@@ -339,3 +339,83 @@ export interface UsageStats {
   peakHour: number
   days: { day: string; count: number }[]
 }
+
+// ----------------------------------------------------------------- ambiente
+
+/**
+ * Estado do ambiente do prime-agent: binário instalado e credencial válida.
+ *
+ * Mora aqui, e não no main, porque é payload de `onboarding:check` e do canal
+ * `onboarding:env` — dois assinantes no renderer liam cópias próprias e nada
+ * garantia que continuassem iguais à origem.
+ */
+export interface EnvStatus {
+  agent: { installed: boolean; path: string | null; version: string | null }
+  auth: { ok: boolean; providers: string[]; envKeys: string[] }
+}
+
+/** Resposta de `updates:check`. */
+export interface UpdateCheck {
+  current: string | null
+  latest: string | null
+  available: boolean
+  /** Por que não checou. Não é erro: é estado esperado. */
+  skipped?: 'offline' | 'disabled' | 'unknown-version'
+  error?: string
+}
+
+// ---------------------------------------------------------------------- ssh
+
+export interface SshConnection {
+  id: string
+  name: string
+  host: string
+  port?: number
+  identity?: string
+  remotePath?: string
+}
+
+/** Onde o agente executa. */
+export interface ExecutionInfo {
+  kind: 'local' | 'ssh'
+  target?: string
+}
+
+// --------------------------------------------------------------------- fala
+
+export interface SpeechModel {
+  id: string
+  label: string
+  /** Tamanho aproximado, para a pessoa decidir antes de baixar. */
+  bytes: number
+  present: boolean
+}
+
+export interface SpeechStatus {
+  /** Compilado e com pelo menos um modelo: dá para transcrever. */
+  ready: boolean
+  dir: string
+  /** Caminho do `whisper-server`, quando já compilado. */
+  server: string | null
+  models: SpeechModel[]
+  /** Ferramentas de build ausentes. Vazio = dá para compilar. */
+  missing: string[]
+}
+
+// ---------------------------------------------------------------------- git
+
+export interface GitBranchInfo {
+  name: string
+  current: boolean
+  /** Ramo remoto que ela acompanha, quando existe. */
+  upstream?: string
+}
+
+export interface GitChange {
+  /** Caminho relativo à raiz do repositório. */
+  path: string
+  /** Código de duas letras do `git status --porcelain` (ex.: ` M`, `A `, `??`). */
+  status: string
+  added: number
+  removed: number
+}

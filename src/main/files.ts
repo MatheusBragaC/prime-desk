@@ -1,7 +1,7 @@
 import { readdir, stat, open, writeFile, rename, unlink, realpath } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
-import type { DirEntry } from '../shared/protocol.js'
+import type { DirEntry, GitBranchInfo, GitChange } from '../shared/protocol.js'
 
 /**
  * Navegação de arquivos do diretório de trabalho.
@@ -140,12 +140,8 @@ export function gitBranch(cwd: string): Promise<string | null> {
   })
 }
 
-export interface GitBranchInfo {
-  name: string
-  current: boolean
-  /** Ramo remoto que ela acompanha, quando existe. */
-  upstream?: string
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { GitBranchInfo }
 
 /**
  * Ramos locais, do mais recente para o mais antigo.
@@ -312,14 +308,8 @@ void rename
 /** Teto do diff devolvido ao renderer: acima disso a leitura deixa de ser útil. */
 const MAX_DIFF_BYTES = 400_000
 
-export interface GitChange {
-  /** Caminho relativo à raiz do repositório. */
-  path: string
-  /** Código de duas letras do `git status --porcelain` (ex.: ` M`, `A `, `??`). */
-  status: string
-  added: number
-  removed: number
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { GitChange }
 
 function git(cwd: string, args: string[], maxBuffer = MAX_DIFF_BYTES): Promise<string | null> {
   return new Promise((res) => {
