@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { StatusBar } from './components/StatusBar'
 import { Composer } from './components/Composer'
+import { ContextChips } from './components/composer/ContextChips'
 import { CommandPalette } from './components/CommandPalette'
 import { ObservedPanel } from './components/ObservedPanel'
 import { Notice } from './components/Notice'
@@ -143,14 +144,24 @@ export function App() {
 
           <div className="relative z-10 mx-auto w-full max-w-col">
             <StalledTurnNotice />
+            {/*
+              Os chips ficam aqui, e não dentro do `Composer`: as ações deles são
+              do destino de execução, que é deste nível (`useExecutionTarget` e o
+              modal de SSH). O composer só repassava seis props que não usava.
+            */}
+            <div className="relative shrink-0 px-6 pt-1">
+              <div className="pointer-events-none absolute inset-x-0 -top-12 h-12 bg-gradient-to-t from-[var(--p-bg)] to-transparent" />
+              <ContextChips
+                home={home}
+                onPickCwd={() => void exec.pickDirectory()}
+                onSetExecution={(conn) => void exec.use(conn)}
+                connections={exec.connections}
+                onOpenSshModal={() => setSshModal(true)}
+                onRemoveConnection={(id) => void exec.remove(id)}
+              />
+            </div>
             <Composer
               onOpenPalette={() => setPalette(true)}
-              onPickCwd={() => void exec.pickDirectory()}
-              onSetExecution={(conn) => void exec.use(conn)}
-              connections={exec.connections}
-              onOpenSshModal={() => setSshModal(true)}
-              onRemoveConnection={(id) => void exec.remove(id)}
-              home={home}
               draft={fileDraft}
               onDraftConsumed={() => setFileDraft(undefined)}
             />
