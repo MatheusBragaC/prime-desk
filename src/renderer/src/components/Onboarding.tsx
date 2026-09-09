@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CheckCircle2, Circle, Loader2, Download, Terminal, KeyRound, RefreshCw,
   Copy, Check, ArrowRight, AlertTriangle
@@ -7,9 +7,8 @@ import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
 import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
-import type { EnvStatus } from '../../../shared/protocol'
-
-type Stage = 'checking' | 'install' | 'installing' | 'auth' | 'ready'
+import { agentDetail, authDetail, installCommand, type Stage } from '../lib/env'
+import { refreshEnvironment, useEnvironment } from '../lib/useEnvironment'
 
 function StepRow({
   done,
@@ -41,8 +40,9 @@ function StepRow({
 
 export function Onboarding({ onReady }: { onReady: () => void }) {
   const { t } = useT()
-  const [status, setStatus] = useState<EnvStatus | null>(null)
-  const [stage, setStage] = useState<Stage>('checking')
+  const { status, from, error, stage: envStage, install: installAgent, openTerminal: openLogin } =
+    useEnvironment()
+  const [installing, setInstalling] = useState(false)
   const [command, setCommand] = useState('')
   const [output, setOutput] = useState('')
   const [copied, setCopied] = useState(false)
@@ -50,56 +50,31 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   const [opening, setOpening] = useState(false)
   const [termOpened, setTermOpened] = useState(false)
   const [portBusy, setPortBusy] = useState<number | null>(null)
-  const [auto, setAuto] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
-  const check = useCallback(async (): Promise<EnvStatus | null> => {
-    const r = await window.prime.checkEnvironment()
-    if (!r.ok) {
-      setError(r.error ?? t('onb.checkFailed'))
-      return null
-    }
-    const s = r.status
-    setStatus(s)
-    if (!s.agent.installed) setStage('install')
-    else if (!s.auth.ok) setStage('auth')
-    else setStage('ready')
-    return s
-  }, [])
+  /** Instalar é passo desta tela; o resto do estágio é do ambiente. */
+  const stage: Stage = installing ? 'installing' : envStage
+  /**
+   * O login acontece fora do app, num terminal. Em vez de exigir um clique em
+   * "já autentiquei", o main observa o diretório do agente — quando as
+   * credenciais aparecem o `useEnvironment` grava, e a tela avança sozinha.
+   */
+  const auto = from === 'watch'
 
   useEffect(() => {
-    void window.prime.installCommand().then((r) => {
-      if (r.ok) setCommand(r.command)
+    void installCommand().then(setCommand).catch(() => {
+      // Sem o texto do comando a tela ainda serve: o botão de instalar continua.
     })
     const off = window.prime.on('onboarding:output', (chunk) => {
       setOutput((o) => (o + String(chunk)).slice(-6000))
     })
-
-    /*
-      O login acontece fora do app, num terminal. Em vez de exigir um clique em
-      "já autentiquei", o main observa o diretório do agente e avisa quando as
-      credenciais aparecem — aí a tela avança sozinha.
-    */
-    const offEnv = window.prime.on('onboarding:env', (s) => {
-      setStatus(s)
-      if (!s.agent.installed) setStage('install')
-      else if (!s.auth.ok) setStage('auth')
-      else {
-        setAuto(true)
-        setStage('ready')
-      }
-    })
-    void window.prime.watchEnvironment()
     // Pequena espera antes da primeira checagem: a tela não deve piscar.
-    const t = setTimeout(() => void check(), 450)
+    const timer = setTimeout(() => void refreshEnvironment(), 450)
     return () => {
       off()
-      offEnv()
-      void window.prime.unwatchEnvironment()
-      clearTimeout(t)
+      clearTimeout(timer)
     }
-  }, [check])
+  }, [])
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
@@ -113,16 +88,10 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
   }, [stage, onReady])
 
   async function install() {
-    setStage('installing')
+    setInstalling(true)
     setOutput('')
-    setError(null)
-    const r = await window.prime.installAgent()
-    if (!r?.ok) {
-      setError(t('onb.installFailed'))
-      setStage('install')
-      return
-    }
-    await check()
+    await installAgent()
+    setInstalling(false)
   }
 
   /** Abre o terminal e, se não der, entrega o comando para o usuário rodar. */
@@ -130,19 +99,14 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
     setOpening(true)
     setTermError(null)
     setPortBusy(null)
-
-    // Um login pendente em outra janela prende a porta do callback e faz o TUI
-    // ignorar o Enter sem dizer nada. Melhor avisar antes de abrir mais um.
-    const port = await window.prime.checkLoginPort()
-    if (port && !port.free) {
-      setPortBusy(port.port as number)
-      setOpening(false)
+    const r = await openLogin()
+    setOpening(false)
+    if (r.portBusy !== undefined) {
+      setPortBusy(r.portBusy)
       return
     }
-    const r = await window.prime.openAgentTerminal()
-    setOpening(false)
-    if (!r?.ok) {
-      setTermError(r?.error ?? 'Falha ao abrir terminal.')
+    if (r.error) {
+      setTermError(r.error)
       setTermOpened(false)
       return
     }
@@ -186,27 +150,13 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             done={agentOk}
             busy={stage === 'checking' || stage === 'installing'}
             title={t('onb.stepAgent')}
-            detail={
-              status?.agent.version
-                ? `${t('onb.version')} ${status.agent.version} · ${status.agent.path}`
-                : stage === 'checking'
-                  ? t('onb.checking')
-                  : t('onb.notFound')
-            }
+            detail={agentDetail(status, stage === 'checking')}
           />
           <StepRow
             done={authOk}
             busy={stage === 'checking'}
             title={t('onb.stepAuth')}
-            detail={
-              status?.auth.providers.length
-                ? `auth.json: ${status.auth.providers.join(', ')}`
-                : status?.auth.envKeys.length
-                  ? `${t('onb.envVar')}: ${status.auth.envKeys.join(', ')}`
-                  : stage === 'checking'
-                    ? t('onb.checking')
-                    : t('onb.noCreds')
-            }
+            detail={authDetail(status, stage === 'checking')}
           />
         </div>
 
@@ -258,7 +208,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               </Button>
               <Button
                 variant="subtle"
-                onClick={() => void check()}
+                onClick={() => void refreshEnvironment()}
                 icon={<RefreshCw size={14} strokeWidth={1.75} />}
               >
                 {t('onb.alreadyInstalled')}
@@ -387,7 +337,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             <div className="mt-3">
               <Button
                 variant="primary"
-                onClick={() => void check()}
+                onClick={() => void refreshEnvironment()}
                 icon={<RefreshCw size={14} strokeWidth={1.75} />}
               >
                 {t('onb.recheck')}
