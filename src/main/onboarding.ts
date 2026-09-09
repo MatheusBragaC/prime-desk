@@ -5,6 +5,7 @@ import { watch, type FSWatcher } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import { resolveAgentPath, invalidateAgentPath } from './agent-path.js'
+import type { EnvStatus } from '../shared/protocol.js'
 
 /**
  * Verificação de ambiente para a primeira execução.
@@ -14,10 +15,8 @@ import { resolveAgentPath, invalidateAgentPath } from './agent-path.js'
  * de credenciais. De `auth.json` extraímos apenas os nomes dos provedores.
  */
 
-export interface EnvStatus {
-  agent: { installed: boolean; path: string | null; version: string | null }
-  auth: { ok: boolean; providers: string[]; envKeys: string[] }
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { EnvStatus }
 
 /** Variáveis reconhecidas pelo prime-agent, conforme docs/providers.md. */
 const ENV_KEYS = [

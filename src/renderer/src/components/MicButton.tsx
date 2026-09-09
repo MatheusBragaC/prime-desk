@@ -5,15 +5,7 @@ import { usePopover } from '../lib/usePopover'
 import { useAgent } from '../store/agent'
 import { fmtSize } from '../lib/format'
 import { useT } from '../i18n'
-
-interface SpeechModel { id: string; label: string; bytes: number; present: boolean }
-interface SpeechStatus {
-  ready: boolean
-  dir: string
-  server: string | null
-  models: SpeechModel[]
-  missing: string[]
-}
+import type { SpeechStatus } from '../../../shared/protocol'
 
 /**
  * Ditado por voz no composer.

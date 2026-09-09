@@ -5,11 +5,7 @@ import {
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
 import { usePopover } from '../lib/usePopover'
-
-interface EnvStatus {
-  agent: { installed: boolean; path: string | null; version: string | null }
-  auth: { ok: boolean; providers: string[]; envKeys: string[] }
-}
+import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -28,7 +24,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
   const [userName, setUserName] = useState('')
-  const [update, setUpdate] = useState<{ current: string | null; latest: string | null; available: boolean } | null>(null)
+  const [update, setUpdate] = useState<UpdateCheck | null>(null)
 
   const refresh = useCallback(async () => {
     const r = await window.prime.checkEnvironment()

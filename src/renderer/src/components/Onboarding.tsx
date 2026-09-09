@@ -7,11 +7,7 @@ import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
 import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
-
-interface EnvStatus {
-  agent: { installed: boolean; path: string | null; version: string | null }
-  auth: { ok: boolean; providers: string[]; envKeys: string[] }
-}
+import type { EnvStatus } from '../../../shared/protocol'
 
 type Stage = 'checking' | 'install' | 'installing' | 'auth' | 'ready'
 
