@@ -105,6 +105,7 @@ export function useBridge(onReady: () => void): BridgeBoot {
       // O cwd efetivo vem do main, não do que pedimos: se a ponte já estava de
       // pé (recarga do renderer), o diretório real é o dela.
       store.setCwd(r.cwd ?? info.home)
+      store.setExecution(r.execution)
       store.setActiveBridge(r.bridgeId ?? null)
 
       if (!(await waitForState())) {
@@ -162,6 +163,12 @@ export async function restartBridge(
   const r = await window.prime.startBridge(opts)
   if (!r.ok) return { ok: false, error: r.error }
 
+  /*
+    O destino efetivo é o que o main devolve, não o que pedimos: ele recusa SSH
+    sem conexão correspondente e cai para local. Escrever aqui é o que faz o
+    chip do composer mudar na hora, sem esperar troca de diretório.
+  */
+  store.setExecution(r.execution)
   store.setActiveBridge(r.bridgeId ?? null)
   onStarted?.(r.cwd)
 
@@ -175,5 +182,7 @@ export async function restartBridge(
 /** Usado quando o destino escolhido falha e é preciso voltar para o local. */
 export async function fallbackToLocal(cwd: string): Promise<void> {
   const back = await window.prime.startBridge({ cwd })
-  useAgent.getState().setActiveBridge(back.ok ? back.bridgeId : null)
+  const store = useAgent.getState()
+  store.setActiveBridge(back.ok ? back.bridgeId : null)
+  if (back.ok) store.setExecution(back.execution)
 }
