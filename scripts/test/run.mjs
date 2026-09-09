@@ -16,6 +16,19 @@ import { join } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'prime-desk-test-'))
 writeFileSync(join(dir, 'react.js'), 'export const useState=()=>[0,()=>{}]\nexport const useEffect=()=>{}\n')
+/*
+  Variante da casca de react que EXECUTA o efeito. Só a suíte da ponte usa: o
+  boot (primeira subida) mora dentro de um `useEffect`, e com a casca inerte ele
+  nunca rodaria — a escrita do destino no boot ficaria sem cobertura.
+*/
+writeFileSync(
+  join(dir, 'reactEager.js'),
+  [
+    'export const useState=(init)=>[typeof init==="function"?init():init,()=>{}]',
+    'export const useEffect=(fn)=>{ fn() }',
+    ''
+  ].join('\n')
+)
 writeFileSync(join(dir, 'storeShim.ts'), 'export const useAgent=()=>undefined\nexport type ToolExec=any\n')
 writeFileSync(join(dir, 'i18nShim.ts'), 'export const t=(k:string)=>k\nexport const useT=()=>({ t, lang: "pt" })\n')
 /*
@@ -39,6 +52,12 @@ writeFileSync(
     "  setExecution: (e: unknown) => { state.execution = e; calls.push({ name: 'setExecution', arg: e }) }",
     '}',
     'export const useAgent = { getState: () => state }',
+    '/** Cada fase da suíte parte de um estado conhecido. */',
+    'export const startFrom = (execution: unknown, cwd = \'/tmp/projeto\'): void => {',
+    '  calls.length = 0',
+    '  state.execution = execution',
+    '  state.cwd = cwd',
+    '}',
     'export const waitForState = async (): Promise<boolean> => true',
     'export const refreshModels = async (): Promise<void> => {}',
     'export const refreshCommands = async (): Promise<void> => {}',
@@ -87,15 +106,16 @@ const SUITES = [
     test: './execution.test.mjs',
     src: 'src/renderer/src/lib/useBridge.ts',
     needsShims: true,
+    reactShim: 'reactEager.js',
     /*
-      A asserção é sobre o que `restartBridge` ESCREVE no store, então o store
+      A asserção é sobre o que a subida da ponte ESCREVE no store, então o store
       entra como casca que registra as chamadas e é reexportado para o teste.
     */
     prepare: (source) =>
       source
         .replaceAll("from '../store/agent'", "from './bridgeStoreShim'")
         .replaceAll("from '../i18n'", "from './i18nShim'") +
-      "\nexport { useAgent, calls } from './bridgeStoreShim'\n"
+      "\nexport { useAgent, calls, startFrom } from './bridgeStoreShim'\n"
   }
 ]
 
@@ -119,7 +139,7 @@ for (const suite of SUITES) {
 
   const args = [entry, '--bundle', '--format=esm', `--outfile=${out}`, '--log-level=error']
   if (suite.platform) args.push(`--platform=${suite.platform}`)
-  if (suite.needsShims) args.push(`--alias:react=${join(dir, 'react.js')}`)
+  if (suite.needsShims) args.push(`--alias:react=${join(dir, suite.reactShim ?? 'react.js')}`)
   execFileSync('./node_modules/.bin/esbuild', args, { stdio: 'inherit' })
 
   /*
