@@ -314,8 +314,14 @@ export async function abortTurn(): Promise<void> {
   void refreshState()
 }
 
-export async function setModel(id: string): Promise<void> {
-  await rpc('set_model', { model: id })
+export async function setModel(model: ModelInfo): Promise<void> {
+  /*
+    O daemon do prime-agent espera `{ provider, modelId }` (ver case "set_model"
+    em AgentDaemon.handleCommand). Enviar `{ model: id }` fazia o daemon ler
+    provider/modelId como undefined e falhar com "Model not found:
+    undefined/undefined", sem feedback na interface.
+  */
+  await rpc('set_model', { provider: model.provider, modelId: model.id })
   void refreshState()
 }
 
