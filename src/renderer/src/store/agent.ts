@@ -3,7 +3,7 @@ import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
   ThinkingLevel, BridgeStatus, RpcResponse, AgentTreeSnapshot, FolderState,
   ContextUsage, SessionStats, DeliveryBehavior, QueueMode, AgentCronJob,
-  AgentHeartbeatDeliveryMode, ParkedRun
+  AgentHeartbeatDeliveryMode, ParkedRun, ExecutionInfo
 } from '../../../shared/protocol'
 import { isAgentEvent } from '../../../shared/protocol'
 import {
@@ -57,6 +57,16 @@ interface AgentStore {
   /** Ocupação da janela, vinda do agente. `null` enquanto não foi consultada. */
   context: ContextUsage | null
   cwd: string
+  /**
+   * Onde o agente executa: máquina local ou destino SSH.
+   *
+   * Vive aqui porque três lugares liam o mesmo fato por caminhos diferentes — o
+   * chip do composer por IPC num efeito com dependência de `cwd`, e
+   * `syncCwdToSession` por IPC de novo. Quem troca de destino é sempre um start
+   * de ponte, então o valor é escrito a partir da resposta do main e todo o
+   * resto apenas observa.
+   */
+  execution: ExecutionInfo
   platform: string
   loadingSession: boolean
   compacting: boolean
@@ -108,6 +118,7 @@ interface AgentStore {
 
   setStatus: (s: BridgeStatus) => void
   setCwd: (c: string) => void
+  setExecution: (e: ExecutionInfo) => void
   setActiveBridge: (id: string | null) => void
   setParkedRuns: (runs: ParkedRun[]) => void
   setPlatform: (p: string) => void
@@ -155,6 +166,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
   totals: { tokens: 0, cost: 0 },
   context: null,
   cwd: '',
+  execution: { kind: 'local' },
   platform: '',
   loadingSession: false,
   compacting: false,
@@ -174,6 +186,7 @@ export const useAgent = create<AgentStore>((set, get) => ({
 
   setStatus: (s) => set({ status: s }),
   setCwd: (c) => set({ cwd: c }),
+  setExecution: (execution) => set({ execution }),
   setActiveBridge: (activeBridgeId) => set({ activeBridgeId }),
   setParkedRuns: (parkedRuns) => set({ parkedRuns }),
   setPlatform: (platform) => set({ platform }),
@@ -660,6 +673,7 @@ async function adoptParked(id: string, sessionPath: string): Promise<void> {
     store.reset()
     store.setActiveBridge(r.bridgeId)
     store.setCwd(r.cwd)
+    store.setExecution(r.execution)
     await loadTranscript(sessionPath, store)
     await refreshState()
     void refreshSessions()
@@ -703,6 +717,7 @@ async function startBridgeAt(cwd: string): Promise<boolean> {
     return false
   }
   store.setCwd(r.cwd ?? cwd)
+  store.setExecution(r.execution)
   store.setActiveBridge(r.bridgeId ?? null)
 
   for (let i = 0; i < 60; i++) {
@@ -740,8 +755,7 @@ async function syncCwdToSession(sessionPath: string): Promise<void> {
   const target = summary?.cwd?.trim()
   if (!target || target === store.cwd) return
 
-  const exec = await window.prime.execution()
-  if (exec.ok && exec.execution.kind === 'ssh') return
+  if (store.execution.kind === 'ssh') return
 
   await restartBridgeAt(target)
 }
