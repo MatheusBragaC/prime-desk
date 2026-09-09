@@ -103,6 +103,23 @@ const SUITES = [
     }
   },
   {
+    test: './env.test.mjs',
+    src: 'src/renderer/src/lib/env.ts',
+    needsShims: false,
+    // Módulo puro na parte que interessa, mas o arquivo inteiro importa `t`:
+    // a casca devolve a chave, e o teste afirma qual chave foi escolhida.
+    prepare: (source) => source.replaceAll("from '../i18n'", "from './i18nShim'"),
+    /*
+      A outra metade do módulo são as chamadas de IPC, que dependem de
+      `window.prime` e não entram aqui. A casca do `unwrap` existe só para o
+      arquivo carregar; nenhum caso do teste passa por ela.
+    */
+    shims: {
+      'ipc.ts':
+        'export async function unwrap(call: Promise<never>): Promise<never> { return call }\n'
+    }
+  },
+  {
     test: './execution.test.mjs',
     src: 'src/renderer/src/lib/useBridge.ts',
     needsShims: true,
