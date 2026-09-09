@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Dock } from '../components/StatusBar'
+import type { Dock } from './types'
 import { useAgent } from '../store/agent'
 
 /**

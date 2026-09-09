@@ -70,13 +70,11 @@ export function TerminalView({ id, cwd, command, onExit }: {
       void window.prime.resizeTerminal(id, term.cols, term.rows)
     }
 
-    const offData = window.prime.on('terminal:data', (payload) => {
-      const p = payload as { id: string; data: string }
+    const offData = window.prime.on('terminal:data', (p) => {
       if (p.id === id) term.write(p.data)
     })
 
-    const offExit = window.prime.on('terminal:exit', (payload) => {
-      const p = payload as { id: string; exitCode: number }
+    const offExit = window.prime.on('terminal:exit', (p) => {
       if (p.id !== id) return
       term.write('\r\n\x1b[2m[processo encerrado]\x1b[0m\r\n')
       onExitRef.current?.(p.exitCode)
@@ -96,7 +94,7 @@ export function TerminalView({ id, cwd, command, onExit }: {
       }
       const back = await window.prime.terminalScrollback(id)
       if (disposed) return
-      if (back?.scrollback) term.write(back.scrollback)
+      if (back.ok && back.scrollback) term.write(back.scrollback)
       sync()
       term.focus()
     })()

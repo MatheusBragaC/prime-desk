@@ -3,12 +3,7 @@ import { GitBranch, Check, Loader2, AlertTriangle } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { usePopover } from '../lib/usePopover'
 import { useT } from '../i18n'
-
-interface Branch {
-  name: string
-  current: boolean
-  upstream?: string
-}
+import type { GitBranchInfo } from '../../../shared/protocol'
 
 /**
  * Ramo do git na barra de contexto, agora clicável.
@@ -31,7 +26,7 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
   const notify = useAgent((s) => s.notify)
   const requestConfirm = useAgent((s) => s.requestConfirm)
 
-  const [branches, setBranches] = useState<Branch[] | null>(null)
+  const [branches, setBranches] = useState<GitBranchInfo[] | null>(null)
   const [dirty, setDirty] = useState(false)
   const [open, setOpen] = useState(false)
   const [switching, setSwitching] = useState<string | null>(null)
@@ -42,12 +37,12 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
 
   const reload = useCallback(async () => {
     const r = await window.prime.gitBranches()
-    if (!r?.ok) {
+    if (!r.ok) {
       setBranches(null)
       return
     }
-    setBranches(r.branches as Branch[])
-    setDirty(Boolean(r.dirty))
+    setBranches(r.branches)
+    setDirty(r.dirty)
   }, [])
 
   useEffect(() => {
@@ -64,10 +59,10 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
     setSwitching(null)
     await reload()
 
-    if (!r?.ok) {
+    if (!r.ok) {
       // A mensagem do git nomeia os arquivos em conflito: vale mais que um
       // "falhou" nosso, e por isso vai inteira para o aviso.
-      const message = (r?.error as string) ?? t('branch.failed')
+      const message = r.error ?? t('branch.failed')
       setError(message)
       notify('error', message)
       return

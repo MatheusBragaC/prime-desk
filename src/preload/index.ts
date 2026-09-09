@@ -1,8 +1,19 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
+import { IPC_CHANNELS } from '../shared/protocol'
+import type {
+  AgentTreeSnapshot, AppInfo, DirEntry, EnvStatus, Envelope, ExecutionInfo, FolderState,
+  GitBranchInfo, GitChange, IpcChannel, IpcEvents, ParkedRun, PickedAttachment, RpcResponse,
+  SessionSummary, SpeechStatus, SshConnection, SshTestResult, UpdateCheck, UsageStats
+} from '../shared/protocol'
 
 /**
  * Superfície mínima exposta ao renderer. Nenhum acesso a fs, path ou child_process.
  * Credenciais do prime-agent (~/.prime/agent/auth.json) nunca transitam por aqui.
+ *
+ * Cada método declara o retorno. `ipcRenderer.invoke` devolve `Promise<any>`, e
+ * como `global.d.ts` publica `typeof api` como `window.prime`, sem a anotação o
+ * renderer inteiro lia `any`: campo inexistente compilava e só quebrava em uso.
+ * O tipo declarado aqui é o contrato do handler correspondente em `src/main`.
  */
 const api = {
   startBridge: (args: {
@@ -11,96 +22,148 @@ const api = {
     ssh?: string
     sshPort?: number
     sshIdentity?: string
-  }) => ipcRenderer.invoke('bridge:start', args),
-  testSsh: (conn: { host: string; port?: number; identity?: string }) =>
+  }): Promise<Envelope<{
+    cwd: string
+    execution: ExecutionInfo
+    bridgeId: string
+    /** A ponte já estava de pé: o `cwd` devolvido é o dela, não o pedido. */
+    alreadyRunning?: boolean
+  }>> => ipcRenderer.invoke('bridge:start', args),
+  testSsh: (conn: { host: string; port?: number; identity?: string }): Promise<SshTestResult> =>
     ipcRenderer.invoke('ssh:test', conn),
-  listSshConnections: () => ipcRenderer.invoke('ssh:list'),
-  saveSshConnections: (list: unknown) => ipcRenderer.invoke('ssh:save', list),
-  execution: () => ipcRenderer.invoke('bridge:execution'),
-  stopBridge: () => ipcRenderer.invoke('bridge:stop'),
-  parkBridge: () => ipcRenderer.invoke('bridge:park'),
-  adoptBridge: (id: string) => ipcRenderer.invoke('bridge:adopt', id),
-  listParked: () => ipcRenderer.invoke('bridge:parked'),
-  markBridge: (args: { sessionPath?: string; sessionId?: string }) =>
+  listSshConnections: (): Promise<Envelope<{ connections: SshConnection[] }>> =>
+    ipcRenderer.invoke('ssh:list'),
+  saveSshConnections: (
+    list: readonly SshConnection[]
+  ): Promise<Envelope<{ connections: SshConnection[] }>> => ipcRenderer.invoke('ssh:save', list),
+  execution: (): Promise<Envelope<{ execution: ExecutionInfo }>> =>
+    ipcRenderer.invoke('bridge:execution'),
+  stopBridge: (): Promise<Envelope> => ipcRenderer.invoke('bridge:stop'),
+  parkBridge: (): Promise<Envelope<{
+    parkedId: string
+    sessionId?: string
+    sessionPath?: string
+  }>> => ipcRenderer.invoke('bridge:park'),
+  adoptBridge: (
+    id: string
+  ): Promise<Envelope<{ cwd: string; execution: ExecutionInfo; bridgeId: string }>> =>
+    ipcRenderer.invoke('bridge:adopt', id),
+  listParked: (): Promise<Envelope<{ parked: ParkedRun[] }>> => ipcRenderer.invoke('bridge:parked'),
+  markBridge: (args: { sessionPath?: string; sessionId?: string }): Promise<Envelope> =>
     ipcRenderer.invoke('bridge:mark', args),
-  send: (type: string, payload?: Record<string, unknown>) =>
+  send: (
+    type: string,
+    payload?: Record<string, unknown>
+  ): Promise<Envelope<{ res: RpcResponse }>> =>
     ipcRenderer.invoke('bridge:send', { type, payload }),
-  fire: (type: string, payload?: Record<string, unknown>) =>
+  fire: (type: string, payload?: Record<string, unknown>): Promise<Envelope> =>
     ipcRenderer.invoke('bridge:fire', { type, payload }),
 
-  listSessions: () => ipcRenderer.invoke('sessions:list'),
-  usageStats: () => ipcRenderer.invoke('usage:stats'),
+  listSessions: (): Promise<Envelope<{ sessions: SessionSummary[] }>> =>
+    ipcRenderer.invoke('sessions:list'),
+  usageStats: (): Promise<Envelope<{ stats: UsageStats }>> => ipcRenderer.invoke('usage:stats'),
 
-  checkEnvironment: () => ipcRenderer.invoke('onboarding:check'),
-  installCommand: () => ipcRenderer.invoke('onboarding:command'),
-  installAgent: () => ipcRenderer.invoke('onboarding:install'),
-  openAgentTerminal: () => ipcRenderer.invoke('onboarding:terminal'),
-  logoutProvider: (provider: string) => ipcRenderer.invoke('auth:logout', provider),
-  checkLoginPort: () => ipcRenderer.invoke('auth:loginPort'),
-  watchEnvironment: () => ipcRenderer.invoke('onboarding:watch'),
-  unwatchEnvironment: () => ipcRenderer.invoke('onboarding:unwatch'),
-  generateTitle: (conversation: string) => ipcRenderer.invoke('title:generate', conversation),
-  setZoom: (level: number) => ipcRenderer.invoke('view:zoom', level),
-  transcript: (path: string, limit?: number) =>
+  checkEnvironment: (): Promise<Envelope<{ status: EnvStatus }>> =>
+    ipcRenderer.invoke('onboarding:check'),
+  installCommand: (): Promise<Envelope<{ command: string }>> =>
+    ipcRenderer.invoke('onboarding:command'),
+  /** Fora do envelope: `code` é o do processo de instalação, e importa mesmo em falha. */
+  installAgent: (): Promise<{ ok: boolean; code: number }> =>
+    ipcRenderer.invoke('onboarding:install'),
+  openAgentTerminal: (): Promise<{ ok: boolean; error?: string; command: string }> =>
+    ipcRenderer.invoke('onboarding:terminal'),
+  logoutProvider: (provider: string): Promise<Envelope> =>
+    ipcRenderer.invoke('auth:logout', provider),
+  checkLoginPort: (): Promise<{ free: boolean; port: number }> =>
+    ipcRenderer.invoke('auth:loginPort'),
+  watchEnvironment: (): Promise<Envelope> => ipcRenderer.invoke('onboarding:watch'),
+  unwatchEnvironment: (): Promise<Envelope> => ipcRenderer.invoke('onboarding:unwatch'),
+  generateTitle: (conversation: string): Promise<Envelope<{ title: string | null }>> =>
+    ipcRenderer.invoke('title:generate', conversation),
+  setZoom: (level: number): Promise<Envelope<{ level: number }>> =>
+    ipcRenderer.invoke('view:zoom', level),
+  /** Linhas cruas do JSONL da sessão: o formato é do agente, não deste app. */
+  transcript: (path: string, limit?: number): Promise<Envelope<{ entries: unknown[] }>> =>
     ipcRenderer.invoke('sessions:transcript', path, limit),
 
-  agentTree: () => ipcRenderer.invoke('agents:tree'),
-  refreshAgentTree: () => ipcRenderer.invoke('agents:refresh'),
-  setAgentCadence: (ms: number) => ipcRenderer.invoke('agents:cadence', ms),
-  stopAgent: (activeSessionId: string) => ipcRenderer.invoke('agents:stop', activeSessionId),
+  agentTree: (): Promise<Envelope<{ tree: AgentTreeSnapshot }>> => ipcRenderer.invoke('agents:tree'),
+  refreshAgentTree: (): Promise<Envelope> => ipcRenderer.invoke('agents:refresh'),
+  setAgentCadence: (ms: number): Promise<Envelope> => ipcRenderer.invoke('agents:cadence', ms),
+  stopAgent: (activeSessionId: string): Promise<Envelope> =>
+    ipcRenderer.invoke('agents:stop', activeSessionId),
 
-  listFiles: (relPath: string) => ipcRenderer.invoke('files:list', relPath),
-  filesRoot: () => ipcRenderer.invoke('files:root'),
-  gitBranch: () => ipcRenderer.invoke('files:branch'),
-  gitChanges: () => ipcRenderer.invoke('git:changes'),
-  gitBranches: () => ipcRenderer.invoke('git:branches'),
-  gitCheckout: (branch: string) => ipcRenderer.invoke('git:checkout', branch),
-  gitDiff: (relPath?: string) => ipcRenderer.invoke('git:diff', relPath),
-  revealFile: (relPath: string) => ipcRenderer.invoke('files:reveal', relPath),
-  readFile: (relPath: string) => ipcRenderer.invoke('files:read', relPath),
-  writeFile: (path: string, content: string) => ipcRenderer.invoke('files:write', { path, content }),
-  deleteSession: (path: string) => ipcRenderer.invoke('sessions:delete', path),
+  listFiles: (relPath: string): Promise<Envelope<{ entries: DirEntry[] }>> =>
+    ipcRenderer.invoke('files:list', relPath),
+  filesRoot: (): Promise<Envelope<{ root: string }>> => ipcRenderer.invoke('files:root'),
+  gitBranch: (): Promise<Envelope<{ branch: string | null }>> =>
+    ipcRenderer.invoke('files:branch'),
+  gitChanges: (): Promise<Envelope<{ changes: GitChange[] }>> => ipcRenderer.invoke('git:changes'),
+  gitBranches: (): Promise<Envelope<{ branches: GitBranchInfo[]; dirty: boolean }>> =>
+    ipcRenderer.invoke('git:branches'),
+  gitCheckout: (branch: string): Promise<Envelope> => ipcRenderer.invoke('git:checkout', branch),
+  gitDiff: (relPath?: string): Promise<Envelope<{ diff: string; truncated?: boolean }>> =>
+    ipcRenderer.invoke('git:diff', relPath),
+  revealFile: (relPath: string): Promise<Envelope<{ revealed?: boolean }>> =>
+    ipcRenderer.invoke('files:reveal', relPath),
+  /** `content` falta quando o arquivo é binário — aí só `size` e `binary` vêm. */
+  readFile: (relPath: string): Promise<Envelope<{
+    content?: string
+    size: number
+    truncated?: boolean
+    binary?: boolean
+  }>> => ipcRenderer.invoke('files:read', relPath),
+  writeFile: (path: string, content: string): Promise<Envelope<{ size: number }>> =>
+    ipcRenderer.invoke('files:write', { path, content }),
+  deleteSession: (path: string): Promise<Envelope> => ipcRenderer.invoke('sessions:delete', path),
 
-  loadFolders: () => ipcRenderer.invoke('folders:load'),
-  saveFolders: (state: unknown) => ipcRenderer.invoke('folders:save', state),
-  pickDirectory: () => ipcRenderer.invoke('dialog:pickDirectory'),
-  pickAttachment: () => ipcRenderer.invoke('dialog:pickAttachment'),
-  pickWorkspaceFile: () => ipcRenderer.invoke('dialog:pickWorkspaceFile'),
+  loadFolders: (): Promise<Envelope<{ state: FolderState }>> => ipcRenderer.invoke('folders:load'),
+  saveFolders: (state: FolderState): Promise<Envelope<{ state: FolderState }>> =>
+    ipcRenderer.invoke('folders:save', state),
+  pickDirectory: (): Promise<Envelope<{ path: string }>> =>
+    ipcRenderer.invoke('dialog:pickDirectory'),
+  pickAttachment: (): Promise<Envelope<{ picked: PickedAttachment[] }>> =>
+    ipcRenderer.invoke('dialog:pickAttachment'),
+  pickWorkspaceFile: (): Promise<Envelope<{ path: string }>> =>
+    ipcRenderer.invoke('dialog:pickWorkspaceFile'),
   /*
     Caminho real de um arquivo arrastado. Com `sandbox: true` o `File.path` do
     DOM nao existe mais; `webUtils.getPathForFile` e a via suportada, e precisa
     rodar no preload.
   */
-  pathForFile: (file: File) => webUtils.getPathForFile(file),
-  openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
-  copyText: (text: string) => ipcRenderer.invoke('clipboard:write', text),
-  appInfo: () => ipcRenderer.invoke('app:info'),
-  checkAgentUpdate: () => ipcRenderer.invoke('updates:check'),
-  rescanAgent: () => ipcRenderer.invoke('updates:rescan'),
-  speechStatus: () => ipcRenderer.invoke('speech:status'),
-  speechSetupCommand: (modelId: string) => ipcRenderer.invoke('speech:setupCommand', modelId),
-  speechStart: (modelId: string) => ipcRenderer.invoke('speech:start', modelId),
-  speechStop: () => ipcRenderer.invoke('speech:stop'),
-  speechTranscribe: (samples: Float32Array) => ipcRenderer.invoke('speech:transcribe', samples),
+  pathForFile: (file: File): string => webUtils.getPathForFile(file),
+  openExternal: (url: string): Promise<Envelope> => ipcRenderer.invoke('shell:openExternal', url),
+  copyText: (text: string): Promise<Envelope> => ipcRenderer.invoke('clipboard:write', text),
+  appInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:info'),
+  checkAgentUpdate: (): Promise<Envelope<{ update: UpdateCheck }>> =>
+    ipcRenderer.invoke('updates:check'),
+  rescanAgent: (): Promise<Envelope<{ status: EnvStatus }>> => ipcRenderer.invoke('updates:rescan'),
+  speechStatus: (): Promise<Envelope<{ status: SpeechStatus }>> =>
+    ipcRenderer.invoke('speech:status'),
+  speechSetupCommand: (modelId: string): Promise<Envelope<{ command: string }>> =>
+    ipcRenderer.invoke('speech:setupCommand', modelId),
+  speechStart: (modelId: string): Promise<Envelope> => ipcRenderer.invoke('speech:start', modelId),
+  speechStop: (): Promise<Envelope> => ipcRenderer.invoke('speech:stop'),
+  speechTranscribe: (samples: Float32Array): Promise<Envelope<{ text: string }>> =>
+    ipcRenderer.invoke('speech:transcribe', samples),
 
-  createTerminal: (spec: { id: string; cwd?: string; command?: string }) =>
+  createTerminal: (spec: { id: string; cwd?: string; command?: string }): Promise<Envelope> =>
     ipcRenderer.invoke('terminal:create', spec),
-  writeTerminal: (id: string, data: string) =>
+  writeTerminal: (id: string, data: string): Promise<Envelope> =>
     ipcRenderer.invoke('terminal:write', { id, data }),
-  resizeTerminal: (id: string, cols: number, rows: number) =>
+  resizeTerminal: (id: string, cols: number, rows: number): Promise<Envelope> =>
     ipcRenderer.invoke('terminal:resize', { id, cols, rows }),
-  terminalScrollback: (id: string) => ipcRenderer.invoke('terminal:scrollback', id),
-  killTerminal: (id: string) => ipcRenderer.invoke('terminal:kill', id),
+  terminalScrollback: (id: string): Promise<Envelope<{ scrollback: string }>> =>
+    ipcRenderer.invoke('terminal:scrollback', id),
+  killTerminal: (id: string): Promise<Envelope> => ipcRenderer.invoke('terminal:kill', id),
 
-  on: (channel: string, listener: (payload: unknown) => void) => {
-    const allowed = [
-      'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
-      'agents:tree', 'agents:tree-error', 'onboarding:output', 'onboarding:env',
-      'bridge:parked', 'bridge:run-ended',
-      'terminal:data', 'terminal:exit'
-    ]
-    if (!allowed.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
-    const wrapped = (_e: IpcRendererEvent, payload: unknown) => listener(payload)
+  /**
+   * Assinatura de canal de evento. O canal decide o payload (`IpcEvents`), e a
+   * allowlist de runtime sai da mesma lista — canal errado agora é erro de
+   * compilação, e não só um `throw` na hora de assinar.
+   */
+  on: <C extends IpcChannel>(channel: C, listener: (payload: IpcEvents[C]) => void): (() => void) => {
+    if (!IPC_CHANNELS.includes(channel)) throw new Error(`Canal não permitido: ${channel}`)
+    const wrapped = (_e: IpcRendererEvent, payload: IpcEvents[C]) => listener(payload)
     ipcRenderer.on(channel, wrapped)
     return () => ipcRenderer.removeListener(channel, wrapped)
   }

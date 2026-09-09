@@ -4,6 +4,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app } from 'electron'
 import { agentEnv } from './agent-path.js'
+import type { SpeechModel, SpeechStatus } from '../shared/protocol.js'
 
 /**
  * Motor de transcrição local.
@@ -24,13 +25,8 @@ import { agentEnv } from './agent-path.js'
 const REPO = 'https://github.com/ggml-org/whisper.cpp'
 const MODEL_BASE = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main'
 
-export interface SpeechModel {
-  id: string
-  label: string
-  /** Tamanho aproximado, para a pessoa decidir antes de baixar. */
-  bytes: number
-  present: boolean
-}
+// Reexportado de shared/protocol: é contrato com o renderer, não detalhe do main.
+export type { SpeechModel }
 
 /** Modelos multilíngues. Quanto maior, melhor em português — e mais lento. */
 const MODELS: Omit<SpeechModel, 'present'>[] = [
@@ -39,16 +35,7 @@ const MODELS: Omit<SpeechModel, 'present'>[] = [
   { id: 'small', label: 'Small', bytes: 487_601_967 }
 ]
 
-export interface SpeechStatus {
-  /** Compilado e com pelo menos um modelo: dá para transcrever. */
-  ready: boolean
-  dir: string
-  /** Caminho do `whisper-server`, quando já compilado. */
-  server: string | null
-  models: SpeechModel[]
-  /** Ferramentas de build ausentes. Vazio = dá para compilar. */
-  missing: string[]
-}
+export type { SpeechStatus }
 
 export function speechDir(): string {
   return join(app.getPath('userData'), 'speech')

@@ -2,14 +2,9 @@ import { useState } from 'react'
 import { Loader2, CheckCircle2, AlertTriangle, Plug } from 'lucide-react'
 import { Modal, Field, Button, inputClass } from './Modal'
 import { useT } from '../i18n'
+import type { SshForm } from '../lib/types'
 
-export interface SshForm {
-  name: string
-  host: string
-  port: string
-  identity: string
-  remotePath: string
-}
+export type { SshForm }
 
 const EMPTY: SshForm = { name: '', host: '', port: '', identity: '', remotePath: '' }
 
@@ -43,7 +38,7 @@ export function SshModal({
       identity: form.identity.trim() || undefined
     })
     setTesting(false)
-    setResult(r as { ok: boolean; message: string })
+    setResult(r)
   }
 
   function submit() {

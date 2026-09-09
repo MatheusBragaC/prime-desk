@@ -7,11 +7,7 @@ import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
 import { copyText } from '../lib/clipboard'
 import { useT } from '../i18n'
-
-interface EnvStatus {
-  agent: { installed: boolean; path: string | null; version: string | null }
-  auth: { ok: boolean; providers: string[]; envKeys: string[] }
-}
+import type { EnvStatus } from '../../../shared/protocol'
 
 type Stage = 'checking' | 'install' | 'installing' | 'auth' | 'ready'
 
@@ -60,11 +56,11 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
   const check = useCallback(async (): Promise<EnvStatus | null> => {
     const r = await window.prime.checkEnvironment()
-    if (!r?.ok) {
-      setError(r?.error ?? t('onb.checkFailed'))
+    if (!r.ok) {
+      setError(r.error ?? t('onb.checkFailed'))
       return null
     }
-    const s = r.status as EnvStatus
+    const s = r.status
     setStatus(s)
     if (!s.agent.installed) setStage('install')
     else if (!s.auth.ok) setStage('auth')
@@ -74,7 +70,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
   useEffect(() => {
     void window.prime.installCommand().then((r) => {
-      if (r?.ok) setCommand(r.command as string)
+      if (r.ok) setCommand(r.command)
     })
     const off = window.prime.on('onboarding:output', (chunk) => {
       setOutput((o) => (o + String(chunk)).slice(-6000))
@@ -85,8 +81,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
       "já autentiquei", o main observa o diretório do agente e avisa quando as
       credenciais aparecem — aí a tela avança sozinha.
     */
-    const offEnv = window.prime.on('onboarding:env', (payload) => {
-      const s = payload as EnvStatus
+    const offEnv = window.prime.on('onboarding:env', (s) => {
       setStatus(s)
       if (!s.agent.installed) setStage('install')
       else if (!s.auth.ok) setStage('auth')
@@ -251,21 +246,22 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 variant="primary"
                 onClick={() => void install()}
                 disabled={stage === 'installing'}
-              >
-                <span className="flex items-center gap-1.5">
-                  {stage === 'installing' ? (
+                icon={
+                  stage === 'installing' ? (
                     <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
                   ) : (
                     <Download size={14} strokeWidth={1.75} />
-                  )}
-                  {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
-                </span>
+                  )
+                }
+              >
+                {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
               </Button>
-              <Button variant="subtle" onClick={() => void check()}>
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw size={14} strokeWidth={1.75} />
-                  {t('onb.alreadyInstalled')}
-                </span>
+              <Button
+                variant="subtle"
+                onClick={() => void check()}
+                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+              >
+                {t('onb.alreadyInstalled')}
               </Button>
             </div>
 
@@ -389,11 +385,12 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             </div>
 
             <div className="mt-3">
-              <Button variant="primary" onClick={() => void check()}>
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw size={14} strokeWidth={1.75} />
-                  {t('onb.recheck')}
-                </span>
+              <Button
+                variant="primary"
+                onClick={() => void check()}
+                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+              >
+                {t('onb.recheck')}
               </Button>
             </div>
           </div>

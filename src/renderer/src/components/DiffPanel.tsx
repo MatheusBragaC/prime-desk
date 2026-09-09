@@ -5,13 +5,7 @@ import { unwrap } from '../lib/ipc'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError, PanelLoading } from './PanelState'
 import { useT } from '../i18n'
-
-interface GitChange {
-  path: string
-  status: string
-  added: number
-  removed: number
-}
+import type { GitChange } from '../../../shared/protocol'
 
 /**
  * Letra de estado do `git status --porcelain`, traduzida para uma marca de uma
@@ -61,7 +55,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
   const [open, setOpen] = useState<string | null>(null)
 
   const list = useAsync<GitChange[]>(
-    () => unwrap(window.prime.gitChanges(), (r) => r.changes as GitChange[], t('diff.noRepo')),
+    () => unwrap(window.prime.gitChanges(), (r) => r.changes, t('diff.noRepo')),
     [],
     { keepPrevious: true }
   )
@@ -77,7 +71,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
       if (!open) return null
       return unwrap(
         window.prime.gitDiff(open),
-        (r) => ({ diff: r.diff as string, truncated: Boolean(r.truncated) }),
+        (r) => ({ diff: r.diff, truncated: Boolean(r.truncated) }),
         t('diff.empty')
       )
     },
