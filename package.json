@@ -23,7 +23,7 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node scripts/test/run.mjs",
-    "lint": "eslint . --max-warnings 7",
+    "lint": "eslint . --max-warnings 6",
     "check:rpc": "node scripts/checkrpc.cjs",
     "check:ui": "node scripts/checkui.cjs",
     "check": "npm run lint && npm run typecheck && npm run check:rpc && npm run check:ui",
