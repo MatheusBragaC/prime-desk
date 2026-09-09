@@ -15,7 +15,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # --ignore-scripts pula o postinstall (electron-builder install-app-deps), que compila
+      # node-pty do zero e levava ~7min. O binário nativo só é necessário para EXECUTAR o app:
+      # lint, tsc, os testes de lib pura e o bundle do electron-vite não tocam nele.
+      - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm run test
       - run: npm run build
