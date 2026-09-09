@@ -56,7 +56,7 @@ function stripQuotes(value: string): string {
 function looksLikeCron(expression: string): boolean {
   const fields = expression.trim().split(/\s+/)
   if (fields.length !== 5) return false
-  return fields.every((f) => /^[0-9*/,\-]+$/.test(f))
+  return fields.every((f) => /^[0-9*/,-]+$/.test(f))
 }
 
 export type ScheduleResult =
