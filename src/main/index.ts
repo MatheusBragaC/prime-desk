@@ -544,7 +544,12 @@ let treeCadenceMs = 0
 async function tickTree(): Promise<void> {
   if (!win || win.isDestroyed() || !win.isVisible()) return
   try {
-    pushToRenderer('agents:tree', await getAgentTree())
+    pushToRenderer(
+      'agents:tree',
+      // A conversa da tela é a raiz: sem esse id, o painel volta a depender só
+      // do daemon, que não vê sessão avulsa. Ver `agent-tree-disk.ts`.
+      await getAgentTree({ rootSessionId: active?.sessionId, rootBusy: active?.running })
+    )
   } catch (err) {
     pushToRenderer('agents:tree-error', err instanceof Error ? err.message : String(err))
   }
@@ -578,7 +583,10 @@ function stopTreePolling(): void {
 
 handle('agents:tree', async () => {
   try {
-    return { ok: true, tree: await getAgentTree() }
+    return {
+      ok: true,
+      tree: await getAgentTree({ rootSessionId: active?.sessionId, rootBusy: active?.running })
+    }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }

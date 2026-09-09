@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
 import type { AgentNode, AgentTreeSnapshot } from '../shared/protocol.js'
 import { agentBinary, agentEnv } from './agent-path.js'
+import { readDiskTree } from './agent-tree-disk.js'
 
 /**
  * Árvore de agentes (root + descendentes RLM).
@@ -11,6 +12,17 @@ import { agentBinary, agentEnv } from './agent-path.js'
  * `sessionName`, `rlmChildId`, `spawnCode`, `taskState`, `activity`.
  *
  * O RPC não expõe isso; usamos a CLI em processo separado, de leitura apenas.
+ *
+ * **A CLI sozinha não bastava.** `list --json` pergunta ao daemon quais sessões
+ * ele acompanha, e o prime-desk sobe cada conversa como `prime-agent --mode rpc`
+ * solto, sem `--daemon-socket` — o daemon nunca fica sabendo que ela existe.
+ * Medido ao vivo: cinco subagentes reais trabalhando e o comando devolvendo
+ * `{"sessions": []}`. Por isso a árvore da conversa da tela vem do disco
+ * (`agent-tree-disk.ts`) e as duas fontes são fundidas aqui.
+ *
+ * A CLI continua: ela é a única que vê sessão residente (agendamento,
+ * heartbeat) e traz `taskState`/`activeSessionId` de verdade. Onde as duas
+ * descrevem a mesma sessão, a do daemon ganha — é a mais rica.
  */
 
 interface RawSession {
@@ -90,6 +102,7 @@ function toNode(raw: RawSession): AgentNode {
     modelName: raw.model?.name ?? '',
     lastActivityAt: raw.lastActivityAt ?? '',
     usage: raw.usage,
+    source: 'daemon',
     children: []
   }
 }
@@ -121,13 +134,67 @@ export function buildTree(sessions: RawSession[]): AgentNode[] {
   return roots
 }
 
-export async function getAgentTree(binary = agentBinary()): Promise<AgentTreeSnapshot> {
-  const sessions = await runList(binary)
-  const roots = buildTree(sessions)
-  return {
-    roots,
-    total: sessions.length,
-    subagents: sessions.filter((s) => s.runtimeKind === 'subagent').length,
-    at: Date.now()
+export interface AgentTreeQuery {
+  /** Sessão da ponte ativa. Sem ela, só a fonte do daemon é consultada. */
+  rootSessionId?: string
+  rootBusy?: boolean
+  binary?: string
+}
+
+/** Conta nós da floresta inteira: o resumo do painel tem de bater com o que ele desenha. */
+function tally(roots: AgentNode[]): { total: number; subagents: number } {
+  let total = 0
+  let subagents = 0
+  const walk = (nodes: AgentNode[]): void => {
+    for (const n of nodes) {
+      total += 1
+      if (n.kind === 'subagent') subagents += 1
+      walk(n.children)
+    }
   }
+  walk(roots)
+  return { total, subagents }
+}
+
+function collectIds(nodes: AgentNode[], into: Set<string>): void {
+  for (const n of nodes) {
+    if (n.sessionId) into.add(n.sessionId)
+    collectIds(n.children, into)
+  }
+}
+
+export async function getAgentTree(query: AgentTreeQuery = {}): Promise<AgentTreeSnapshot> {
+  const binary = query.binary ?? agentBinary()
+
+  /*
+    As duas fontes são independentes e uma não pode derrubar a outra: sem daemon
+    de pé, `list` falha, e a árvore da conversa continua valendo. O caminho
+    inverso também — daí `allSettled` em vez de `all`.
+  */
+  const [listed, fromDisk] = await Promise.allSettled([
+    runList(binary),
+    query.rootSessionId
+      ? readDiskTree({ rootSessionId: query.rootSessionId, rootBusy: query.rootBusy })
+      : Promise.resolve(null)
+  ])
+
+  const roots = listed.status === 'fulfilled' ? buildTree(listed.value) : []
+
+  const diskRoot = fromDisk.status === 'fulfilled' ? fromDisk.value : null
+  if (diskRoot) {
+    // Se o daemon já descreve essa sessão, a versão dele fica: tem `taskState` e
+    // o `activeSessionId` que o `observe` exige.
+    const known = new Set<string>()
+    collectIds(roots, known)
+    if (!known.has(diskRoot.sessionId)) roots.unshift(diskRoot)
+  }
+
+  /*
+    Erro só quando NADA sobrou. Com a árvore do disco na mão, a falha do `list`
+    é irrelevante para quem está olhando — e virar erro vermelho no painel seria
+    ruído sobre uma informação que está correta.
+  */
+  if (roots.length === 0 && listed.status === 'rejected') throw listed.reason
+
+  return { roots, ...tally(roots), at: Date.now() }
 }

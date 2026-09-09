@@ -309,6 +309,17 @@ export interface AgentNode {
    * campo em `list --json`): trate ausência como "sem dado", não como zero.
    */
   usage?: { inputTokens: number; outputTokens: number; cost: number }
+  /**
+   * De onde o nó veio.
+   *
+   * `daemon` é o `prime-agent list --json`, que só enxerga sessão residente.
+   * `disk` é a leitura de `session-artifacts/`, que enxerga a conversa da tela —
+   * a maioria dos casos, já que o app sobe cada conversa fora do daemon.
+   *
+   * A diferença é visível na interface: `observe` precisa do id que só o daemon
+   * tem, então o botão de acompanhar não aparece em nó vindo do disco.
+   */
+  source: 'daemon' | 'disk'
   children: AgentNode[]
 }
 
