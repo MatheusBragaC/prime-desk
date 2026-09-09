@@ -246,21 +246,22 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 variant="primary"
                 onClick={() => void install()}
                 disabled={stage === 'installing'}
-              >
-                <span className="flex items-center gap-1.5">
-                  {stage === 'installing' ? (
+                icon={
+                  stage === 'installing' ? (
                     <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
                   ) : (
                     <Download size={14} strokeWidth={1.75} />
-                  )}
-                  {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
-                </span>
+                  )
+                }
+              >
+                {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
               </Button>
-              <Button variant="subtle" onClick={() => void check()}>
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw size={14} strokeWidth={1.75} />
-                  {t('onb.alreadyInstalled')}
-                </span>
+              <Button
+                variant="subtle"
+                onClick={() => void check()}
+                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+              >
+                {t('onb.alreadyInstalled')}
               </Button>
             </div>
 
@@ -384,11 +385,12 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             </div>
 
             <div className="mt-3">
-              <Button variant="primary" onClick={() => void check()}>
-                <span className="flex items-center gap-1.5">
-                  <RefreshCw size={14} strokeWidth={1.75} />
-                  {t('onb.recheck')}
-                </span>
+              <Button
+                variant="primary"
+                onClick={() => void check()}
+                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+              >
+                {t('onb.recheck')}
               </Button>
             </div>
           </div>

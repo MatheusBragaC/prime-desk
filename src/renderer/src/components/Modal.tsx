@@ -186,10 +186,14 @@ export const inputClass =
 
 export function Button({
   variant = 'ghost',
+  icon,
+  className,
   children,
   ...rest
 }: {
-  variant?: 'primary' | 'ghost' | 'subtle'
+  variant?: 'primary' | 'ghost' | 'subtle' | 'danger'
+  /** Ícone à esquerda do rótulo, no espaçamento do primitivo. */
+  icon?: ReactNode
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const base =
     'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40'
@@ -198,10 +202,26 @@ export function Button({
       ? 'border border-primary/40 bg-primary/20 text-fg hover:bg-primary/30'
       : variant === 'subtle'
         ? 'border border-white/[0.1] text-muted hover:border-white/20 hover:text-fg'
-        : 'text-muted hover:bg-white/[0.06] hover:text-fg'
+        : variant === 'danger'
+          ? 'border border-err/40 bg-err/15 text-err hover:bg-err/25'
+          : 'text-muted hover:bg-white/[0.06] hover:text-fg'
+  /*
+    `className` externo entra DEPOIS da base, e não no lugar dela. Escrito antes
+    do spread, qualquer chamador que passasse uma classe apagava o primitivo
+    inteiro — e era assim que o botão de perigo e os botões com ícone vinham
+    sendo remontados à mão fora daqui.
+  */
+  const merged = [base, style, className].filter(Boolean).join(' ')
   return (
-    <button className={`${base} ${style}`} {...rest}>
-      {children}
+    <button className={merged} {...rest}>
+      {icon ? (
+        <span className="flex items-center gap-1.5">
+          {icon}
+          {children}
+        </span>
+      ) : (
+        children
+      )}
     </button>
   )
 }

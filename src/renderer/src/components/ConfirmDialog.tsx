@@ -42,23 +42,12 @@ export function ConfirmDialog() {
             {t('common.cancel')}
           </Button>
           <Button
-            variant={confirm.danger ? 'ghost' : 'primary'}
+            variant={confirm.danger ? 'danger' : 'primary'}
             onClick={() => void run()}
             disabled={busy}
-            className={
-              confirm.danger
-                ? 'rounded-lg border border-err/40 bg-err/15 px-3 py-1.5 text-sm font-medium text-err transition-colors hover:bg-err/25 disabled:opacity-40'
-                : undefined
-            }
+            icon={busy ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : undefined}
           >
-            {busy ? (
-              <span className="flex items-center gap-1.5">
-                <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
-                {t('common.processing')}
-              </span>
-            ) : (
-              (confirm.confirmLabel ?? t('common.confirm'))
-            )}
+            {busy ? t('common.processing') : (confirm.confirmLabel ?? t('common.confirm'))}
           </Button>
         </>
       }
