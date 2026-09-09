@@ -220,6 +220,7 @@ export type KnownAgentEvent =
   | { type: 'auto_retry_start'; attempt: number; maxAttempts: number; delayMs: number; errorMessage: string }
   | { type: 'auto_retry_end'; success: boolean; attempt: number; finalError?: string }
   | { type: 'extension_error'; message?: string }
+  | { type: 'heartbeats_changed' }
 
 /**
  * Evento que o agente emite e este cliente ainda não mapeou.
