@@ -5,6 +5,7 @@ import type {
   ContextUsage, SessionStats, DeliveryBehavior, QueueMode, AgentCronJob,
   AgentHeartbeatDeliveryMode, ParkedRun
 } from '../../../shared/protocol'
+import { isAgentEvent } from '../../../shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
 } from './transcript'
@@ -200,40 +201,33 @@ export const useAgent = create<AgentStore>((set, get) => ({
     const after = applyEvent(before, ev)
     if (after !== before) set(after)
 
-    switch (ev.type) {
-      case 'agent_start':
-        set((s) => ({ state: s.state ? { ...s.state, isStreaming: true } : s.state }))
-        break
-      case 'agent_end':
-        set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
-        // A ocupação só muda quando o turno fecha; consultar durante o stream
-        // seria pedir o mesmo número várias vezes.
-        void refreshContext()
-        break
-      case 'session_action_update': {
-        const a = (ev as { actions?: AgentState['sessionActions'] }).actions
-        set((s) => ({ state: s.state && a ? { ...s.state, sessionActions: a } : s.state }))
-        break
-      }
-      case 'compaction_start':
-        set({ compacting: true })
-        break
-      case 'compaction_end':
-        set({ compacting: false })
-        // Aqui o agente devolve `tokens: null` de propósito, até a próxima
-        // resposta. A UI mostra "desconhecido" em vez do número velho.
-        void refreshContext()
-        break
-      case 'auto_retry_start': {
-        const e = ev as unknown as { attempt: number; maxAttempts: number; errorMessage: string }
-        set({ retry: { attempt: e.attempt, max: e.maxAttempts, message: e.errorMessage } })
-        break
-      }
-      case 'auto_retry_end':
-        set({ retry: null })
-        break
-      default:
-        break
+    /*
+      Cadeia de guardas em vez de `switch (ev.type)`: `AgentEvent` inclui o
+      evento ainda não mapeado (`type: string`), e num `switch` ele acompanha
+      todo `case` — o campo lido voltaria a ser `unknown`. Evento desconhecido
+      não casa com nenhuma guarda e é ignorado, como antes.
+    */
+    if (isAgentEvent(ev, 'agent_start')) {
+      set((s) => ({ state: s.state ? { ...s.state, isStreaming: true } : s.state }))
+    } else if (isAgentEvent(ev, 'agent_end')) {
+      set((s) => ({ state: s.state ? { ...s.state, isStreaming: false } : s.state }))
+      // A ocupação só muda quando o turno fecha; consultar durante o stream
+      // seria pedir o mesmo número várias vezes.
+      void refreshContext()
+    } else if (isAgentEvent(ev, 'session_action_update')) {
+      const a = ev.actions
+      set((s) => ({ state: s.state && a ? { ...s.state, sessionActions: a } : s.state }))
+    } else if (isAgentEvent(ev, 'compaction_start')) {
+      set({ compacting: true })
+    } else if (isAgentEvent(ev, 'compaction_end')) {
+      set({ compacting: false })
+      // Aqui o agente devolve `tokens: null` de propósito, até a próxima
+      // resposta. A UI mostra "desconhecido" em vez do número velho.
+      void refreshContext()
+    } else if (isAgentEvent(ev, 'auto_retry_start')) {
+      set({ retry: { attempt: ev.attempt, max: ev.maxAttempts, message: ev.errorMessage } })
+    } else if (isAgentEvent(ev, 'auto_retry_end')) {
+      set({ retry: null })
     }
   },
 
