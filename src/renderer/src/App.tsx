@@ -87,9 +87,12 @@ export function App() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--p-bg)]">
       {chrome.narrowSidebar && chrome.sidebarOpen && (
+        /* Véu decorativo: fechar a sidebar também está no botão dela, então o
+           certo aqui é sumir do leitor de tela, não virar um controle duplicado. */
         <div
           className="fixed inset-0 z-scrim bg-black/50 animate-fade-up"
           onClick={() => chrome.setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
