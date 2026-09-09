@@ -419,3 +419,103 @@ export interface GitChange {
   added: number
   removed: number
 }
+
+// ------------------------------------------------------------- fronteira IPC
+
+/**
+ * Envelope de resposta do processo principal.
+ *
+ * Todo handler devolve `{ ok, ...dados, error? }` em vez de lançar (ver
+ * `lib/ipc.ts`). Escrito como união discriminada por `ok`: assim `if (!r.ok)`
+ * é narrowing de verdade e o campo de dado só existe no ramo bem-sucedido —
+ * era isso que faltava para o renderer parar de afirmar tipo com `as`.
+ */
+export type Ok<T> = { ok: true } & T
+export type Err = { ok: false; error?: string }
+export type Envelope<T = Record<never, never>> = Ok<T> | Err
+
+/** Resposta de `app:info`. Fora do envelope: o handler devolve o objeto cru. */
+export interface AppInfo {
+  version: string
+  home: string
+  platform: string
+  userName: string
+}
+
+/**
+ * Arquivo escolhido no seletor de anexo.
+ *
+ * Só imagem sobe embutida (`data`/`mimeType`); qualquer outro formato volta
+ * apenas como caminho, porque o RPC do prime-agent aceita só imagem.
+ */
+export type PickedAttachment =
+  | { path: string; isImage: true; data: string; mimeType: string }
+  | { path: string; isImage: false }
+
+/** Conversa que segue executando numa ponte estacionada, fora da tela. */
+export interface ParkedRun {
+  id: string
+  cwd: string
+  running: boolean
+  sessionId?: string
+  sessionPath?: string
+}
+
+/** Saída do processo do agente, como o main a reporta. */
+export interface AgentExitInfo {
+  code: number | null
+  signal?: NodeJS.Signals | number | null
+  stderr?: string
+  /** `true` quando fomos nós que pedimos a parada. */
+  expected?: boolean
+}
+
+/**
+ * Evento do agente como ele chega ao renderer.
+ *
+ * O main carimba a ponte de origem, e a sessão observada vem embrulhada
+ * (`observed_session_event`) para não se confundir com a conversa da tela.
+ */
+export type BridgeAgentEvent = AgentEvent & {
+  bridgeId?: string
+  activeSessionId?: string
+  event?: AgentEvent
+  error?: string
+}
+
+/** Resultado de `ssh:test`. */
+export interface SshTestResult {
+  ok: boolean
+  message: string
+}
+
+/**
+ * Canal de evento -> payload que ele carrega.
+ *
+ * Fonte única: a allowlist de runtime do preload é derivada daqui, então não há
+ * como um canal existir num lugar e faltar no outro.
+ */
+export interface IpcEvents {
+  'agent:event': BridgeAgentEvent
+  'agent:response': RpcResponse
+  'agent:stderr': string
+  'agent:fatal': string
+  'agent:exit': AgentExitInfo
+  'agents:tree': AgentTreeSnapshot
+  'agents:tree-error': string
+  'onboarding:output': string
+  'onboarding:env': EnvStatus
+  'bridge:parked': ParkedRun[]
+  'bridge:run-ended': { id: string; sessionId?: string; sessionPath?: string }
+  'terminal:data': { id: string; data: string }
+  'terminal:exit': { id: string; exitCode: number; signal?: number }
+}
+
+export type IpcChannel = keyof IpcEvents
+
+export const IPC_CHANNELS: readonly IpcChannel[] = [
+  'agent:event', 'agent:response', 'agent:stderr', 'agent:fatal', 'agent:exit',
+  'agents:tree', 'agents:tree-error', 'onboarding:output', 'onboarding:env',
+  'bridge:parked', 'bridge:run-ended',
+  'terminal:data', 'terminal:exit'
+]

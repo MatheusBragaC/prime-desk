@@ -16,7 +16,7 @@ export function Welcome() {
   useEffect(() => {
     let alive = true
     void window.prime.usageStats().then((r) => {
-      if (alive && r?.ok) setStats(r.stats as UsageStats)
+      if (alive && r.ok) setStats(r.stats)
     })
     void window.prime.appInfo().then((info) => {
       if (alive) setName(firstNameFromHome(info.home))

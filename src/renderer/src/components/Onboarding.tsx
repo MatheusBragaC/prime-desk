@@ -56,11 +56,11 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
   const check = useCallback(async (): Promise<EnvStatus | null> => {
     const r = await window.prime.checkEnvironment()
-    if (!r?.ok) {
-      setError(r?.error ?? t('onb.checkFailed'))
+    if (!r.ok) {
+      setError(r.error ?? t('onb.checkFailed'))
       return null
     }
-    const s = r.status as EnvStatus
+    const s = r.status
     setStatus(s)
     if (!s.agent.installed) setStage('install')
     else if (!s.auth.ok) setStage('auth')
@@ -70,7 +70,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
   useEffect(() => {
     void window.prime.installCommand().then((r) => {
-      if (r?.ok) setCommand(r.command as string)
+      if (r.ok) setCommand(r.command)
     })
     const off = window.prime.on('onboarding:output', (chunk) => {
       setOutput((o) => (o + String(chunk)).slice(-6000))
@@ -81,8 +81,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
       "já autentiquei", o main observa o diretório do agente e avisa quando as
       credenciais aparecem — aí a tela avança sozinha.
     */
-    const offEnv = window.prime.on('onboarding:env', (payload) => {
-      const s = payload as EnvStatus
+    const offEnv = window.prime.on('onboarding:env', (s) => {
       setStatus(s)
       if (!s.agent.installed) setStage('install')
       else if (!s.auth.ok) setStage('auth')

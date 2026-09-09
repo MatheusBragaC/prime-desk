@@ -65,7 +65,7 @@ export function MicButton({ onPartial, onFinal }: {
 
   const loadSpeech = useCallback(async () => {
     const r = await window.prime.speechStatus()
-    if (r?.ok) setSpeech(r.status as SpeechStatus)
+    if (r.ok) setSpeech(r.status)
   }, [])
 
   useEffect(() => {
@@ -80,8 +80,8 @@ export function MicButton({ onPartial, onFinal }: {
   const install = useCallback(async (modelId: string) => {
     setMenu(false)
     const r = await window.prime.speechSetupCommand(modelId)
-    if (!r?.ok) {
-      notify('error', (r?.error as string) ?? t('mic.setupFailed'))
+    if (!r.ok) {
+      notify('error', r.error ?? t('mic.setupFailed'))
       return
     }
     const model = speech?.models.find((m) => m.id === modelId)
@@ -90,7 +90,7 @@ export function MicButton({ onPartial, onFinal }: {
       message: t('mic.setupMsg'),
       detail: model ? `${model.label} · ${fmtSize(model.bytes)}` : undefined,
       confirmLabel: t('mic.setupRun'),
-      onConfirm: () => requestTerminal(r.command as string, t('mic.setupTab'))
+      onConfirm: () => requestTerminal(r.command, t('mic.setupTab'))
     })
   }, [notify, requestConfirm, requestTerminal, speech, t])
 
