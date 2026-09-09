@@ -196,8 +196,14 @@ export interface AgentState {
   goal: GoalState
 }
 
-/** Eventos emitidos pelo agente em stdout. */
-export type AgentEvent =
+/**
+ * Eventos emitidos pelo agente em stdout que este cliente conhece.
+ *
+ * União fechada de propósito: com um membro coringa no fim, `ev.type === 'x'`
+ * continuava aceitando o coringa e todo campo virava `unknown` — a união
+ * existia mas não dava narrowing, e o renderer compensava com `as unknown as`.
+ */
+export type KnownAgentEvent =
   | { type: 'agent_start' }
   | { type: 'agent_end'; messages: AgentMessage[] }
   | { type: 'turn_start' }
@@ -214,7 +220,32 @@ export type AgentEvent =
   | { type: 'auto_retry_start'; attempt: number; maxAttempts: number; delayMs: number; errorMessage: string }
   | { type: 'auto_retry_end'; success: boolean; attempt: number; finalError?: string }
   | { type: 'extension_error'; message?: string }
-  | { type: string; [k: string]: unknown }
+
+/**
+ * Evento que o agente emite e este cliente ainda não mapeou.
+ *
+ * Existe para que versão nova do prime-agent não quebre o app: o evento passa
+ * pelo reducer sem casar com nada e é ignorado.
+ */
+export interface UnknownAgentEvent {
+  type: string
+  [k: string]: unknown
+}
+
+export type AgentEvent = KnownAgentEvent | UnknownAgentEvent
+
+export type AgentEventOf<K extends KnownAgentEvent['type']> = Extract<KnownAgentEvent, { type: K }>
+
+/**
+ * Guarda de evento conhecido. Substitui os `as unknown as` do renderer: aqui o
+ * compilador confere o nome do campo contra o protocolo, o cast não conferia.
+ */
+export function isAgentEvent<K extends KnownAgentEvent['type']>(
+  ev: AgentEvent,
+  type: K
+): ev is AgentEventOf<K> {
+  return ev.type === type
+}
 
 export interface RpcResponse<T = unknown> {
   id?: string
