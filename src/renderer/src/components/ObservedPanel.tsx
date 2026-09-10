@@ -91,10 +91,14 @@ export function ObservedPanel() {
           {ids.map((id) => {
             const o = observed[id]
             return (
-              <button
+              /*
+                Aba e fechar são irmãos, não aninhados: `<button>` dentro de
+                `<button>` é HTML inválido e o leitor de tela anuncia um
+                controle ambíguo. A casca continua sendo a mesma pílula, agora
+                num `div` que só posiciona.
+              */
+              <div
                 key={id}
-                onClick={() => setActive(id)}
-                title={o.name || id}
                 className={
                   'group flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md pl-2 pr-1 text-xs transition-colors ' +
                   (id === activeSessionId
@@ -102,20 +106,23 @@ export function ObservedPanel() {
                     : 'text-dim hover:bg-elevated/60 hover:text-muted')
                 }
               >
-                <StatusIcon obs={o} size={12} />
-                <span className="max-w-[140px] truncate">{o.name || id.slice(0, 8)}</span>
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void unobserveSession(id)
-                  }}
-                  className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
+                <button
+                  onClick={() => setActive(id)}
+                  title={o.name || id}
+                  className="flex min-w-0 items-center gap-1.5 text-left"
+                >
+                  <StatusIcon obs={o} size={12} />
+                  <span className="max-w-[140px] truncate">{o.name || id.slice(0, 8)}</span>
+                </button>
+                {/* `focus-visible` porque o fechar só aparece no hover: sem isso, quem navega por teclado foca um botão invisível. */}
+                <button
+                  onClick={() => void unobserveSession(id)}
+                  aria-label={t('observed.stop')}
+                  className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
                 >
                   <X size={11} strokeWidth={2} />
-                </span>
-              </button>
+                </button>
+              </div>
             )
           })}
         </div>
@@ -149,6 +156,7 @@ export function ObservedPanel() {
         </button>
         <button
           onClick={() => void unobserveSession(activeSessionId)}
+          aria-label={t('observed.stop')}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
           <X size={16} strokeWidth={1.75} />

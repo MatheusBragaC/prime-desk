@@ -77,11 +77,17 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
       header={
         <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-1 border-b border-[var(--p-line)] pl-2 pr-3">
         <div className="no-drag flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+          {/*
+            Aba e fechar são irmãos dentro de um `div` de layout. Antes o fechar
+            era um `<span role="button" tabIndex={-1}>` DENTRO do botão da aba:
+            aninhamento interativo é HTML inválido, o leitor de tela anuncia um
+            controle ambíguo e o `tabIndex={-1}` tirava o fechar do teclado. O
+            `stopPropagation` deixou de ser necessário porque não há mais
+            handler no pai.
+          */}
           {tabs.map((tab) => (
-            <button
+            <div
               key={tab.id}
-              onClick={() => setActive(tab.id)}
-              title={tab.path ?? tab.title}
               className={
                 'group flex h-7 min-w-0 shrink-0 items-center gap-1.5 rounded-md pl-2 pr-1 text-xs transition-colors ' +
                 (tab.id === activeId
@@ -89,22 +95,25 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
                   : 'text-dim hover:bg-elevated/60 hover:text-muted')
               }
             >
-              {tab.kind === 'shell'
-                ? <SquareTerminal size={13} strokeWidth={1.75} className="shrink-0" />
-                : <FileCode2 size={13} strokeWidth={1.75} className="shrink-0" />}
-              <span className="max-w-[120px] truncate">{tab.title}</span>
-              <span
-                role="button"
-                tabIndex={-1}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  closeTab(tab.id)
-                }}
-                className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover:opacity-100"
+              <button
+                onClick={() => setActive(tab.id)}
+                title={tab.path ?? tab.title}
+                className="flex min-w-0 items-center gap-1.5 text-left"
+              >
+                {tab.kind === 'shell'
+                  ? <SquareTerminal size={13} strokeWidth={1.75} className="shrink-0" />
+                  : <FileCode2 size={13} strokeWidth={1.75} className="shrink-0" />}
+                <span className="max-w-[120px] truncate">{tab.title}</span>
+              </button>
+              {/* `focus-visible` porque o fechar só aparece no hover: sem isso, quem navega por teclado foca um botão invisível. */}
+              <button
+                onClick={() => closeTab(tab.id)}
+                aria-label={t('terminal.closeTab')}
+                className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <X size={11} strokeWidth={2} />
-              </span>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
 
@@ -112,6 +121,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
           onClick={addShell}
           className="no-drag shrink-0 rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
           title={t('terminal.newShell')}
+          aria-label={t('terminal.newShell')}
         >
           <Plus size={15} strokeWidth={1.75} />
         </button>
@@ -119,11 +129,13 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
           onClick={() => void openFile()}
           className="no-drag shrink-0 rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
           title={t('terminal.openFile')}
+          aria-label={t('terminal.openFile')}
         >
           <FolderOpen size={15} strokeWidth={1.75} />
         </button>
         <button
           onClick={onClose}
+          aria-label={t('common.close')}
           className="no-drag shrink-0 rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
         >
           <X size={15} strokeWidth={1.75} />
