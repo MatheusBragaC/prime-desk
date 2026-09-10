@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
-  UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle
+  UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp,
+  ArrowUpCircle, Download
 } from 'lucide-react'
 import { useAgent } from '@/store/agent'
 import { useT, setLang, getLang, LANGS } from '@/i18n'
 import { usePopover } from '@/lib/usePopover'
 import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
 import { useEnvironment } from '@/lib/useEnvironment'
+import type { UpdateCheck } from '@shared/protocol'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -21,6 +23,12 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const { t } = useT()
   const { status, update, userName, refresh } = useEnvironment(true)
   const [open, setOpen] = useState(false)
+  /*
+    Atualização do PRÓPRIO app, separada da do agente: as fontes são diferentes
+    (releases do GitHub x manifesto em R2) e as duas podem estar disponíveis ao
+    mesmo tempo. Estado local porque só este menu consome.
+  */
+  const [appUpdate, setAppUpdate] = useState<{ update: UpdateCheck; command: string } | null>(null)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const notify = useAgent((s) => s.notify)
   const requestTerminal = useAgent((s) => s.requestTerminal)
@@ -29,6 +37,9 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   // A primeira leitura é do badge: o hook guarda o dado, não decide quando ler.
   useEffect(() => {
     void refresh()
+    void window.prime.checkAppUpdate().then((r) => {
+      if (r?.ok) setAppUpdate({ update: r.update, command: r.command })
+    })
   }, [refresh])
 
   /*
@@ -47,6 +58,29 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
       onConfirm: async () => {
         await window.prime.stopBridge()
         requestTerminal('prime-agent update', t('update.tabTitle'))
+      }
+    })
+  }
+
+  /*
+    Instalar troca o binário do app que está rodando, e no Linux passa por
+    `sudo`. Por isso vai para o terminal embutido, igual à do agente: quem
+    clicou vê o que roda e digita a senha. Nada de instalar por baixo.
+
+    Não fecha a ponte antes: quem reinicia é a instalação, e derrubar o agente
+    antes só perderia o turno em andamento sem necessidade.
+  */
+  function askAppUpdate() {
+    setOpen(false)
+    const info = appUpdate
+    if (!info) return
+    requestConfirm({
+      title: t('appUpdate.title'),
+      message: t('appUpdate.msg'),
+      detail: `${info.update.current ?? '?'} → ${info.update.latest ?? '?'}\n\n${info.command}`,
+      confirmLabel: t('appUpdate.run'),
+      onConfirm: () => {
+        requestTerminal(info.command, t('appUpdate.tabTitle'))
       }
     })
   }
@@ -119,7 +153,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
         >
           <UserRound size={13} strokeWidth={1.75} />
         </span>
-        {update?.available && !open && (
+        {(update?.available || appUpdate?.update.available) && !open && (
           <span
             title={t('update.available')}
             className="absolute left-[26px] top-1.5 h-1.5 w-1.5 rounded-full bg-primary"
@@ -204,6 +238,17 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
               <ArrowUpCircle size={14} strokeWidth={1.75} />
               <span className="flex-1">{t('update.available')}</span>
               <span className="font-mono text-micro text-dim">{update.latest}</span>
+            </button>
+          )}
+
+          {appUpdate?.update.available && (
+            <button
+              className={item + ' text-primarySoft hover:text-primarySoft'}
+              onClick={askAppUpdate}
+            >
+              <Download size={14} strokeWidth={1.75} />
+              <span className="flex-1">{t('appUpdate.available')}</span>
+              <span className="font-mono text-micro text-dim">{appUpdate.update.latest}</span>
             </button>
           )}
 

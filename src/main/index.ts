@@ -23,7 +23,7 @@ import {
   startEnvWatch, stopEnvWatch, INSTALL_COMMAND
 } from './onboarding.js'
 import { generateTitle } from './titles.js'
-import { checkAgentUpdate } from './updates.js'
+import { checkAppUpdate, appUpdateCommand, checkAgentUpdate } from './updates.js'
 import { speechStatus, speechSetupCommand, ensureSpeechDir } from './speech.js'
 import { startSpeech, stopSpeech, transcribe } from './speech-server.js'
 import {
@@ -956,6 +956,18 @@ handle('updates:check', async () => {
  * `startEnvWatch` não ajuda aqui: ele compara a assinatura do `auth.json`, e
  * troca de versão não mexe em credencial.
  */
+/**
+ * Versão nova do próprio app.
+ *
+ * Separado do `updates:check` (que é do agente) porque as fontes são outras: o
+ * agente vem do manifesto em R2, o app vem do `releases/latest` do GitHub — o
+ * mesmo que o `scripts/install.sh` consome.
+ */
+handle('updates:app', async () => {
+  const update = await checkAppUpdate(app.getVersion())
+  return { ok: true, update, command: appUpdateCommand() }
+})
+
 handle('updates:rescan', async () => {
   invalidateAgentPath()
   const status = await checkEnvironment()
