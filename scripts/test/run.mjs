@@ -84,6 +84,21 @@ const SUITES = [
     needsShims: true
   },
   {
+    /*
+      Lado com efeito do mesmo módulo do `dialogTrap`: a suíte roda o efeito à
+      mão contra uma casca de `document` que registra add/removeEventListener.
+      Precisa da casca de react com slots porque um dos casos é o re-render do
+      pai com `onClose` novo sem refazer o efeito.
+    */
+    test: './dialogEffect.test.mjs',
+    src: 'src/renderer/src/lib/useDialogA11y.ts',
+    needsShims: true,
+    reactShim: 'reactHooks.js',
+    prepare: (source) =>
+      source + "\nexport { hooks, beginRender, resetHooks } from './reactHooks.js'\n",
+    shims: { 'reactHooks.js': readFileSync('scripts/test/shims/reactHooks.js', 'utf8') }
+  },
+  {
     test: './documentDetect.test.mjs',
     src: 'src/renderer/src/lib/documentDetect.ts',
     needsShims: false
@@ -128,6 +143,28 @@ const SUITES = [
     }
   },
   {
+    /*
+      Contagem de referência da assinatura de ambiente. A casca de react guarda
+      slots entre renders e entrega o `subscribe` do `useSyncExternalStore` à
+      suíte, que monta e desmonta consumidores na mão. O `lib/env.ts` entra como
+      casca porque o que se afirma é quantas vezes watch/unwatch foram pedidos.
+    */
+    test: './envWatch.test.mjs',
+    src: 'src/renderer/src/lib/useEnvironment.ts',
+    needsShims: true,
+    reactShim: 'reactHooks.js',
+    prepare: (source) =>
+      source
+        .replaceAll("from './env'", "from './envForWatch'")
+        .replaceAll("from '../i18n'", "from './i18nShim'") +
+      "\nexport { hooks, beginRender, resetHooks } from './reactHooks.js'\n" +
+      "\nexport { watchCalls } from './envForWatch'\n",
+    shims: {
+      'reactHooks.js': readFileSync('scripts/test/shims/reactHooks.js', 'utf8'),
+      'envForWatch.ts': readFileSync('scripts/test/shims/envForWatch.ts', 'utf8')
+    }
+  },
+  {
     test: './execution.test.mjs',
     src: 'src/renderer/src/lib/useBridge.ts',
     needsShims: true,
@@ -146,7 +183,13 @@ const SUITES = [
 
 let allOk = true
 for (const suite of SUITES) {
-  const name = suite.src.split('/').pop().replace(/\.ts$/, '')
+  /*
+    O nome vem do TESTE, não do módulo: duas suítes podem cobrir o mesmo módulo
+    (`dialogTrap` e `dialogEffect`), e com nome de módulo o segundo bundle
+    sobrescreveria o primeiro — o `import` devolveria o módulo já em cache, com
+    as exportações da outra suíte.
+  */
+  const name = suite.test.replace(/^\.\//, '').replace(/\.test\.mjs$/, '')
   const entry = join(dir, name + '.ts')
   const out = join(dir, name + '.mjs')
 
