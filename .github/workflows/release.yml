@@ -95,29 +95,33 @@ jobs:
       # Um unico pty.node nao serve para as duas arches, entao compilamos e
       # empacotamos arm64 e x64 separadamente, sempre com npmRebuild=false para
       # nao cair no @electron/rebuild que trava.
+      # Sem `timeout` do shell: e do GNU coreutils e nao existe no macOS (exit 127).
+      # O limite vem do `timeout-minutes` nativo do GitHub Actions.
       - name: Empacotar macOS arm64 (rebuild node-pty + package)
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           ELECTRON_VERSION="$(node -p "require('electron/package.json').version")"
           NODE_GYP="$PWD/node_modules/.bin/node-gyp"
-          ( cd node_modules/node-pty && timeout 300 "$NODE_GYP" rebuild \
+          ( cd node_modules/node-pty && "$NODE_GYP" rebuild \
               --target="$ELECTRON_VERSION" \
               --arch=arm64 \
               --dist-url=https://electronjs.org/headers \
               --runtime=electron )
-          timeout 900 npx electron-builder --mac dmg zip --arm64 -c.npmRebuild=false --publish never
+          npx electron-builder --mac dmg zip --arm64 -c.npmRebuild=false --publish never
 
       - name: Empacotar macOS x64 (rebuild node-pty + package)
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           ELECTRON_VERSION="$(node -p "require('electron/package.json').version")"
           NODE_GYP="$PWD/node_modules/.bin/node-gyp"
-          ( cd node_modules/node-pty && timeout 300 "$NODE_GYP" rebuild \
+          ( cd node_modules/node-pty && "$NODE_GYP" rebuild \
               --target="$ELECTRON_VERSION" \
               --arch=x64 \
               --dist-url=https://electronjs.org/headers \
               --runtime=electron )
-          timeout 900 npx electron-builder --mac dmg zip --x64 -c.npmRebuild=false --publish never
+          npx electron-builder --mac dmg zip --x64 -c.npmRebuild=false --publish never
 
       - uses: actions/upload-artifact@v4
         with:
