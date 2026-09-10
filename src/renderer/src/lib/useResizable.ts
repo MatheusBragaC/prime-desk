@@ -10,8 +10,16 @@ export interface Resizable {
   width: number
   /** `left` = o painel cresce arrastando para a direita (painel na esquerda). */
   onMouseDown: (e: React.MouseEvent) => void
+  /**
+   * Move o divisor `delta` pixels no espaço do ponteiro — positivo é para a
+   * direita, igual ao arraste. Existe para o teclado: a seta pressionada tem
+   * direção na tela, não "mais/menos largura", que depende da borda.
+   */
+  nudge: (delta: number) => void
   reset: () => void
   dragging: boolean
+  min: number
+  max: number
 }
 
 export function useResizable(
@@ -72,7 +80,13 @@ export function useResizable(
     }
   }, [dragging, edge, min, max])
 
+  const nudge = useCallback(
+    (delta: number) =>
+      setWidth((w) => Math.min(max, Math.max(min, edge === 'right' ? w + delta : w - delta))),
+    [edge, min, max]
+  )
+
   const reset = useCallback(() => setWidth(defaultWidth), [defaultWidth])
 
-  return { width, onMouseDown, reset, dragging }
+  return { width, onMouseDown, nudge, reset, dragging, min, max }
 }
