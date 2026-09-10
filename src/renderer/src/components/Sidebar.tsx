@@ -130,6 +130,10 @@ export function Sidebar({
         dragging={size.dragging}
         onMouseDown={size.onMouseDown}
         onReset={size.reset}
+        onNudge={size.nudge}
+        width={size.width}
+        min={size.min}
+        max={size.max}
       />
       <SidebarHeader />
 
