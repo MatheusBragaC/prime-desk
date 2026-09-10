@@ -8,3 +8,6 @@ release/
 build/
 release/
 graphify-out/
+
+# Skills e config local do agente; nada disso e do projeto.
+.claude/
