@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle
 } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import { useT, setLang, getLang, LANGS } from '../i18n'
-import { usePopover } from '../lib/usePopover'
-import { logoutProvider, providerLabel as labelFor } from '../lib/env'
-import { useEnvironment } from '../lib/useEnvironment'
+import { useAgent } from '@/store/agent'
+import { useT, setLang, getLang, LANGS } from '@/i18n'
+import { usePopover } from '@/lib/usePopover'
+import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
+import { useEnvironment } from '@/lib/useEnvironment'
 
 /**
  * Identidade do usuário no rodapé da sidebar.

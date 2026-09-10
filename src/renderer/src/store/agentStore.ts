@@ -3,8 +3,8 @@ import type {
   AgentEvent, AgentMessage, AgentState, ModelInfo, SessionSummary,
   BridgeStatus, AgentTreeSnapshot, FolderState,
   ContextUsage, SessionStats, ParkedRun, ExecutionInfo
-} from '../../../shared/protocol'
-import { isAgentEvent } from '../../../shared/protocol'
+} from '@shared/protocol'
+import { isAgentEvent } from '@shared/protocol'
 import {
   applyEvent, emptyTranscript, hydrate, type Totals, type ToolExec, type Transcript, type UiMessage
 } from './transcript'

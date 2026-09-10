@@ -1,4 +1,4 @@
-import type { AgentMessage } from '../../../shared/protocol'
+import type { AgentMessage } from '@shared/protocol'
 import { useAgent, refreshState, type UiMessage } from './agentStore'
 import { bridge, rpc } from './rpc'
 import { mutateFolders, refreshSessions } from './catalog'

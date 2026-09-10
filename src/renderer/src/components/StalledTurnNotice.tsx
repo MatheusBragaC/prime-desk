@@ -1,9 +1,9 @@
 import { Clock, Square, Bot } from 'lucide-react'
-import { useAgent, abortTurn } from '../store/agent'
-import { useTurnActivity } from '../lib/useTurnActivity'
-import { summary } from '../lib/toolSummary'
-import { fmtElapsed } from '../lib/format'
-import { useT } from '../i18n'
+import { useAgent, abortTurn } from '@/store/agent'
+import { useTurnActivity } from '@/lib/useTurnActivity'
+import { summary } from '@/lib/toolSummary'
+import { fmtElapsed } from '@/lib/format'
+import { useT } from '@/i18n'
 
 /**
  * Aviso de turno silencioso, acima do composer.

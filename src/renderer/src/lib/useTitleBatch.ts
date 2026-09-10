@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { SessionSummary } from '../../../shared/protocol'
-import { useAgent, generateTitlesFor } from '../store/agent'
-import { useT } from '../i18n'
+import type { SessionSummary } from '@shared/protocol'
+import { useAgent, generateTitlesFor } from '@/store/agent'
+import { useT } from '@/i18n'
 
 /** `null` fora do lote; `{ done, total }` durante. */
 export type TitlingProgress = { done: number; total: number } | null

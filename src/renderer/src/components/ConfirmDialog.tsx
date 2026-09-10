@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Modal, Button } from './Modal'
-import { useAgent } from '../store/agent'
-import { useT } from '../i18n'
+import { useAgent } from '@/store/agent'
+import { useT } from '@/i18n'
 
 /**
  * Diálogo de confirmação único do app.

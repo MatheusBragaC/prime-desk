@@ -1,8 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { useT } from '../i18n'
-import { useDialogA11y } from '../lib/useDialogA11y'
+import { useT } from '@/i18n'
+import { useDialogA11y } from '@/lib/useDialogA11y'
 
 /**
  * Modal padrão do Prime Desk.

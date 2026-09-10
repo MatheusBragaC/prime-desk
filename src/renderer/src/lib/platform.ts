@@ -1,4 +1,4 @@
-import { useAgent } from '../store/agent'
+import { useAgent } from '@/store/agent'
 
 /**
  * Diferenças de plataforma que a interface precisa respeitar.

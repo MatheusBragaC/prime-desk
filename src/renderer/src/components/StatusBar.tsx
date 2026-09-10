@@ -3,12 +3,12 @@ import {
   Layers, Target, AlertTriangle, Minimize2, PanelLeft,
   SquareTerminal, FileDiff, FolderTree, GitBranch, CalendarClock
 } from 'lucide-react'
-import { useAgent, compactNow } from '../store/agent'
-import { usePopover } from '../lib/usePopover'
-import { useIsMac, WIN_CONTROLS_WIDTH } from '../lib/platform'
-import { fmtCost, fmtTokens } from '../lib/format'
-import { useT } from '../i18n'
-import type { Dock } from '../lib/types'
+import { useAgent, compactNow } from '@/store/agent'
+import { usePopover } from '@/lib/usePopover'
+import { useIsMac, WIN_CONTROLS_WIDTH } from '@/lib/platform'
+import { fmtCost, fmtTokens } from '@/lib/format'
+import { useT } from '@/i18n'
+import type { Dock } from '@/lib/types'
 
 /**
  * Anel de uso da janela de contexto.

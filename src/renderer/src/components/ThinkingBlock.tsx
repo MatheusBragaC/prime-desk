@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Sparkles } from 'lucide-react'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 export function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
   const { t } = useT()

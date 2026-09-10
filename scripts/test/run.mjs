@@ -12,7 +12,7 @@
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'prime-desk-test-'))
 writeFileSync(
@@ -131,7 +131,7 @@ const SUITES = [
     needsShims: false,
     // Módulo puro na parte que interessa, mas o arquivo inteiro importa `t`:
     // a casca devolve a chave, e o teste afirma qual chave foi escolhida.
-    prepare: (source) => source.replaceAll("from '../i18n'", "from './i18nShim'"),
+    prepare: (source) => source.replaceAll("from '@/i18n'", "from './i18nShim'"),
     /*
       A outra metade do módulo são as chamadas de IPC, que dependem de
       `window.prime` e não entram aqui. A casca do `unwrap` existe só para o
@@ -156,7 +156,7 @@ const SUITES = [
     prepare: (source) =>
       source
         .replaceAll("from './env'", "from './envForWatch'")
-        .replaceAll("from '../i18n'", "from './i18nShim'") +
+        .replaceAll("from '@/i18n'", "from './i18nShim'") +
       "\nexport { hooks, beginRender, resetHooks } from './reactHooks.js'\n" +
       "\nexport { watchCalls } from './envForWatch'\n",
     shims: {
@@ -175,8 +175,8 @@ const SUITES = [
     */
     prepare: (source) =>
       source
-        .replaceAll("from '../store/agent'", "from './bridgeStoreShim'")
-        .replaceAll("from '../i18n'", "from './i18nShim'") +
+        .replaceAll("from '@/store/agent'", "from './bridgeStoreShim'")
+        .replaceAll("from '@/i18n'", "from './i18nShim'") +
       "\nexport { useAgent, calls, startFrom } from './bridgeStoreShim'\n"
   }
 ]
@@ -197,7 +197,7 @@ for (const suite of SUITES) {
   const source = suite.prepare
     ? suite.prepare(raw)
     : suite.needsShims
-      ? raw.replaceAll("from '../store/agent'", "from './storeShim'")
+      ? raw.replaceAll("from '@/store/agent'", "from './storeShim'")
       : raw
   writeFileSync(entry, source)
 
@@ -206,6 +206,13 @@ for (const suite of SUITES) {
   }
 
   const args = [entry, '--bundle', '--format=esm', `--outfile=${out}`, '--log-level=error']
+  /*
+    Terceiro resolvedor dos aliases, ao lado do vite e do tsc: o módulo é
+    copiado para um diretório temporário, então `@/` e `@shared/` têm que
+    apontar para a árvore real do repositório. Sem isto, migrar um import de
+    relativo para alias derruba a suíte com "Could not resolve".
+  */
+  args.push(`--alias:@=${resolve('src/renderer/src')}`, `--alias:@shared=${resolve('src/shared')}`)
   if (suite.platform) args.push(`--platform=${suite.platform}`)
   if (suite.needsShims) args.push(`--alias:react=${join(dir, suite.reactShim ?? 'react.js')}`)
   execFileSync('./node_modules/.bin/esbuild', args, { stdio: 'inherit' })

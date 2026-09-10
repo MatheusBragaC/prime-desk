@@ -3,15 +3,15 @@ import {
   ChevronRight, GitBranch, Loader2, CheckCircle2, Circle, CornerDownRight,
   MessageSquare, Code2, RefreshCw, Eye, Radio
 } from 'lucide-react'
-import type { AgentNode } from '../../../shared/protocol'
-import { useAgent, observeSession } from '../store/agent'
+import type { AgentNode } from '@shared/protocol'
+import { useAgent, observeSession } from '@/store/agent'
 import { Butterfly } from './Butterfly'
-import { relTime, fmtTokens, fmtCost } from '../lib/format'
-import { sumTreeUsage } from '../lib/agentUsage'
-import { countWorking } from '../lib/agentMessage'
+import { relTime, fmtTokens, fmtCost } from '@/lib/format'
+import { sumTreeUsage } from '@/lib/agentUsage'
+import { countWorking } from '@/lib/agentMessage'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError } from './PanelState'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 function StatusDot({ node }: { node: AgentNode }) {
   if (node.status === 'working') {

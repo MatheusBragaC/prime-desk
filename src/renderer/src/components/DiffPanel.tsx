@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { FileDiff, RefreshCw, ChevronRight } from 'lucide-react'
-import { useAsync } from '../lib/useAsync'
-import { unwrap } from '../lib/ipc'
+import { useAsync } from '@/lib/useAsync'
+import { unwrap } from '@/lib/ipc'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError, PanelLoading } from './PanelState'
-import { useT } from '../i18n'
-import type { GitChange } from '../../../shared/protocol'
+import { useT } from '@/i18n'
+import type { GitChange } from '@shared/protocol'
 
 /**
  * Letra de estado do `git status --porcelain`, traduzida para uma marca de uma

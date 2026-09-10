@@ -41,6 +41,20 @@ atualizar o baseline estão em `docs/auditoria/README.md` ("Lacuna de processo")
    da raiz.
 5. **Comentário explica o porquê**, não o quê.
 
+## Padrão de import
+
+Alias para tudo que atravessa diretório; relativo só para irmão da mesma pasta.
+
+- `@/…` → `src/renderer/src/…` (ex.: `@/store/agent`, `@/lib/format`)
+- `@shared/…` → `src/shared/…` (ex.: `@shared/protocol`)
+- `./Modal`, `./rpc` — irmão continua relativo: alias em irmão esconde a
+  proximidade e não elimina nenhum `../`.
+
+Os aliases moram em três resolvedores e precisam andar juntos: `tsconfig.json`
+(`paths`, usado pelo `typecheck`), `electron.vite.config.ts` (`renderer.resolve.alias`,
+usado pelo `build`) e `scripts/test/run.mjs` (`--alias:` do esbuild, usado pelo `test`).
+`src/main` e `src/preload` seguem com import relativo com extensão `.js`.
+
 ## Padrão de modal
 
 Todo diálogo usa `components/Modal.tsx` (`Modal`, `Field`, `Button`,

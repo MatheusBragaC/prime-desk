@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Plus, ChevronRight, Trash2, Pencil } from 'lucide-react'
-import { useAgent, newSession, mutateFolders } from '../../store/agent'
-import type { Group } from '../../lib/grouping'
-import { InlineEdit } from '../ui/InlineEdit'
-import { useT } from '../../i18n'
+import { useAgent, newSession, mutateFolders } from '@/store/agent'
+import type { Group } from '@/lib/grouping'
+import { InlineEdit } from '@/components/ui/InlineEdit'
+import { useT } from '@/i18n'
 
 export function GroupHeader({
   group,

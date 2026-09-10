@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
-import { t } from '../i18n'
+import type { EnvStatus, UpdateCheck } from '@shared/protocol'
+import { t } from '@/i18n'
 import {
   appUserName, checkUpdate, openLoginTerminal, readEnvironment, rescanAgent, runInstall,
   stageFor, unwatchEnvironment, watchEnvironment, type Stage

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { X, Radio, AlertTriangle, CircleOff, Loader2 } from 'lucide-react'
-import { useAgent, unobserveSession, type Observed } from '../store/agent'
+import { useAgent, unobserveSession, type Observed } from '@/store/agent'
 import { Message } from './Message'
-import { fmtTokens } from '../lib/format'
-import { useT } from '../i18n'
+import { fmtTokens } from '@/lib/format'
+import { useT } from '@/i18n'
 
 /**
  * Transcript ao vivo de outras sessões (normalmente subagentes).

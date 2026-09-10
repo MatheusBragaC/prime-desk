@@ -5,10 +5,10 @@ import {
 } from 'lucide-react'
 import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
-import { copyText } from '../lib/clipboard'
-import { useT } from '../i18n'
-import { agentDetail, authDetail, installCommand, type Stage } from '../lib/env'
-import { refreshEnvironment, useEnvironment } from '../lib/useEnvironment'
+import { copyText } from '@/lib/clipboard'
+import { useT } from '@/i18n'
+import { agentDetail, authDetail, installCommand, type Stage } from '@/lib/env'
+import { refreshEnvironment, useEnvironment } from '@/lib/useEnvironment'
 
 function StepRow({
   done,

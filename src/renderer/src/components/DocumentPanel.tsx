@@ -3,9 +3,9 @@ import { FileText, Copy, Check } from 'lucide-react'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty } from './PanelState'
 import { Markdown } from './Markdown'
-import { useAgent } from '../store/agent'
-import { copyText } from '../lib/clipboard'
-import { useT } from '../i18n'
+import { useAgent } from '@/store/agent'
+import { copyText } from '@/lib/clipboard'
+import { useT } from '@/i18n'
 
 /**
  * O "canto formatado" que falta no prime-agent — mas do lado do prime-desk.

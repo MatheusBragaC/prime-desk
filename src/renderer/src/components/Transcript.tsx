@@ -2,8 +2,8 @@ import type { RefObject } from 'react'
 import { Message } from './Message'
 import { Welcome } from './Welcome'
 import { PendingBubble } from './PendingBubble'
-import type { ToolExec, UiMessage } from '../store/agent'
-import { useT } from '../i18n'
+import type { ToolExec, UiMessage } from '@/store/agent'
+import { useT } from '@/i18n'
 
 /**
  * O palco da conversa: falha fatal, carregamento, tela inicial ou mensagens.
