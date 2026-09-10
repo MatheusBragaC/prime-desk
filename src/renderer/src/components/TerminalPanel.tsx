@@ -5,6 +5,7 @@ import { useTerminalTabs } from '@/store/terminal'
 import { DockPanel } from './DockPanel'
 import { TerminalView } from './TerminalView'
 import { FileViewer } from './FileViewer'
+import { useWinControlsInset } from '@/lib/platform'
 import { useT } from '@/i18n'
 
 /**
@@ -22,6 +23,9 @@ import { useT } from '@/i18n'
 
 export function TerminalPanel({ onClose }: { onClose: () => void }) {
   const { t } = useT()
+  /* Cabeçalho próprio, então a reserva dos botões de janela é feita aqui: o
+     DockPanel só consegue aplicá-la na linha de título padrão. */
+  const winctl = useWinControlsInset(true)
   const cwd = useAgent((s) => s.cwd)
   const notify = useAgent((s) => s.notify)
   const request = useAgent((s) => s.terminalRequest)
@@ -75,7 +79,10 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
       bodyClassName="relative min-h-0 flex-1"
       /* Cabeçalho próprio: a tira de abas ocupa o lugar da linha de título. */
       header={
-        <div className="drag-region flex h-[var(--p-titlebar)] items-center gap-1 border-b border-[var(--p-line)] pl-2 pr-3">
+        <div
+          style={{ paddingRight: 12 + winctl }}
+          className="drag-region flex h-[var(--p-titlebar)] items-center gap-1 border-b border-[var(--p-line)] pl-2"
+        >
         <div className="no-drag flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
           {/*
             Aba e fechar são irmãos dentro de um `div` de layout. Antes o fechar
