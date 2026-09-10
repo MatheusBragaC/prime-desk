@@ -158,6 +158,29 @@ export default async function run({
   ok('tres consumidores: unwatch so no fim', conta('unwatch'), 1)
   ok('e o canal fica sem handler', bus.handlers.length, 0)
 
+  // ------------------------------------- a limpeza chamada duas vezes
+  /*
+    O React chama a limpeza uma vez só, mas isso é garantia dele, não invariante
+    nossa. Com a segunda chamada passando, a contagem iria a -1 e a montagem
+    seguinte nunca chegaria a 1: nada de watch, ambiente surdo e sem erro.
+  */
+  watchCalls.length = 0
+  const offAntes = bus.offCalls
+  const j = montar()
+  j.desmontar()
+  j.desmontar()
+  ok('limpeza repetida: unwatch so uma vez', conta('unwatch'), 1)
+  ok('limpeza repetida: o canal e desligado so uma vez', bus.offCalls - offAntes, 1)
+  ok('limpeza repetida: nao sobra handler no canal', bus.handlers.length, 0)
+
+  const k = montar()
+  ok('depois da limpeza repetida, a montagem volta a pedir watch', conta('watch'), 2)
+  bus.emit(ambiente('5.0.0'))
+  ok('e o consumidor novo recebe: a contagem nao ficou negativa', k.avisos(), 1)
+  ok('o estado novo chega', k.ler().status.agent.version, '5.0.0')
+  k.desmontar()
+  ok('e o ciclo fecha com unwatch', conta('unwatch'), 2)
+
   console.log(falhas ? `\n${falhas} teste(s) falharam` : '\ntodos passaram')
   return falhas === 0
 }

@@ -59,7 +59,13 @@ function subscribe(fn: () => void): () => void {
     })
     watchEnvironment()
   }
+  let ativa = true
   return () => {
+    // Limpeza chamada duas vezes é garantia de terceiro, não invariante nossa:
+    // sem a trava a contagem iria a -1 e a montagem seguinte nunca voltaria a 1
+    // — o ambiente ficaria surdo, sem erro nenhum.
+    if (!ativa) return
+    ativa = false
     listeners.delete(fn)
     if (--subscribers === 0) {
       offEnv?.()
