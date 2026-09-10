@@ -8,6 +8,9 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-22.04
+    # Heap maior evita o OOM (SIGKILL 137) do bundle do renderer no vite.
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,8 +18,29 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx electron-vite build
-      - run: npx electron-builder --linux deb AppImage --publish never
+      - name: Build (main + preload + renderer)
+        run: npx electron-vite build
+
+      # O `@electron/rebuild` invocado pelo electron-builder trava indefinidamente
+      # (worker do node-gyp fica pendurado em "preparing node-pty" sem nunca chamar
+      # o compilador). Compilamos o único modulo nativo (node-pty) direto contra a
+      # ABI do Electron e depois empacotamos com npmRebuild=false. O `timeout`
+      # garante que um eventual travamento falhe rapido em vez de gastar minutos de CI.
+      - name: Rebuild node-pty contra a ABI do Electron
+        run: |
+          set -euo pipefail
+          ELECTRON_VERSION="$(node -p "require('electron/package.json').version")"
+          echo "Recompilando node-pty para Electron $ELECTRON_VERSION"
+          NODE_GYP="$PWD/node_modules/.bin/node-gyp"
+          ( cd node_modules/node-pty && timeout 300 "$NODE_GYP" rebuild \
+              --target="$ELECTRON_VERSION" \
+              --arch=x64 \
+              --dist-url=https://electronjs.org/headers \
+              --runtime=electron )
+
+      - name: Empacotar .deb + AppImage (sem rebuild)
+        run: timeout 900 npx electron-builder --linux deb AppImage -c.npmRebuild=false --publish never
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux
