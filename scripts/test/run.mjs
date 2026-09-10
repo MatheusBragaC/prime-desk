@@ -15,7 +15,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const dir = mkdtempSync(join(tmpdir(), 'prime-desk-test-'))
-writeFileSync(join(dir, 'react.js'), 'export const useState=()=>[0,()=>{}]\nexport const useEffect=()=>{}\n')
+writeFileSync(
+  join(dir, 'react.js'),
+  'export const useState=()=>[0,()=>{}]\nexport const useEffect=()=>{}\nexport const useRef=(v)=>({ current: v })\n'
+)
 /*
   Variante da casca de react que EXECUTA o efeito. Só a suíte da ponte usa: o
   boot (primeira subida) mora dentro de um `useEffect`, e com a casca inerte ele
@@ -73,6 +76,11 @@ const SUITES = [
   {
     test: './stall.test.mjs',
     src: 'src/renderer/src/lib/useTurnActivity.ts',
+    needsShims: true
+  },
+  {
+    test: './dialogTrap.test.mjs',
+    src: 'src/renderer/src/lib/useDialogA11y.ts',
     needsShims: true
   },
   {
