@@ -112,7 +112,7 @@ export function FileViewer({ path, onClose, active = true }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold">{name}</span>
-            {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title="Alterado" />}
+            {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title={t('viewer.dirty')} />}
           </div>
           <div className="truncate font-mono text-micro text-dim" title={path}>
             {path} · {fmtSize(meta.size)}
@@ -126,6 +126,7 @@ export function FileViewer({ path, onClose, active = true }: {
               onClick={() => void copyText(content, t('common.copyFailed'))}
               className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
               title={t('viewer.copyContent')}
+              aria-label={t('viewer.copyContent')}
             >
               <Copy size={16} strokeWidth={1.75} />
             </button>
@@ -157,11 +158,13 @@ export function FileViewer({ path, onClose, active = true }: {
           onClick={() => void window.prime.revealFile(path)}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
           title={t('files.openExternal')}
+          aria-label={t('files.openExternal')}
         >
           <ExternalLink size={16} strokeWidth={1.75} />
         </button>
         <button
           onClick={onClose}
+          aria-label={t('common.close')}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
           <X size={16} strokeWidth={1.75} />

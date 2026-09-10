@@ -1,16 +1,18 @@
 import { useEffect } from 'react'
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { useAgent } from '../store/agent'
+import { useT } from '../i18n'
 
 /** Aviso transitório. Erros de comando não devem morrer só no console. */
 export function Notice() {
+  const { t } = useT()
   const notice = useAgent((s) => s.notice)
   const clear = useAgent((s) => s.clearNotice)
 
   useEffect(() => {
     if (!notice) return
-    const t = setTimeout(clear, notice.kind === 'error' ? 9000 : 5000)
-    return () => clearTimeout(t)
+    const id = setTimeout(clear, notice.kind === 'error' ? 9000 : 5000)
+    return () => clearTimeout(id)
   }, [notice, clear])
 
   if (!notice) return null
@@ -33,7 +35,11 @@ export function Notice() {
           <Info size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
         )}
         <span className="text-sm leading-snug">{notice.text}</span>
-        <button onClick={clear} className="mt-[2px] shrink-0 opacity-60 transition-opacity hover:opacity-100">
+        <button
+          onClick={clear}
+          aria-label={t('common.close')}
+          className="mt-[2px] shrink-0 opacity-60 transition-opacity hover:opacity-100"
+        >
           <X size={14} strokeWidth={1.75} />
         </button>
       </div>
