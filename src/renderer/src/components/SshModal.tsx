@@ -144,7 +144,7 @@ export function SshModal({
         )}
       </div>
 
-      <p className="mt-3 rounded-lg border border-[var(--p-line)] bg-black/20 p-2.5 text-xs leading-relaxed text-dim">
+      <p className="mt-3 rounded-lg border border-[var(--p-line)] bg-sunken p-2.5 text-xs leading-relaxed text-dim">
         {t('ssh.keyNote')}
       </p>
     </Modal>

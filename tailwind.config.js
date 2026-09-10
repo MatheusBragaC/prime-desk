@@ -19,7 +19,25 @@ export default {
         warn: 'rgb(var(--p-warning-rgb) / <alpha-value>)',
         err: 'rgb(var(--p-error-rgb) / <alpha-value>)',
         info: 'rgb(var(--p-info-rgb) / <alpha-value>)',
-        mint: 'rgb(var(--p-mint-rgb) / <alpha-value>)'
+        mint: 'rgb(var(--p-mint-rgb) / <alpha-value>)',
+        /*
+          Sobreposições semânticas (ver `styles/theme.css`). Aqui o alpha faz
+          parte do token, então não aceitam o modificador `/x`: `bg-hover` é o
+          hover, ponto. Era o inverso disso — 8 valores de `bg-white/[0.0X]`
+          para o mesmo hover — que fazia cada componente novo inventar um tom.
+        */
+        hover: 'var(--p-hover)',
+        hoverStrong: 'var(--p-hover-strong)',
+        raise: 'var(--p-raise)',
+        chip: 'var(--p-chip)',
+        track: 'var(--p-track)',
+        lineStrong: 'var(--p-line-strong)',
+        lineHover: 'var(--p-line-hover)',
+        sunken: 'var(--p-sunken)',
+        well: 'var(--p-well)',
+        codeWell: 'var(--p-code-well)',
+        scrim: 'var(--p-scrim)',
+        drop: 'var(--p-shadow)'
       },
       /*
         Escala de sete degraus. Antes eram 21 tamanhos arbitrários

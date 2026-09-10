@@ -312,7 +312,7 @@ export function Composer({
             {queued > 0 ? t('composer.queued', { n: queued }) : t('queue.title')}
           </button>
 
-          <div className="flex gap-0.5 rounded-md bg-black/25 p-0.5">
+          <div className="flex gap-0.5 rounded-md bg-well p-0.5">
             {(['steer', 'followUp'] as DeliveryBehavior[]).map((b) => (
               <button
                 key={b}
@@ -379,13 +379,13 @@ export function Composer({
                     src={`data:${a.mimeType};base64,${a.data}`}
                     alt={a.path}
                     title={a.path}
-                    className="h-14 w-14 rounded-card border border-white/[0.12] object-cover"
+                    className="h-14 w-14 rounded-card border border-lineStrong object-cover"
                   />
                 ) : (
                   /* Arquivo não tem miniatura: o chip mostra nome e tipo. */
                   <div
                     title={a.path}
-                    className="flex h-14 max-w-[220px] items-center gap-2 rounded-card border border-white/[0.12] bg-[var(--p-panel)] px-3"
+                    className="flex h-14 max-w-[220px] items-center gap-2 rounded-card border border-lineStrong bg-[var(--p-panel)] px-3"
                   >
                     <FileText size={18} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
                     <span className="min-w-0">
@@ -399,7 +399,7 @@ export function Composer({
                 <button
                   onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
                   title={t('composer.removeAttachment')}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border border-white/15 bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover/att:opacity-100"
+                  className="absolute -right-1.5 -top-1.5 rounded-full border border-lineStrong bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover/att:opacity-100"
                 >
                   <X size={14} strokeWidth={1.75} />
                 </button>
@@ -482,7 +482,7 @@ export function Composer({
           {streaming ? (
             <button
               onClick={() => void abortTurn()}
-              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-fg transition-colors hover:bg-white/20"
+              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-fg transition-colors hover:bg-hoverStrong"
               title={t('composer.stop')}
             >
               <Square size={14} strokeWidth={1.75} fill="currentColor" />

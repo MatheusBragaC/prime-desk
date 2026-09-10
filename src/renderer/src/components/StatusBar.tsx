@@ -77,7 +77,7 @@ function MetricsPopover({ onClose, trigger }: {
   return (
     <div
       ref={ref}
-      className="no-drag absolute right-0 top-full z-dropdown mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-black/60"
+      className="no-drag absolute right-0 top-full z-dropdown mt-1.5 w-[268px] animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] py-1.5 shadow-2xl shadow-drop"
     >
       <div className={row}>
         <span className={label} title={t('app.contextTitle')}>{t('app.contextLabel')}</span>
@@ -89,7 +89,7 @@ function MetricsPopover({ onClose, trigger }: {
 
       {ctx > 0 && (
         <div className="px-3 pb-1.5 pt-0.5">
-          <div className="h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
+          <div className="h-[3px] overflow-hidden rounded-full bg-track">
             {pct !== null && (
               <div
                 className={

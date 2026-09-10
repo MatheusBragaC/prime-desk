@@ -1,7 +1,7 @@
 {
   "//": "Divida congelada. Ver docs/auditoria/README.md.",
   "nul": 0,
-  "alpha": 93,
+  "alpha": 5,
   "offscale": 2,
   "i18nInline": 2,
   "hardcoded": 10

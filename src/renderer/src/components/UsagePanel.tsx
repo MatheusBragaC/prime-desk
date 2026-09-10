@@ -29,7 +29,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 
 /** Escala em 5 níveis, relativa ao dia mais ativo. */
 function level(count: number, max: number): string {
-  if (count === 0) return 'bg-white/[0.05]'
+  if (count === 0) return 'bg-track'
   const r = count / Math.max(1, max)
   if (r > 0.66) return 'bg-primary'
   if (r > 0.4) return 'bg-primary/70'

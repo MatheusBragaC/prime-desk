@@ -157,7 +157,7 @@ export function MicButton({ onPartial, onFinal }: {
       {menu && (
         <div
           ref={menuRef}
-          className="absolute bottom-full left-0 z-dropdown mb-2 max-h-[260px] w-[280px] overflow-y-auto animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+          className="absolute bottom-full left-0 z-dropdown mb-2 max-h-[260px] w-[280px] overflow-y-auto animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
         >
           <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
             {t('mic.devices')}
@@ -174,7 +174,7 @@ export function MicButton({ onPartial, onFinal }: {
                 mic.chooseDevice(d.id)
                 setMenu(false)
               }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
             >
               <Mic size={13} strokeWidth={1.75} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate" title={d.label}>{d.label}</span>
@@ -206,7 +206,7 @@ export function MicButton({ onPartial, onFinal }: {
                 <button
                   key={m.id}
                   onClick={() => void install(m.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
                 >
                   <Download size={13} strokeWidth={1.75} className="shrink-0" />
                   <span className="flex-1">{m.label}</span>
