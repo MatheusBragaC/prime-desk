@@ -5,7 +5,12 @@ release/
 *.log
 .DS_Store
 .vite/
-build/
+# Saída de build. NÃO vale para `build/`, que o electron-builder usa como
+# `buildResources` — ali moram os ícones, que são FONTE. Ignorá-los fazia o CI
+# clonar sem eles e empacotar com o ícone padrão do Electron.
+build/*
+!build/icon.png
+!build/icons/
 release/
 graphify-out/
 
