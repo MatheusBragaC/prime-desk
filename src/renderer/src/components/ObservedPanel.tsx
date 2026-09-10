@@ -150,14 +150,14 @@ export function ObservedPanel() {
 
         <button
           onClick={() => void unobserveSession(activeSessionId)}
-          className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+          className="rounded-lg px-2.5 py-1.5 text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
         >
           {t('observed.stop')}
         </button>
         <button
           onClick={() => void unobserveSession(activeSessionId)}
           aria-label={t('observed.stop')}
-          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
         >
           <X size={16} strokeWidth={1.75} />
         </button>
@@ -170,7 +170,7 @@ export function ObservedPanel() {
       )}
 
       {status === 'closed' && (
-        <div className="mx-5 mt-4 rounded-xl border border-[var(--p-line)] bg-white/[0.02] p-3 text-sm text-muted">
+        <div className="mx-5 mt-4 rounded-xl border border-[var(--p-line)] bg-raise p-3 text-sm text-muted">
           {t('observed.closedNote')}
         </div>
       )}

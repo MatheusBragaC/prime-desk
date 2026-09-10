@@ -70,7 +70,7 @@ export function InlineEdit({
         if (e.key === 'Escape') cancel()
       }}
       className={
-        'rounded border bg-black/40 text-fg outline-none placeholder:text-dim ' + SIZE[size]
+        'rounded border bg-well text-fg outline-none placeholder:text-dim ' + SIZE[size]
       }
     />
   )

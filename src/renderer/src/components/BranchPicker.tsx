@@ -123,7 +123,7 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
         {open && (
           <div
             ref={menuRef}
-            className="absolute bottom-full left-0 z-dropdown mb-2 max-h-[300px] w-[300px] overflow-y-auto animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+            className="absolute bottom-full left-0 z-dropdown mb-2 max-h-[300px] w-[300px] overflow-y-auto animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
           >
             <div className="px-2 py-1 text-micro uppercase tracking-wider text-dim">
               {t('branch.local', { n: branches?.length ?? 0 })}
@@ -138,7 +138,7 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
                   'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors ' +
                   (b.current
                     ? 'text-fg'
-                    : 'text-muted hover:bg-white/[0.06] hover:text-fg')
+                    : 'text-muted hover:bg-hover hover:text-fg')
                 }
               >
                 <GitBranch size={13} strokeWidth={1.75} className="shrink-0 text-dim" />

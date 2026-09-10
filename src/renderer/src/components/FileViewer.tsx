@@ -135,7 +135,7 @@ export function FileViewer({ path, onClose, active = true }: {
           <>
             <button
               onClick={() => void copyText(content, t('common.copyFailed'))}
-              className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+              className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
               title={t('viewer.copyContent')}
               aria-label={t('viewer.copyContent')}
             >
@@ -146,7 +146,7 @@ export function FileViewer({ path, onClose, active = true }: {
               disabled={meta.truncated}
               className={
                 'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors disabled:opacity-40 ' +
-                (editing ? 'bg-primary/15 text-primarySoft' : 'text-muted hover:bg-white/[0.06] hover:text-fg')
+                (editing ? 'bg-primary/15 text-primarySoft' : 'text-muted hover:bg-hover hover:text-fg')
               }
               title={meta.truncated ? t('viewer.truncatedTitle') : t('viewer.edit')}
             >
@@ -167,7 +167,7 @@ export function FileViewer({ path, onClose, active = true }: {
 
         <button
           onClick={() => void window.prime.revealFile(path)}
-          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
           title={t('files.openExternal')}
           aria-label={t('files.openExternal')}
         >
@@ -176,7 +176,7 @@ export function FileViewer({ path, onClose, active = true }: {
         <button
           onClick={onClose}
           aria-label={t('common.close')}
-          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
+          className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
         >
           <X size={16} strokeWidth={1.75} />
         </button>
@@ -209,7 +209,7 @@ export function FileViewer({ path, onClose, active = true }: {
             <span className="text-sm">{t('viewer.binary')}</span>
             <button
               onClick={() => void window.prime.revealFile(path)}
-              className="mt-1 rounded-lg border border-white/[0.1] px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-fg"
+              className="mt-1 rounded-lg border border-lineStrong px-3 py-1.5 text-sm text-muted transition-colors hover:border-primary/40 hover:text-fg"
             >
               {t('files.openExternal')}
             </button>

@@ -48,6 +48,30 @@
   --p-diff-added: #3fb950;
   --p-diff-removed: #f85149;
 
+  /*
+    Sobreposições por PAPEL, não por número. O tema já tinha `--p-line`, mas
+    hover, contorno de superfície flutuante, poço de campo, bloco de código e
+    véu eram escritos com alpha literal na classe — 22 valores distintos para
+    ~10 papéis, então cada componente novo escolhia um número por conta.
+    Nomear o papel é o que impede o próximo `bg-white/[0.045]`.
+  */
+
+  /* Branco sobre superfície */
+  --p-hover: rgba(255, 255, 255, 0.06);        /* ponteiro sobre item de lista/botão de cromo */
+  --p-hover-strong: rgba(255, 255, 255, 0.2);  /* ponteiro sobre botão já preenchido */
+  --p-raise: rgba(255, 255, 255, 0.02);        /* bloco levemente destacado dentro do painel */
+  --p-chip: rgba(255, 255, 255, 0.06);         /* pílula/badge neutro, estático */
+  --p-track: rgba(255, 255, 255, 0.08);        /* trilho vazio de medidor (barra, heatmap) */
+  --p-line-strong: rgba(255, 255, 255, 0.1);   /* contorno de superfície flutuante e de mídia */
+  --p-line-hover: rgba(255, 255, 255, 0.2);    /* borda sob o ponteiro */
+
+  /* Preto sob conteúdo */
+  --p-sunken: rgba(0, 0, 0, 0.2);              /* bloco recuado que agrupa (nota, formulário) */
+  --p-well: rgba(0, 0, 0, 0.25);               /* fundo de controle: campo, trilho de segmentos */
+  --p-code-well: rgba(0, 0, 0, 0.4);           /* bloco monospace de leitura: código, log, caminho */
+  --p-scrim: rgba(0, 0, 0, 0.55);              /* véu de modal */
+  --p-shadow: rgba(0, 0, 0, 0.7);              /* cor da sombra de superfície flutuante */
+
   --p-bg-rgb: 11 11 15;
   --p-surface-rgb: 18 18 24;
   --p-panel-rgb: 26 26 33;

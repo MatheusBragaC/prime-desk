@@ -59,7 +59,7 @@ export function ConfirmDialog() {
         <div className="min-w-0">
           <p className="text-sm leading-relaxed text-fg">{confirm.message}</p>
           {confirm.detail && (
-            <p className="mt-2 break-words rounded-lg border border-[var(--p-line)] bg-black/25 p-2.5 font-mono text-xs leading-snug text-dim">
+            <p className="mt-2 break-words rounded-lg border border-[var(--p-line)] bg-codeWell p-2.5 font-mono text-xs leading-snug text-dim">
               {confirm.detail}
             </p>
           )}
