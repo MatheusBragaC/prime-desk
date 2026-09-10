@@ -21,7 +21,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      # --ignore-scripts pula o postinstall (electron-builder install-app-deps), que
+      # recompila o node-pty via @electron/rebuild e trava/consome ~7min. O binario
+      # nativo e gerado no passo dedicado abaixo (node-gyp contra a ABI do Electron),
+      # entao o postinstall aqui e redundante.
+      - run: npm ci --ignore-scripts
       - name: Build (main + preload + renderer)
         run: npx electron-vite build
 
