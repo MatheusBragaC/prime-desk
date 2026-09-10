@@ -91,6 +91,17 @@ export function FileViewer({ path, onClose, active = true }: {
     return () => window.removeEventListener('keydown', onKey)
   }, [save, dirty, onClose, active])
 
+  /*
+    Invariante de segurança do `dangerouslySetInnerHTML` lá embaixo: o HTML aqui
+    só pode conter marcação gerada pelo highlight.js. `highlight` e
+    `highlightAuto` escapam `<`, `>` e `&` do conteúdo do arquivo e devolvem
+    apenas `<span class="hljs-…">` — nada do arquivo vira tag. O `catch` devolve
+    `null` (o `pre` cai para vazio) em vez de deixar passar texto cru.
+    Quebraria se: trocarem o highlighter por um que não escape a entrada, ligarem
+    a opção de HTML embutido do highlight.js, ou concatenarem qualquer coisa
+    (nome do arquivo, mensagem de erro) neste valor. Nesse dia, o certo é
+    renderizar tokens em JSX, não sanitizar depois.
+  */
   const highlighted = useMemo(() => {
     if (editing || state !== 'ready' || meta.binary) return null
     const lang = langOf(path)
@@ -112,7 +123,7 @@ export function FileViewer({ path, onClose, active = true }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold">{name}</span>
-            {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title="Alterado" />}
+            {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warn" title={t('viewer.dirty')} />}
           </div>
           <div className="truncate font-mono text-micro text-dim" title={path}>
             {path} · {fmtSize(meta.size)}
@@ -126,6 +137,7 @@ export function FileViewer({ path, onClose, active = true }: {
               onClick={() => void copyText(content, t('common.copyFailed'))}
               className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
               title={t('viewer.copyContent')}
+              aria-label={t('viewer.copyContent')}
             >
               <Copy size={16} strokeWidth={1.75} />
             </button>
@@ -157,11 +169,13 @@ export function FileViewer({ path, onClose, active = true }: {
           onClick={() => void window.prime.revealFile(path)}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
           title={t('files.openExternal')}
+          aria-label={t('files.openExternal')}
         >
           <ExternalLink size={16} strokeWidth={1.75} />
         </button>
         <button
           onClick={onClose}
+          aria-label={t('common.close')}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-white/[0.06] hover:text-fg"
         >
           <X size={16} strokeWidth={1.75} />
@@ -213,6 +227,7 @@ export function FileViewer({ path, onClose, active = true }: {
 
         {state === 'ready' && !meta.binary && !editing && (
           <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65]">
+            {/* Só HTML do highlight.js entra aqui — ver a invariante em `highlighted`. */}
             <code
               className="hljs bg-transparent"
               dangerouslySetInnerHTML={{ __html: highlighted ?? '' }}
