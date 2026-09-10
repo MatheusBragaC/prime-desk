@@ -188,6 +188,12 @@ export interface AgentState {
   steeringMode: QueueMode
   followUpMode: QueueMode
   sessionId: string
+  /**
+   * Caminho do arquivo da sessão. O `get_state` do prime-agent devolve
+   * (`modes/rpc/rpc-mode.js`), e o tipo não declarava — então o campo existia
+   * no fio e não no contrato.
+   */
+  sessionFile?: string
   /** Nome de exibição definido via `set_session_name`; ausente se não houver. */
   sessionName?: string
   autoCompactionEnabled: boolean
