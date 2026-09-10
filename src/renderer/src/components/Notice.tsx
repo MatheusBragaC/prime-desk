@@ -23,10 +23,10 @@ export function Notice() {
     <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--p-titlebar)+12px)] z-toast flex justify-center px-6">
       <div
         className={
-          'pointer-events-auto flex max-w-[620px] animate-fade-up items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl shadow-black/60 ' +
+          'pointer-events-auto flex max-w-[620px] animate-fade-up items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl shadow-drop ' +
           (err
             ? 'border-err/30 bg-[#20121a] text-err'
-            : 'border-white/[0.1] bg-[var(--p-panel)] text-muted')
+            : 'border-lineStrong bg-[var(--p-panel)] text-muted')
         }
       >
         {err ? (

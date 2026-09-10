@@ -35,12 +35,12 @@ export function ExecutionMenu({
   const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
   const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
       <button className={item} onClick={onLocal}>
         <Monitor size={14} strokeWidth={1.75} />

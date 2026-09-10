@@ -60,7 +60,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
   return (
     <div>
       <div
-        className="group flex items-center gap-1.5 rounded-md py-[3px] pr-2 transition-colors hover:bg-white/[0.045]"
+        className="group flex items-center gap-1.5 rounded-md py-[3px] pr-2 transition-colors hover:bg-hover"
         style={{ paddingLeft: 6 + level * 13 }}
       >
         {entry.isDir ? (
@@ -199,7 +199,7 @@ export function FilesPanel({
       }
       subheader={
         <div className="px-3 py-2">
-          <div className="flex items-center gap-2 rounded-[9px] border border-[var(--p-line)] bg-black/25 px-2.5 py-1.5 focus-within:border-primary/40">
+          <div className="flex items-center gap-2 rounded-[9px] border border-[var(--p-line)] bg-well px-2.5 py-1.5 focus-within:border-primary/40">
             <Search size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
             <input
               value={filter}

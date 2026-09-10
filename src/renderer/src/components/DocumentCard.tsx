@@ -45,7 +45,7 @@ export function DocumentCard({
         'group/doc my-2 flex w-full max-w-[420px] items-start gap-3 rounded-card border px-3.5 py-3 text-left transition-colors ' +
         (isOpen
           ? 'border-primary/35 bg-primary/[0.06]'
-          : 'border-[var(--p-line)] bg-[var(--p-surface)] hover:border-white/20 hover:bg-elevated')
+          : 'border-[var(--p-line)] bg-[var(--p-surface)] hover:border-lineHover hover:bg-elevated')
       }
     >
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primarySoft">

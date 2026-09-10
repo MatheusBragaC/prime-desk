@@ -90,7 +90,7 @@ export function App() {
         /* Véu decorativo: fechar a sidebar também está no botão dela, então o
            certo aqui é sumir do leitor de tela, não virar um controle duplicado. */
         <div
-          className="fixed inset-0 z-scrim bg-black/50 animate-fade-up"
+          className="fixed inset-0 z-scrim bg-scrim animate-fade-up"
           onClick={() => chrome.setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -100,7 +100,7 @@ export function App() {
         className={
           chrome.narrowSidebar
             ? 'fixed inset-y-0 left-0 z-panel transition-transform duration-200 ' +
-              (chrome.sidebarOpen ? 'translate-x-0 shadow-2xl shadow-black/60' : '-translate-x-full')
+              (chrome.sidebarOpen ? 'translate-x-0 shadow-2xl shadow-drop' : '-translate-x-full')
             : 'contents'
         }
       >

@@ -178,7 +178,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               {t('onb.installDesc')}
             </p>
 
-            <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-[var(--p-line)] bg-black/35 p-2.5">
+            <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-[var(--p-line)] bg-codeWell p-2.5">
               <code className="min-w-0 flex-1 break-all font-mono text-xs text-mint">
                 {command}
               </code>
@@ -218,7 +218,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             {output && (
               <pre
                 ref={logRef}
-                className="mt-3 max-h-[150px] overflow-auto rounded-lg border border-[var(--p-line)] bg-black/40 p-2.5 font-mono text-micro leading-snug text-muted"
+                className="mt-3 max-h-[150px] overflow-auto rounded-lg border border-[var(--p-line)] bg-codeWell p-2.5 font-mono text-micro leading-snug text-muted"
               >
                 {output}
               </pre>
@@ -261,7 +261,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                   <span>
                     {t('onb.portBusy', { port: portBusy })}
                     <span className="mt-1.5 block">{t('onb.portBusyCmd')}</span>
-                    <code className="mt-1 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-micro text-mint">
+                    <code className="mt-1 block rounded border border-lineStrong bg-codeWell p-2 font-mono text-micro text-mint">
                       pkill -f &quot;bash -lc prime-agent&quot;
                     </code>
                   </span>
@@ -280,7 +280,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                     <span className="text-dim">1.</span>
                     <span>
                       {t('onb.step1', { cmd: '' })}
-                      <code className="ml-1 rounded border border-white/[0.12] bg-black/40 px-1.5 py-0.5 font-mono text-xs text-mint">
+                      <code className="ml-1 rounded border border-lineStrong bg-codeWell px-1.5 py-0.5 font-mono text-xs text-mint">
                         /login
                       </code>
                     </span>
@@ -307,7 +307,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                   <AlertTriangle size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
                   <span>
                     {t('onb.termFailed')}
-                    <code className="mt-1.5 block rounded border border-white/[0.1] bg-black/40 p-2 font-mono text-xs text-mint">
+                    <code className="mt-1.5 block rounded border border-lineStrong bg-codeWell p-2 font-mono text-xs text-mint">
                       prime-agent
                     </code>
                     <span className="mt-1 block">{t('onb.termThenLogin')}</span>
@@ -324,7 +324,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 <div className="mt-0.5 text-xs leading-snug text-dim">
                   {t('onb.keyDesc')}
                 </div>
-                <code className="mt-1.5 block break-all rounded border border-[var(--p-line)] bg-black/35 p-2 font-mono text-xs text-mint">
+                <code className="mt-1.5 block break-all rounded border border-[var(--p-line)] bg-codeWell p-2 font-mono text-xs text-mint">
                   export ANTHROPIC_API_KEY=sk-ant-…
                 </code>
               </div>

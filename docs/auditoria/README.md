@@ -96,13 +96,13 @@ numero atual esta congelado em `scripts/ui-baseline.json` e o script falha **ape
 | Medida | Modo | Hoje | Como pagar |
 |---|---|---|---|
 | `nul` — byte NUL literal (todo `src/`) | zero | 0 | trocar por `\u0000` no literal |
-| `alpha` — alpha cru de cor (`white/[0.06]`) | ratchet | 95 | tokens `line`/`hover`/`scrim` no `tailwind.config.js` |
+| `alpha` — alpha cru de cor (`white/[0.06]`) | ratchet | 5 | tokens de papel (`hover`, `well`, `scrim`, …) no `tailwind.config.js` |
 | `offscale` — `text-[Npx]` fora da escala do REDESIGN 3.1 | ratchet | 2 | `text-xs/sm/base/lg/xl/display` |
 | `i18nInline` — i18n por ternario inline no JSX | ratchet | 2 | chave em `src/renderer/src/i18n` + `t()` |
 | `hardcoded` — string de UI hardcoded em componente | ratchet | 12 | passar pelo `t()` |
 
-O `alpha` conta 95 e nao os 81 do relatorio de padroes: o relatorio contou ocorrencias distintas,
-o script conta todas as ocorrencias. O `offscale` 2 e o outro lado do "escala tipografica 238/240".
+O `alpha` contava 95 e nao os 81 do relatorio de padroes: o relatorio contou ocorrencias distintas,
+o script conta todas as ocorrencias. Hoje sao 5 — restam so as do `AccountBadge.tsx`. O `offscale` 2 e o outro lado do "escala tipografica 238/240".
 
 **Atualizar o baseline quando a divida for paga:**
 

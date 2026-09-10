@@ -86,14 +86,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-start justify-center bg-scrim pt-[16vh] backdrop-blur-[2px]"
       onMouseDown={onClose}
       role="presentation"
     >
       <div
         ref={dialog.ref}
         {...dialog.dialogProps}
-        className="w-[600px] max-w-[90vw] animate-fade-up overflow-hidden rounded-2xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70"
+        className="w-[600px] max-w-[90vw] animate-fade-up overflow-hidden rounded-2xl border border-lineStrong bg-[var(--p-panel)] shadow-2xl shadow-drop"
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
@@ -121,7 +121,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               }}
               className={
                 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors ' +
-                (i === cursor ? 'bg-primary/[0.16]' : 'hover:bg-white/[0.04]')
+                (i === cursor ? 'bg-primary/[0.16]' : 'hover:bg-hover')
               }
             >
               {item.id === 'new' || item.id === 'compact' ? (

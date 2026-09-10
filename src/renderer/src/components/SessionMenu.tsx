@@ -23,7 +23,7 @@ interface Props {
 }
 
 const item =
-  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
 export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename, trigger }: Props) {
   const folders = useAgent((s) => s.folders)
@@ -130,7 +130,7 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
   return (
     <div
       ref={ref}
-      className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70"
+      className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
       <button className={item} onClick={onOpen}>
         <ExternalLink size={14} strokeWidth={1.75} />
