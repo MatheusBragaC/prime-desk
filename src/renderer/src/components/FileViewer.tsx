@@ -91,6 +91,17 @@ export function FileViewer({ path, onClose, active = true }: {
     return () => window.removeEventListener('keydown', onKey)
   }, [save, dirty, onClose, active])
 
+  /*
+    Invariante de segurança do `dangerouslySetInnerHTML` lá embaixo: o HTML aqui
+    só pode conter marcação gerada pelo highlight.js. `highlight` e
+    `highlightAuto` escapam `<`, `>` e `&` do conteúdo do arquivo e devolvem
+    apenas `<span class="hljs-…">` — nada do arquivo vira tag. O `catch` devolve
+    `null` (o `pre` cai para vazio) em vez de deixar passar texto cru.
+    Quebraria se: trocarem o highlighter por um que não escape a entrada, ligarem
+    a opção de HTML embutido do highlight.js, ou concatenarem qualquer coisa
+    (nome do arquivo, mensagem de erro) neste valor. Nesse dia, o certo é
+    renderizar tokens em JSX, não sanitizar depois.
+  */
   const highlighted = useMemo(() => {
     if (editing || state !== 'ready' || meta.binary) return null
     const lang = langOf(path)
@@ -216,6 +227,7 @@ export function FileViewer({ path, onClose, active = true }: {
 
         {state === 'ready' && !meta.binary && !editing && (
           <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65]">
+            {/* Só HTML do highlight.js entra aqui — ver a invariante em `highlighted`. */}
             <code
               className="hljs bg-transparent"
               dangerouslySetInnerHTML={{ __html: highlighted ?? '' }}
