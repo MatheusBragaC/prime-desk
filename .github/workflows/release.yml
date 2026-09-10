@@ -61,11 +61,16 @@ jobs:
       # pacote só existe como artefato de CI (zip, com login e retenção curta).
       # O `curl | sh` do README instala sem conferir integridade. Com o
       # checksum publicado, quem quiser conferir tem contra o que comparar.
+      # GitHub troca espaco por ponto no nome do asset ao publicar
+      # ("Prime Desk-0.2.6.AppImage" chega como "Prime.Desk-0.2.6.AppImage"),
+      # entao o nome gravado aqui tem de ser o nome PUBLICADO. Sem isso o
+      # `sha256sum -c` falha com "No such file or directory" em quem baixou o
+      # asset — checksum que nao da para conferir e pior que nenhum.
       - name: Gerar SHA256SUMS
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           cd release
-          sha256sum *.deb *.AppImage > SHA256SUMS-linux.txt
+          sha256sum *.deb *.AppImage | sed 's/ /./g; s/^\([a-f0-9]*\)\.\./\1  /' > SHA256SUMS-linux.txt
           cat SHA256SUMS-linux.txt
 
       # Em push de tag `v*`, anexa .deb, AppImage, checksum e o metadado de
@@ -147,11 +152,12 @@ jobs:
 
       # Anexa .dmg e .zip na mesma Release da tag (a action cria se não existir
       # e atualiza se já existir — os dois jobs escrevem na mesma release).
+      # Mesmo motivo do job linux: o nome tem de ser o publicado, com ponto.
       - name: Gerar SHA256SUMS
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           cd release
-          shasum -a 256 *.dmg *.zip > SHA256SUMS-macos.txt
+          shasum -a 256 *.dmg *.zip | sed 's/ /./g; s/^\([a-f0-9]*\)\.\./\1  /' > SHA256SUMS-macos.txt
           cat SHA256SUMS-macos.txt
 
       - name: Publicar assets na Release (só em tag)
