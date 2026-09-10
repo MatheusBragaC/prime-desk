@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useResizable } from '../lib/useResizable'
+import { useT } from '../i18n'
 import { ResizeHandle } from './ResizeHandle'
 
 /**
@@ -54,6 +55,7 @@ export function DockPanel({
   children: ReactNode
 }) {
   const size = useResizable(storageKey, defaultWidth, min, max, 'left')
+  const { t } = useT()
 
   return (
     <aside
@@ -82,8 +84,14 @@ export function DockPanel({
           {icon}
           <span className="flex-1 truncate text-sm font-semibold">{title}</span>
           {actions}
+          {/*
+            Botão só de ícone: sem `aria-label` o leitor de tela anuncia apenas
+            "botão". Como esta casca serve os seis painéis do dock, o rótulo
+            aqui é o nome acessível do fechar de todos eles.
+          */}
           <button
             onClick={onClose}
+            aria-label={t('common.close')}
             className="no-drag rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
           >
             <X size={16} strokeWidth={1.75} />

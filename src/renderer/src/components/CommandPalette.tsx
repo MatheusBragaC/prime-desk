@@ -1,7 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, Sparkles, Zap } from 'lucide-react'
 import { useAgent, sendPrompt, newSession, compactNow } from '../store/agent'
 import { useT } from '../i18n'
+import { useDialogA11y } from '../lib/useDialogA11y'
+
+/**
+ * Paleta de comandos.
+ *
+ * Casca própria de propósito: ela abre colada no topo, sem cabeçalho nem
+ * rodapé, e a lista é navegada por setas — nada disso cabe na moldura do
+ * `Modal`, que existe para formulário com título e botões. O que o CONTRIBUTING
+ * cobra de todo diálogo (papel, Escape, foco inicial e Tab preso) vem do
+ * `useDialogA11y`, o mesmo hook que o `Modal` usa.
+ */
 
 interface Item {
   id: string
@@ -14,14 +25,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const { t } = useT()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
   const commands = useAgent((s) => s.commands)
+  // O hook põe o primeiro campo em foco na abertura, e aqui o primeiro campo é
+  // a busca — a paleta continua utilizável só com o teclado.
+  const dialog = useDialogA11y(open, t('palette.title'), onClose)
 
   useEffect(() => {
     if (open) {
       setQuery('')
       setCursor(0)
-      setTimeout(() => inputRef.current?.focus(), 10)
     }
   }, [open])
 
@@ -51,8 +63,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   if (!open) return null
 
+  // Escape fica com o `useDialogA11y`, que escuta no documento: fechar não pode
+  // depender de o foco estar dentro da caixa.
   function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') return onClose()
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setCursor((c) => (c + 1) % Math.max(1, items.length))
@@ -75,8 +88,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     <div
       className="fixed inset-0 z-modal flex items-start justify-center bg-black/55 pt-[16vh] backdrop-blur-[2px]"
       onMouseDown={onClose}
+      role="presentation"
     >
       <div
+        ref={dialog.ref}
+        {...dialog.dialogProps}
         className="w-[600px] max-w-[90vw] animate-fade-up overflow-hidden rounded-2xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70"
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
@@ -84,7 +100,6 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         <div className="flex items-center gap-2.5 border-b border-[var(--p-line)] px-4 py-3">
           <Search size={16} strokeWidth={1.75} className="text-dim" />
           <input
-            ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('palette.search')}

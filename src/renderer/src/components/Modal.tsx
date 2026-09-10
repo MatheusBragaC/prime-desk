@@ -2,13 +2,15 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useT } from '../i18n'
+import { useDialogA11y } from '../lib/useDialogA11y'
 
 /**
  * Modal padrão do Prime Desk.
  *
  * Um único componente para todo diálogo do app: mesma moldura, mesmo
  * espaçamento, mesmo comportamento de teclado. Fecha com Esc e com clique fora,
- * devolve o foco ao elemento anterior e prende o Tab dentro do diálogo.
+ * devolve o foco ao elemento anterior e prende o Tab dentro do diálogo — isso
+ * tudo vem do `useDialogA11y`, compartilhado com a paleta de comandos.
  */
 export function Modal({
   open,
@@ -27,70 +29,20 @@ export function Modal({
   footer?: ReactNode
   width?: number
 }) {
-  const panel = useRef<HTMLDivElement>(null)
-  const restoreFocus = useRef<HTMLElement | null>(null)
-
-  // `onClose` costuma chegar como arrow inline, ou seja, muda de identidade a
-  // cada render do pai. Guardar em ref mantém o efeito preso apenas a `open`:
-  // sem isso, cada re-render do app refazia listeners e devolvia o foco, o que
-  // deixava o diálogo instável enquanto o poller de agentes rodava.
   const { t } = useT()
-  const closeRef = useRef(onClose)
-  closeRef.current = onClose
+  const dialog = useDialogA11y(open, title, onClose)
 
   // Instante da abertura: um clique isolado logo após abrir (inclusive o próprio
   // que abriu o diálogo, ou um clique perdido na janela) não deve fechá-lo.
   const openedAt = useRef(0)
-
   useEffect(() => {
-    if (!open) return
-
-    restoreFocus.current = document.activeElement as HTMLElement | null
-    openedAt.current = Date.now()
-
-    const focusable = () =>
-      Array.from(
-        panel.current?.querySelectorAll<HTMLElement>(
-          'input, textarea, select, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
-        ) ?? []
-      ).filter((el) => el.offsetParent !== null)
-
-    // Primeiro campo em foco: o diálogo existe para ser preenchido.
-    setTimeout(() => {
-      const list = focusable()
-      const firstField = list.find((el) => el instanceof HTMLInputElement) ?? list[0]
-      firstField?.focus()
-    }, 20)
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        closeRef.current()
-        return
-      }
-      if (e.key !== 'Tab') return
-
-      const list = focusable()
-      if (list.length === 0) return
-      const first = list[0]
-      const last = list[list.length - 1]
-      const active = document.activeElement
-
-      if (e.shiftKey && active === first) {
-        e.preventDefault()
-        last.focus()
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener('keydown', onKey, true)
-    return () => {
-      document.removeEventListener('keydown', onKey, true)
-      restoreFocus.current?.focus?.()
-    }
+    if (open) openedAt.current = Date.now()
   }, [open])
+
+  // `onClose` inline muda de identidade a cada render do pai; o clique no véu lê
+  // a versão corrente pela ref em vez de reassinar nada.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
   if (!open) return null
 
@@ -126,10 +78,8 @@ export function Modal({
       role="presentation"
     >
       <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
+        ref={dialog.ref}
+        {...dialog.dialogProps}
         style={{ width }}
         onMouseDown={(e) => e.stopPropagation()}
         className="max-h-full animate-fade-up overflow-y-auto rounded-2xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70"
