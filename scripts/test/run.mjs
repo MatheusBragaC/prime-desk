@@ -128,6 +128,28 @@ const SUITES = [
     }
   },
   {
+    /*
+      Contagem de referência da assinatura de ambiente. A casca de react guarda
+      slots entre renders e entrega o `subscribe` do `useSyncExternalStore` à
+      suíte, que monta e desmonta consumidores na mão. O `lib/env.ts` entra como
+      casca porque o que se afirma é quantas vezes watch/unwatch foram pedidos.
+    */
+    test: './envWatch.test.mjs',
+    src: 'src/renderer/src/lib/useEnvironment.ts',
+    needsShims: true,
+    reactShim: 'reactHooks.js',
+    prepare: (source) =>
+      source
+        .replaceAll("from './env'", "from './envForWatch'")
+        .replaceAll("from '../i18n'", "from './i18nShim'") +
+      "\nexport { hooks, beginRender, resetHooks } from './reactHooks.js'\n" +
+      "\nexport { watchCalls } from './envForWatch'\n",
+    shims: {
+      'reactHooks.js': readFileSync('scripts/test/shims/reactHooks.js', 'utf8'),
+      'envForWatch.ts': readFileSync('scripts/test/shims/envForWatch.ts', 'utf8')
+    }
+  },
+  {
     test: './execution.test.mjs',
     src: 'src/renderer/src/lib/useBridge.ts',
     needsShims: true,
