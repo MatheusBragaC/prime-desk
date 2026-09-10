@@ -36,7 +36,7 @@ export default {
       },
       fontFamily: {
         display: ['Newsreader Variable', 'Georgia', 'serif'],
-        sans: ['Inter Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Geist Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono Variable', 'ui-monospace', 'SFMono-Regular', 'monospace']
       },
       /*

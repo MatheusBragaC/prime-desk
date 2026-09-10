@@ -99,6 +99,12 @@ O CSP não permite CDN. Baixar para `src/renderer/src/assets/fonts/`:
   aberta mais próxima da Copernicus usada pelo Claude. Alternativa: Source Serif 4.
 - `JetBrainsMono-Regular.woff2` + `-Bold.woff2` (SIL OFL)
 
+> **Atualização.** A sans do corpo passou de Inter para **Geist Variable** (OFL,
+> Vercel). Medição das duas na frase de UI mais comum do app: Geist é 3,2% mais
+> estreita com x-height praticamente igual (0,530 contra 0,546 em em), tem `tnum`
+> — de que o `ToolCard` depende — e pesa 46 KB contra 133 KB. Newsreader na
+> display e JetBrains Mono no monoespaçado seguem como especificado aqui.
+
 Declarar com `@font-face` e `font-display: block` (evita FOUT no arranque de app
 desktop). Vite embute o hash e o CSP `'self'` já cobre.
 
