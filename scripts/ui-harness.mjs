@@ -290,7 +290,15 @@ const STUB_JS = `
       estourava e a tela ficava na saudacao — o andaime so sabia mostrar o
       estado vazio, que e justamente o menos interessante de conferir.
     */
-    markBridge: async () => ({ ok: true }),
+    /*
+      Registra as chamadas: e por aqui que o processo principal descobre o id da
+      sessao, e sem ele a arvore de agentes fica vazia. Ver o teste de fumaca
+      logo abaixo do stub (window.__harness.marcados).
+    */
+    markBridge: async (args) => {
+      window.__harness.marcados.push(args)
+      return { ok: true }
+    },
     parkBridge: async () => ({ ok: false }),
     adoptBridge: async () => ({ ok: false }),
     stopAgent: async () => ({ ok: true }),
@@ -359,7 +367,10 @@ const STUB_JS = `
     } }),
     on: (ch, cb) => { (listeners[ch] ??= []).push(cb); return () => {} }
   }
-  window.__harness = { emit: (ch, p) => (listeners[ch] ?? []).forEach((f) => f(p)) }
+  window.__harness = {
+    emit: (ch, p) => (listeners[ch] ?? []).forEach((f) => f(p)),
+    marcados: []
+  }
   window.__errors = []
   addEventListener('error', (e) => window.__errors.push(String(e.message)))
   addEventListener('unhandledrejection', (e) => window.__errors.push('rejeição: ' + e.reason))

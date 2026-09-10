@@ -8,6 +8,7 @@ import { useAgent, observeSession } from '../store/agent'
 import { Butterfly } from './Butterfly'
 import { relTime, fmtTokens, fmtCost } from '../lib/format'
 import { sumTreeUsage } from '../lib/agentUsage'
+import { countWorking } from '../lib/agentMessage'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError } from './PanelState'
 import { useT } from '../i18n'
@@ -190,7 +191,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between gap-2 border-b border-[var(--p-line)] px-4 py-2 text-xs text-dim">
           <span className="min-w-0 truncate">
             {tree
-              ? t('tree.summary', { total: tree.total, subs: tree.subagents })
+              ? t('tree.summary', { subs: tree.subagents, working: countWorking(tree) })
               : t('common.loading')}
           </span>
           {/* Soma de TODA a árvore — o número que faltava depois do incidente

@@ -310,9 +310,36 @@ export async function refreshContext(): Promise<void> {
   useAgent.getState().setContext(data?.contextUsage ?? null)
 }
 
+/**
+ * Último id carimbado na ponte. Evita repetir o `markBridge` a cada refresh.
+ */
+let stampedSessionId: string | null = null
+
 export async function refreshState(): Promise<void> {
   const [state] = await Promise.all([rpc<AgentState>('get_state'), refreshContext()])
-  if (state) useAgent.getState().setState(state)
+  if (!state) return
+  useAgent.getState().setState(state)
+
+  /*
+    Carimba o id da sessão na ponte assim que ele é conhecido.
+    
+    NÃO É REDUNDANTE, por mais que pareça. O processo principal precisa desse id
+    para achar `session-artifacts/<id>/` e montar a árvore de agentes
+    (`agent-tree-disk.ts`). Ele não tem outro jeito de saber: o evento de RPC do
+    prime-agent não carrega `sessionId` — só a resposta do `get_state` carrega, e
+    quem chama `get_state` é o renderer.
+    
+    Antes disto, o único `markBridge` era o da troca de conversa
+    (`store/session.ts`), então numa conversa NOVA a ponte ficava sem id e o
+    painel dizia "Nenhum agente ativo" mesmo com quinze subagentes trabalhando.
+  */
+  if (state.sessionId && state.sessionId !== stampedSessionId) {
+    stampedSessionId = state.sessionId
+    void window.prime.markBridge({
+      sessionId: state.sessionId,
+      ...(state.sessionFile ? { sessionPath: state.sessionFile } : {})
+    })
+  }
 }
 
 /**
