@@ -178,6 +178,12 @@ const SUITES = [
         .replaceAll("from '@/store/agent'", "from './bridgeStoreShim'")
         .replaceAll("from '@/i18n'", "from './i18nShim'") +
       "\nexport { useAgent, calls, startFrom } from './bridgeStoreShim'\n"
+  },
+  {
+    test: './appUpdate.test.mjs',
+    src: 'src/main/updates.ts',
+    needsShims: false,
+    platform: 'node'
   }
 ]
 

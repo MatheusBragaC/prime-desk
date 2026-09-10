@@ -330,9 +330,17 @@ const STUB_JS = `
     setZoom: async () => ({ ok: true, level: 0 }),
     watchEnvironment: async () => ({ ok: true }),
     unwatchEnvironment: async () => ({ ok: true }),
-    createTerminal: async () => ({ ok: true }),
     writeTerminal: async () => ({ ok: true }),
     resizeTerminal: async () => ({ ok: true }),
+    /*
+      Registra o que foi pedido ao PTY. Sem isto o andaime provava que a aba
+      abria, mas nao QUAL comando ia rodar nela — que e o que importa numa
+      acao que instala software.
+    */
+    createTerminal: async (spec) => {
+      window.__harness.terminais.push(spec)
+      return { ok: true, id: 't' + window.__harness.terminais.length }
+    },
     terminalScrollback: async () => ({ ok: true, scrollback: 'prime-desk $ ' }),
     killTerminal: async () => ({ ok: true }),
     pickWorkspaceFile: async () => ({ ok: false }),
@@ -361,6 +369,17 @@ const STUB_JS = `
     } }),
     speechSetupCommand: async () => ({ ok: true, command: 'echo compilando whisper.cpp' }),
     checkAgentUpdate: async () => ({ ok: true, update: { current: '0.8.0', latest: 'v0.9.1', available: true } }),
+    /*
+      Atualizacao do PROPRIO app. Ligavel por ?noappupdate=1 para conferir os
+      dois estados: com e sem versao nova disponivel.
+    */
+    checkAppUpdate: async () => ({
+      ok: true,
+      update: new URLSearchParams(location.search).has('noappupdate')
+        ? { current: '0.2.6', latest: '0.2.6', available: false }
+        : { current: '0.2.5', latest: '0.2.6', available: true },
+      command: 'curl -fsSL https://raw.githubusercontent.com/MatheusBragaC/prime-desk/main/scripts/install.sh | sh'
+    }),
     rescanAgent: async () => ({ ok: true, status: {
       agent: { installed: true, path: '/usr/bin/prime-agent', version: '0.9.1' },
       auth: { ok: true, providers: ['anthropic'], envKeys: [] }
@@ -369,7 +388,8 @@ const STUB_JS = `
   }
   window.__harness = {
     emit: (ch, p) => (listeners[ch] ?? []).forEach((f) => f(p)),
-    marcados: []
+    marcados: [],
+    terminais: []
   }
   window.__errors = []
   addEventListener('error', (e) => window.__errors.push(String(e.message)))

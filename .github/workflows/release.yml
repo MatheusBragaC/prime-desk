@@ -59,6 +59,19 @@ jobs:
       # Em push de tag `v*`, anexa .deb e AppImage como assets da Release.
       # É o que o `scripts/install.sh` consome (releases/latest). Sem isto, o
       # pacote só existe como artefato de CI (zip, com login e retenção curta).
+      # O `curl | sh` do README instala sem conferir integridade. Com o
+      # checksum publicado, quem quiser conferir tem contra o que comparar.
+      - name: Gerar SHA256SUMS
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd release
+          sha256sum *.deb *.AppImage > SHA256SUMS-linux.txt
+          cat SHA256SUMS-linux.txt
+
+      # Em push de tag `v*`, anexa .deb, AppImage, checksum e o metadado de
+      # versão. O `latest-linux.yml` é o que a checagem de update do app usa
+      # como alternativa ao releases/latest, e o electron-builder já o gera —
+      # antes ele ficava só no runner e era descartado.
       - name: Publicar assets na Release (só em tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -66,6 +79,8 @@ jobs:
           files: |
             release/*.deb
             release/*.AppImage
+            release/SHA256SUMS-linux.txt
+            release/latest-linux.yml
 
   macos:
     # O dmg só pode ser gerado em macOS: dmg-license é darwin-only e o
@@ -132,6 +147,13 @@ jobs:
 
       # Anexa .dmg e .zip na mesma Release da tag (a action cria se não existir
       # e atualiza se já existir — os dois jobs escrevem na mesma release).
+      - name: Gerar SHA256SUMS
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd release
+          shasum -a 256 *.dmg *.zip > SHA256SUMS-macos.txt
+          cat SHA256SUMS-macos.txt
+
       - name: Publicar assets na Release (só em tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -139,3 +161,5 @@ jobs:
           files: |
             release/*.dmg
             release/*.zip
+            release/SHA256SUMS-macos.txt
+            release/latest-mac.yml

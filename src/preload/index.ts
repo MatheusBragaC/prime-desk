@@ -134,6 +134,9 @@ const api = {
   appInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:info'),
   checkAgentUpdate: (): Promise<Envelope<{ update: UpdateCheck }>> =>
     ipcRenderer.invoke('updates:check'),
+  /** Versão nova do PRÓPRIO app; `command` é o que instala, para rodar no terminal. */
+  checkAppUpdate: (): Promise<Envelope<{ update: UpdateCheck; command: string }>> =>
+    ipcRenderer.invoke('updates:app'),
   rescanAgent: (): Promise<Envelope<{ status: EnvStatus }>> => ipcRenderer.invoke('updates:rescan'),
   speechStatus: (): Promise<Envelope<{ status: SpeechStatus }>> =>
     ipcRenderer.invoke('speech:status'),
