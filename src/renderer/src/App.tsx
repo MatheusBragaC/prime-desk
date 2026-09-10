@@ -171,10 +171,19 @@ export function App() {
           </div>
         </div>
 
+        {/*
+          As duas sobreposições são `absolute inset-0` dentro do `<main>`, então
+          encostam na borda direita da janela — e caem sob os botões de janela —
+          exatamente quando não há painel do dock. Quem sabe disso é o `App`: o
+          estado do dock é do `useDock` daqui. Vai por prop em vez de subir para
+          o store porque é dado de layout, com dois consumidores a um nível.
+        */}
         {/* Última sessão observada fica em foco; as outras seguem acumulando em background. */}
-        {Object.keys(observed).length > 0 && <ObservedPanel />}
+        {Object.keys(observed).length > 0 && <ObservedPanel atRightEdge={!dock.dock} />}
 
-        {openFile && <FileViewer path={openFile} onClose={() => setOpenFile(null)} />}
+        {openFile && (
+          <FileViewer path={openFile} onClose={() => setOpenFile(null)} atRightEdge={!dock.dock} />
+        )}
       </main>
 
       <DockHost

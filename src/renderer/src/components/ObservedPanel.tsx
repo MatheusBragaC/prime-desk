@@ -3,6 +3,7 @@ import { X, Radio, AlertTriangle, CircleOff, Loader2 } from 'lucide-react'
 import { useAgent, unobserveSession, type Observed } from '@/store/agent'
 import { Message } from './Message'
 import { fmtTokens } from '@/lib/format'
+import { useWinControlsInset } from '@/lib/platform'
 import { useT } from '@/i18n'
 
 /**
@@ -38,8 +39,16 @@ function StatusIcon({ obs, size }: { obs: Observed; size: number }) {
   return <AlertTriangle size={size} strokeWidth={1.75} className="shrink-0 text-err" />
 }
 
-export function ObservedPanel() {
+export function ObservedPanel({ atRightEdge = false }: {
+  /**
+   * Verdadeiro só quando a sobreposição encosta na borda direita da janela —
+   * dentro do `<main>` sem painel do dock aberto. Com painel aberto quem
+   * encosta é o dock, e a reserva é dele.
+   */
+  atRightEdge?: boolean
+}) {
   const { t } = useT()
+  const winctl = useWinControlsInset(atRightEdge)
   const observed = useAgent((s) => s.observed)
   const scroller = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
@@ -87,7 +96,10 @@ export function ObservedPanel() {
     <div className="absolute inset-0 z-panel flex flex-col bg-[var(--p-bg)]">
       {/* A tira só aparece com mais de uma sessão: com uma só, seria ruído. */}
       {ids.length > 1 && (
-        <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[var(--p-line)] px-2 py-1.5">
+        <div
+          style={{ paddingRight: 8 + winctl }}
+          className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[var(--p-line)] pl-2 py-1.5"
+        >
           {ids.map((id) => {
             const o = observed[id]
             return (
@@ -128,7 +140,12 @@ export function ObservedPanel() {
         </div>
       )}
 
-      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
+      {/* Reserva à direita só para a linha de cima: a faixa dos botões de
+          janela tem 44px, então a segunda linha já passa dela. */}
+      <div
+        style={{ paddingRight: 20 + (ids.length > 1 ? 0 : winctl) }}
+        className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] pl-5"
+      >
         <StatusIcon obs={obs} size={16} />
 
         <div className="min-w-0 flex-1">

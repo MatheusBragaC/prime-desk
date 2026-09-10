@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { copyText } from '@/lib/clipboard'
 import { useT } from '@/i18n'
+import { useWinControlsInset } from '@/lib/platform'
 import { fmtSize } from '@/lib/format'
 
 const LANG_BY_EXT: Record<string, string> = {
@@ -24,7 +25,7 @@ function langOf(path: string): string | null {
   return LANG_BY_EXT[ext] ?? null
 }
 
-export function FileViewer({ path, onClose, active = true }: {
+export function FileViewer({ path, onClose, active = true, atRightEdge = false }: {
   path: string
   onClose: () => void
   /**
@@ -34,8 +35,16 @@ export function FileViewer({ path, onClose, active = true }: {
    * Esc fecharia todos os arquivos abertos de uma vez.
    */
   active?: boolean
+  /**
+   * Verdadeiro só quando a sobreposição encosta na borda direita da janela —
+   * dentro do `<main>` sem painel do dock aberto. Dentro do painel do terminal
+   * é falso: ali o corpo começa abaixo da faixa do overlay, e reservar criaria
+   * um vão de 150px sem motivo.
+   */
+  atRightEdge?: boolean
 }) {
   const { t } = useT()
+  const winctl = useWinControlsInset(atRightEdge)
   const [content, setContent] = useState('')
   const [original, setOriginal] = useState('')
   const [meta, setMeta] = useState<{ size: number; truncated?: boolean; binary?: boolean }>({ size: 0 })
@@ -119,7 +128,12 @@ export function FileViewer({ path, onClose, active = true }: {
 
   return (
     <div className="absolute inset-0 z-panel flex flex-col bg-[var(--p-bg)]">
-      <div className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] px-5">
+      {/* Reserva à direita: o cabeçalho é a primeira linha da sobreposição e
+          cai debaixo dos botões de janela quando ela encosta na borda. */}
+      <div
+        style={{ paddingRight: 20 + winctl }}
+        className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-[var(--p-line)] pl-5"
+      >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold">{name}</span>
