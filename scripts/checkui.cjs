@@ -81,7 +81,7 @@ const MEASURES = [
     key: 'alpha',
     label: 'alpha cru de cor (white/[0.06], black/40, ...)',
     mode: 'ratchet',
-    fix: 'use os tokens line/hover/scrim do tailwind.config.js'
+    fix: 'use o token de papel (hover, chip, well, codeWell, scrim, ...) do tailwind.config.js'
   },
   {
     key: 'offscale',
