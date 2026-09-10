@@ -1,4 +1,4 @@
-import type { SessionSummary, FolderState } from '../../../shared/protocol'
+import type { SessionSummary, FolderState } from '@shared/protocol'
 
 export interface Group {
   key: string

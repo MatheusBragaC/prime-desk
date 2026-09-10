@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { GitBranch, Check, Loader2, AlertTriangle } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import { usePopover } from '../lib/usePopover'
-import { useT } from '../i18n'
-import type { GitBranchInfo } from '../../../shared/protocol'
+import { useAgent } from '@/store/agent'
+import { usePopover } from '@/lib/usePopover'
+import { useT } from '@/i18n'
+import type { GitBranchInfo } from '@shared/protocol'
 
 /**
  * Ramo do git na barra de contexto, agora clicável.

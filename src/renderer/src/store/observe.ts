@@ -1,8 +1,8 @@
-import type { AgentMessage } from '../../../shared/protocol'
+import type { AgentMessage } from '@shared/protocol'
 import { useAgent } from './agentStore'
 import { bridge, rpc } from './rpc'
 import { hydrate } from './transcript'
-import { t } from '../i18n'
+import { t } from '@/i18n'
 
 /**
  * Assina os eventos de outra sessão (root ou subagente).

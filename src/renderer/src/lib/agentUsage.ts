@@ -1,4 +1,4 @@
-import type { AgentNode, AgentTreeSnapshot } from '../../../shared/protocol'
+import type { AgentNode, AgentTreeSnapshot } from '@shared/protocol'
 
 /**
  * Soma o gasto de uma árvore de agentes.

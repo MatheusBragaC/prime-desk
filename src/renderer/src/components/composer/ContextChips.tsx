@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { Folder, Monitor, Terminal } from 'lucide-react'
-import { useAgent } from '../../store/agent'
-import { BranchPicker } from '../BranchPicker'
+import { useAgent } from '@/store/agent'
+import { BranchPicker } from '@/components/BranchPicker'
 import { ExecutionMenu } from './ExecutionMenu'
-import type { SshConnection } from '../../../../shared/protocol'
-import { useT } from '../../i18n'
+import type { SshConnection } from '@shared/protocol'
+import { useT } from '@/i18n'
 
 /** Barra de contexto: onde o agente está executando. */
 export function ContextChips({

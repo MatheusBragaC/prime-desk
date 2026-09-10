@@ -1,8 +1,8 @@
-import type { DeliveryBehavior, QueueMode, ThinkingLevel } from '../../../shared/protocol'
+import type { DeliveryBehavior, QueueMode, ThinkingLevel } from '@shared/protocol'
 import { useAgent, refreshState } from './agentStore'
 import { bridge, rpc, rpcCall } from './rpc'
 import { maybeGenerateTitle } from './titles'
-import { t } from '../i18n'
+import { t } from '@/i18n'
 
 /* O turno: enviar prompt, abortar e os ajustes que valem para o turno seguinte. */
 

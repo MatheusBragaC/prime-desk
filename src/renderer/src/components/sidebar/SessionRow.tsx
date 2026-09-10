@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import { MoreHorizontal, Pin } from 'lucide-react'
-import { useAgent, mutateFolders } from '../../store/agent'
-import type { Group } from '../../lib/grouping'
-import { SessionMenu } from '../SessionMenu'
-import { InlineEdit } from '../ui/InlineEdit'
-import type { SessionSummary } from '../../../../shared/protocol'
-import { useT } from '../../i18n'
+import { useAgent, mutateFolders } from '@/store/agent'
+import type { Group } from '@/lib/grouping'
+import { SessionMenu } from '@/components/SessionMenu'
+import { InlineEdit } from '@/components/ui/InlineEdit'
+import type { SessionSummary } from '@shared/protocol'
+import { useT } from '@/i18n'
 
 export function SessionRow({
   s,

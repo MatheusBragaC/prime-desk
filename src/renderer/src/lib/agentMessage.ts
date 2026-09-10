@@ -1,4 +1,4 @@
-import type { AgentNode, AgentTreeSnapshot } from '../../../shared/protocol'
+import type { AgentNode, AgentTreeSnapshot } from '@shared/protocol'
 
 /**
  * Reconhece um item de fila que veio de um subagente.

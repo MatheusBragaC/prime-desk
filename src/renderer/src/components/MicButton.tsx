@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, ChevronDown, Check, Loader2, Download, Wrench } from 'lucide-react'
-import { useDictation } from '../lib/useDictation'
-import { usePopover } from '../lib/usePopover'
-import { useAgent } from '../store/agent'
-import { fmtSize } from '../lib/format'
-import { useT } from '../i18n'
-import type { SpeechStatus } from '../../../shared/protocol'
+import { useDictation } from '@/lib/useDictation'
+import { usePopover } from '@/lib/usePopover'
+import { useAgent } from '@/store/agent'
+import { fmtSize } from '@/lib/format'
+import { useT } from '@/i18n'
+import type { SpeechStatus } from '@shared/protocol'
 
 /**
  * Ditado por voz no composer.

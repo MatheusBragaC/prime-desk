@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import {
   useAgent, refreshModels, refreshCommands, refreshSessions,
   refreshFolders, maybeGenerateTitle, waitForState
-} from '../store/agent'
-import { useT } from '../i18n'
+} from '@/store/agent'
+import { useT } from '@/i18n'
 
 /**
  * Ciclo de vida da ponte com o prime-agent: ouvintes do main e boot.

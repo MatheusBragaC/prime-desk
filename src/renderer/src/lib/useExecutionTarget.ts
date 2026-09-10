@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react'
-import type { SshConnection } from '../../../shared/protocol'
+import type { SshConnection } from '@shared/protocol'
 import type { SshForm } from './types'
-import { useAgent, refreshSessions } from '../store/agent'
+import { useAgent, refreshSessions } from '@/store/agent'
 import { restartBridge, fallbackToLocal } from './useBridge'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Onde o agente roda: diretório local ou máquina remota por SSH.

@@ -1,4 +1,4 @@
-import type { FolderState, ModelInfo } from '../../../shared/protocol'
+import type { FolderState, ModelInfo } from '@shared/protocol'
 import { useAgent, type CommandInfo } from './agentStore'
 import { bridge, rpc } from './rpc'
 

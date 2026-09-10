@@ -1,11 +1,11 @@
 import type { RefObject } from 'react'
 import { useEffect } from 'react'
 import { Loader2, Zap, Clock, Bot, GitBranch, ChevronRight } from 'lucide-react'
-import { useAgent, setSteeringMode, setFollowUpMode, refreshTree } from '../store/agent'
-import { usePopover } from '../lib/usePopover'
-import { parseQueueItem, countWorking } from '../lib/agentMessage'
-import type { QueueMode } from '../../../shared/protocol'
-import { useT } from '../i18n'
+import { useAgent, setSteeringMode, setFollowUpMode, refreshTree } from '@/store/agent'
+import { usePopover } from '@/lib/usePopover'
+import { parseQueueItem, countWorking } from '@/lib/agentMessage'
+import type { QueueMode } from '@shared/protocol'
+import { useT } from '@/i18n'
 
 /**
  * Conteúdo da fila de mensagens.

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Loader2, CheckCircle2, AlertTriangle, Plug } from 'lucide-react'
 import { Modal, Field, Button, inputClass } from './Modal'
-import { useT } from '../i18n'
-import type { SshForm } from '../lib/types'
+import { useT } from '@/i18n'
+import type { SshForm } from '@/lib/types'
 
 export type { SshForm }
 

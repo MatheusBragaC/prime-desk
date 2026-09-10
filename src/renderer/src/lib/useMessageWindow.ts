@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { UiMessage } from '../store/agent'
+import type { UiMessage } from '@/store/agent'
 
 /**
  * Janela de mensagens renderizadas.
