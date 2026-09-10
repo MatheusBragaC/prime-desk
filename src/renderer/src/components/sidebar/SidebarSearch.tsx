@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useT } from '../../i18n'
+import { useT } from '@/i18n'
 
 export function SidebarSearch({
   value,

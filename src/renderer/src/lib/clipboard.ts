@@ -1,4 +1,4 @@
-import { useAgent } from '../store/agent'
+import { useAgent } from '@/store/agent'
 
 /**
  * Copiar texto, por um caminho que não falha calado.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Dock } from './types'
-import { useAgent } from '../store/agent'
+import { useAgent } from '@/store/agent'
 
 /**
  * O painel lateral direito — qual está aberto e quem pode abri-lo.

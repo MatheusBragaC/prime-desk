@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Search, Sparkles, Zap } from 'lucide-react'
-import { useAgent, sendPrompt, newSession, compactNow } from '../store/agent'
-import { useT } from '../i18n'
-import { useDialogA11y } from '../lib/useDialogA11y'
+import { useAgent, sendPrompt, newSession, compactNow } from '@/store/agent'
+import { useT } from '@/i18n'
+import { useDialogA11y } from '@/lib/useDialogA11y'
 
 /**
  * Paleta de comandos.

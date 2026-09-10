@@ -3,9 +3,9 @@ import hljs from 'highlight.js'
 import {
   X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
 } from 'lucide-react'
-import { copyText } from '../lib/clipboard'
-import { useT } from '../i18n'
-import { fmtSize } from '../lib/format'
+import { copyText } from '@/lib/clipboard'
+import { useT } from '@/i18n'
+import { fmtSize } from '@/lib/format'
 
 const LANG_BY_EXT: Record<string, string> = {
   ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',

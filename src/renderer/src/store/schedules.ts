@@ -1,4 +1,4 @@
-import type { AgentCronJob, AgentHeartbeatDeliveryMode } from '../../../shared/protocol'
+import type { AgentCronJob, AgentHeartbeatDeliveryMode } from '@shared/protocol'
 import { rpcCall, type RpcOutcome } from './rpc'
 
 /*

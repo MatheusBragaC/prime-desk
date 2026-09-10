@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Sparkles, FileText, Puzzle } from 'lucide-react'
-import type { CommandInfo } from '../store/agent'
-import { useT } from '../i18n'
+import type { CommandInfo } from '@/store/agent'
+import { useT } from '@/i18n'
 
 function SourceIcon({ source }: { source: string }) {
   if (source === 'skill') return <Sparkles size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />

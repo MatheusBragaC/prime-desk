@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { AlertTriangle, Info, X } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import { useT } from '../i18n'
+import { useAgent } from '@/store/agent'
+import { useT } from '@/i18n'
 
 /** Aviso transitório. Erros de comando não devem morrer só no console. */
 export function Notice() {

@@ -1,4 +1,4 @@
-import type { Envelope, Ok } from '../../../shared/protocol'
+import type { Envelope, Ok } from '@shared/protocol'
 
 /**
  * Adaptador entre o envelope do IPC e código que espera exceção.

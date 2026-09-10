@@ -1,4 +1,4 @@
-import type { RpcResponse } from '../../../shared/protocol'
+import type { RpcResponse } from '@shared/protocol'
 
 /*
   Transporte puro: fala com o preload e devolve o erro em vez de engoli-lo.

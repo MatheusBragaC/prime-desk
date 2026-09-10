@@ -1,4 +1,4 @@
-import type { AgentCronScheduleKind } from '../../../shared/protocol'
+import type { AgentCronScheduleKind } from '@shared/protocol'
 
 /**
  * Espelho da gramática de agendamento do prime-agent.

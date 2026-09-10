@@ -3,8 +3,8 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { memo, useRef, useState, type ReactNode } from 'react'
 import { Check, Copy } from 'lucide-react'
-import { copyText } from '../lib/clipboard'
-import { useT } from '../i18n'
+import { copyText } from '@/lib/clipboard'
+import { useT } from '@/i18n'
 
 function openExternal(e: React.MouseEvent<HTMLAnchorElement>) {
   e.preventDefault()

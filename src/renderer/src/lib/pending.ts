@@ -1,4 +1,4 @@
-import type { UiMessage } from '../store/agent'
+import type { UiMessage } from '@/store/agent'
 
 /**
  * A resposta ainda não apareceu na tela.

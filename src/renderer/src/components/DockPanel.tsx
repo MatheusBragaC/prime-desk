@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useResizable } from '../lib/useResizable'
-import { useT } from '../i18n'
+import { useResizable } from '@/lib/useResizable'
+import { useT } from '@/i18n'
 import { ResizeHandle } from './ResizeHandle'
 
 /**

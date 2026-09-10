@@ -3,13 +3,13 @@ import {
   ChevronRight, Folder, FolderOpen, FileCode2, FileText, FileJson, Image as ImageIcon,
   Search, X, RefreshCw, ExternalLink, FolderTree, AtSign
 } from 'lucide-react'
-import type { DirEntry } from '../../../shared/protocol'
-import { fmtSize } from '../lib/format'
-import { useAsync } from '../lib/useAsync'
-import { unwrap } from '../lib/ipc'
+import type { DirEntry } from '@shared/protocol'
+import { fmtSize } from '@/lib/format'
+import { useAsync } from '@/lib/useAsync'
+import { unwrap } from '@/lib/ipc'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError, PanelLoading } from './PanelState'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 const CODE = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'py', 'rb', 'go', 'rs', 'java', 'kt', 'c', 'h', 'cpp', 'cs', 'php', 'sh', 'bash', 'sql', 'css', 'scss', 'html', 'vue', 'svelte'])
 const DATA = new Set(['json', 'yml', 'yaml', 'toml', 'ini', 'env', 'lock'])

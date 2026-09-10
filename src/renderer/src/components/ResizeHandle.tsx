@@ -1,4 +1,4 @@
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /** Passo do ajuste por teclado. Grande o bastante para valer o toque, pequeno o bastante para acertar a largura. */
 const STEP = 16

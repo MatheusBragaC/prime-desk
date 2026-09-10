@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle
 } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import { useT, setLang, getLang, LANGS } from '../i18n'
-import { usePopover } from '../lib/usePopover'
-import { logoutProvider, providerLabel as labelFor } from '../lib/env'
-import { useEnvironment } from '../lib/useEnvironment'
+import { useAgent } from '@/store/agent'
+import { useT, setLang, getLang, LANGS } from '@/i18n'
+import { usePopover } from '@/lib/usePopover'
+import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
+import { useEnvironment } from '@/lib/useEnvironment'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -18,7 +18,7 @@ import { useEnvironment } from '../lib/useEnvironment'
  * Ambiente, nome e atualização vêm todos do `useEnvironment`: o badge só exibe.
  */
 export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
-  const { t, lang } = useT()
+  const { t } = useT()
   const { status, update, userName, refresh } = useEnvironment(true)
   const [open, setOpen] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
@@ -223,7 +223,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
           )}
 
           <div className="px-2 pb-1 pt-1 text-micro text-dim">
-            {lang === 'pt' ? 'Credenciais ficam no prime-agent.' : lang === 'es' ? 'Las credenciales viven en prime-agent.' : 'Credentials live in prime-agent.'}
+            {t('acct.credsNote')}
           </div>
         </div>
       )}

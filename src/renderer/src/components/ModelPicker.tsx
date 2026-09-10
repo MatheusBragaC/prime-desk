@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Check, ChevronDown, Brain, Cpu } from 'lucide-react'
-import { useAgent, setModel, setThinking } from '../store/agent'
-import { THINKING_LEVELS, type ThinkingLevel } from '../../../shared/protocol'
-import { usePopover } from '../lib/usePopover'
-import { t, useT } from '../i18n'
+import { useAgent, setModel, setThinking } from '@/store/agent'
+import { THINKING_LEVELS, type ThinkingLevel } from '@shared/protocol'
+import { usePopover } from '@/lib/usePopover'
+import { t, useT } from '@/i18n'
 
 const thinkingLabel = (l: ThinkingLevel): string => t(`thinking.${l}`)
 

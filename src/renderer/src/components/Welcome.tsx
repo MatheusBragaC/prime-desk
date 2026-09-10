@@ -3,9 +3,9 @@ import { BarChart3 } from 'lucide-react'
 import { Butterfly } from './Butterfly'
 import { Modal } from './Modal'
 import { UsagePanel } from './UsagePanel'
-import type { UsageStats } from '../../../shared/protocol'
-import { firstNameFromHome } from '../lib/greeting'
-import { useT } from '../i18n'
+import type { UsageStats } from '@shared/protocol'
+import { firstNameFromHome } from '@/lib/greeting'
+import { useT } from '@/i18n'
 
 export function Welcome() {
   const { t } = useT()

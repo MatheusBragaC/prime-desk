@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Square, X, Command, Plus, ArrowUp, FileText } from 'lucide-react'
-import { useAgent, sendPrompt, abortTurn } from '../store/agent'
+import { useAgent, sendPrompt, abortTurn } from '@/store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
-import { useMod } from '../lib/platform'
-import { joinWithPaths, baseName, joinDictation } from '../lib/attachments'
+import { useMod } from '@/lib/platform'
+import { joinWithPaths, baseName, joinDictation } from '@/lib/attachments'
 import { QueuePopover } from './QueuePopover'
 import { MicButton } from './MicButton'
-import type { DeliveryBehavior } from '../../../shared/protocol'
-import { useT } from '../i18n'
+import type { DeliveryBehavior } from '@shared/protocol'
+import { useT } from '@/i18n'
 
 /**
  * Anexo pendente na caixa de entrada.

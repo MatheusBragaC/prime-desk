@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useAgent, mutateFolders } from '../../store/agent'
-import type { Group } from '../../lib/grouping'
+import { useAgent, mutateFolders } from '@/store/agent'
+import type { Group } from '@/lib/grouping'
 import { GroupHeader } from './GroupHeader'
 import { SessionRow } from './SessionRow'
-import { InlineEdit } from '../ui/InlineEdit'
-import { useT } from '../../i18n'
+import { InlineEdit } from '@/components/ui/InlineEdit'
+import { useT } from '@/i18n'
 
 /**
  * Conversas mostradas por grupo antes do "mostrar mais".

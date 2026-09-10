@@ -36,7 +36,21 @@ export default defineConfig({
       outDir: 'out/renderer',
       rollupOptions: { input: { index: resolve('src/renderer/index.html') } }
     },
-    resolve: { alias: { '@': resolve('src/renderer/src') } },
+    /*
+     * Os dois aliases existem também em `tsconfig.json` (`paths`): o build usa
+     * este resolvedor, o `npm run typecheck` usa o do `tsc`. Mudar um sem o
+     * outro compila e quebra no outro lado.
+     *
+     * `@shared` só é declarado aqui, no renderer: main e preload continuam com
+     * import relativo com extensão `.js`, que é o que o bundle CJS do preload e
+     * o `externalizeDepsPlugin` do main já resolvem.
+     */
+    resolve: {
+      alias: {
+        '@': resolve('src/renderer/src'),
+        '@shared': resolve('src/shared')
+      }
+    },
     plugins: [react()]
   }
 })

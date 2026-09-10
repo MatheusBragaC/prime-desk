@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from 'react'
 import { X, Plus, SquareTerminal, FileCode2, FolderOpen } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import { useTerminalTabs } from '../store/terminal'
+import { useAgent } from '@/store/agent'
+import { useTerminalTabs } from '@/store/terminal'
 import { DockPanel } from './DockPanel'
 import { TerminalView } from './TerminalView'
 import { FileViewer } from './FileViewer'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Painel de terminal e arquivos.

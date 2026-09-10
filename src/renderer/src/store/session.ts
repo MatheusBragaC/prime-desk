@@ -1,8 +1,8 @@
-import type { AgentMessage } from '../../../shared/protocol'
+import type { AgentMessage } from '@shared/protocol'
 import { useAgent, refreshState } from './agentStore'
 import { bridge, rpc, rpcCall } from './rpc'
 import { refreshSessions } from './catalog'
-import { t } from '../i18n'
+import { t } from '@/i18n'
 
 /*
   Ciclo de vida da conversa e da ponte: criar, abrir, estacionar, readotar,
