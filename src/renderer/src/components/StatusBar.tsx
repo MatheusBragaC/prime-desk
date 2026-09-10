@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { useAgent, compactNow } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
-import { useIsMac, WIN_CONTROLS_WIDTH } from '@/lib/platform'
+import { useWinControlsInset } from '@/lib/platform'
 import { fmtCost, fmtTokens } from '@/lib/format'
 import { useT } from '@/i18n'
 import type { Dock } from '@/lib/types'
@@ -190,7 +190,9 @@ export function StatusBar({
   onDock: (kind: Exclude<Dock, null>) => void
 }) {
   const { t } = useT()
-  const isMac = useIsMac()
+  /* Com painel aberto quem encosta na borda direita é o dock, e a reserva dos
+     botões de janela passa a ser dele: manter aqui deixaria um vão de 150px. */
+  const winctl = useWinControlsInset(!dock)
   const state = useAgent((s) => s.state)
   const context = useAgent((s) => s.context)
   const status = useAgent((s) => s.status)
@@ -230,13 +232,14 @@ export function StatusBar({
 
   return (
     /*
-      Sem `border-b`: a separação do palco vem do tom, não de uma linha. Reserva
-      à direita só onde os botões de janela são desenhados no conteúdo
-      (Windows/Linux). No macOS eles estão à esquerda, na sidebar.
+      Sem `border-b`: a separação do palco vem do tom, não de uma linha. A
+      reserva à direita só vale quando a barra é quem encosta na borda direita
+      (sem painel do dock) e onde os botões de janela são desenhados no
+      conteúdo (Windows/Linux). No macOS eles estão à esquerda, na sidebar.
     */
     <div
       className="drag-region relative z-chrome flex h-[var(--p-titlebar)] shrink-0 items-center gap-2.5 pl-4"
-      style={{ paddingRight: isMac ? 16 : WIN_CONTROLS_WIDTH }}
+      style={{ paddingRight: 16 + winctl }}
     >
       {onToggleSidebar && (
         <button

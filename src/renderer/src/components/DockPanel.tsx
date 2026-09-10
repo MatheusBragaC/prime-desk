@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useResizable } from '@/lib/useResizable'
+import { useWinControlsInset } from '@/lib/platform'
 import { useT } from '@/i18n'
 import { ResizeHandle } from './ResizeHandle'
 
@@ -56,6 +57,9 @@ export function DockPanel({
 }) {
   const size = useResizable(storageKey, defaultWidth, min, max, 'left')
   const { t } = useT()
+  /* Painel aberto = o dock é quem encosta na borda direita, então é aqui que os
+     botões de janela caem. Sem esta reserva eles cobrem o fechar do painel. */
+  const winctl = useWinControlsInset(true)
 
   return (
     <aside
@@ -80,8 +84,9 @@ export function DockPanel({
       */}
       {header ?? (
         <div
+          style={{ paddingRight: 16 + winctl }}
           className={
-            'drag-region flex h-[var(--p-titlebar)] items-center gap-2 px-4 ' +
+            'drag-region flex h-[var(--p-titlebar)] items-center gap-2 pl-4 ' +
             (headerBorder ? 'border-b border-[var(--p-line)]' : '')
           }
         >
