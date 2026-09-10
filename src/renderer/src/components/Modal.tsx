@@ -66,7 +66,7 @@ export function Modal({
   */
   return createPortal(
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 p-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim p-6 backdrop-blur-[2px]"
       onClick={(e) => {
         // Fecha no clique completo (press + release) na área externa. Usar
         // mousedown fechava o diálogo com press perdido ou com arraste que
@@ -82,13 +82,13 @@ export function Modal({
         {...dialog.dialogProps}
         style={{ width }}
         onMouseDown={(e) => e.stopPropagation()}
-        className="max-h-full animate-fade-up overflow-y-auto rounded-2xl border border-white/[0.1] bg-[var(--p-panel)] shadow-2xl shadow-black/70"
+        className="max-h-full animate-fade-up overflow-y-auto rounded-2xl border border-lineStrong bg-[var(--p-panel)] shadow-2xl shadow-drop"
       >
         <div className="flex items-start gap-3 px-5 pb-1 pt-5">
           <h2 className="flex-1 text-lg font-semibold tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-dim transition-colors hover:bg-white/[0.07] hover:text-fg"
+            className="rounded-md p-1 text-dim transition-colors hover:bg-hover hover:text-fg"
             aria-label={t('common.close')}
           >
             <X size={16} strokeWidth={1.75} />
@@ -132,7 +132,7 @@ export function Field({
 }
 
 export const inputClass =
-  'w-full rounded-lg border border-[var(--p-line)] bg-black/30 px-3 py-2 text-sm text-fg outline-none transition-colors placeholder:text-dim focus:border-primary/50'
+  'w-full rounded-lg border border-[var(--p-line)] bg-well px-3 py-2 text-sm text-fg outline-none transition-colors placeholder:text-dim focus:border-primary/50'
 
 export function Button({
   variant = 'ghost',
@@ -151,10 +151,10 @@ export function Button({
     variant === 'primary'
       ? 'border border-primary/40 bg-primary/20 text-fg hover:bg-primary/30'
       : variant === 'subtle'
-        ? 'border border-white/[0.1] text-muted hover:border-white/20 hover:text-fg'
+        ? 'border border-lineStrong text-muted hover:border-lineHover hover:text-fg'
         : variant === 'danger'
           ? 'border border-err/40 bg-err/15 text-err hover:bg-err/25'
-          : 'text-muted hover:bg-white/[0.06] hover:text-fg'
+          : 'text-muted hover:bg-hover hover:text-fg'
   /*
     `className` externo entra DEPOIS da base, e não no lugar dela. Escrito antes
     do spread, qualquer chamador que passasse uma classe apagava o primitivo

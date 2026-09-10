@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: AgentCronJob['status'] }) {
   const tone =
     status === 'active' ? 'bg-ok/12 text-ok'
     : status === 'paused' ? 'bg-warn/12 text-warn'
-    : 'bg-white/[0.06] text-dim'
+    : 'bg-chip text-dim'
   return (
     <span className={'shrink-0 rounded px-1.5 py-[1px] text-micro ' + tone}>
       {t(`sched.status.${status}`)}
@@ -80,7 +80,7 @@ function ScheduleField({ value, onChange }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={SCHEDULE_EXAMPLES[0]}
-        className="w-full rounded border border-[var(--p-line)] bg-black/25 px-2 py-1 font-mono text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
+        className="w-full rounded border border-[var(--p-line)] bg-well px-2 py-1 font-mono text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
       />
       <div className="mt-1 min-h-[14px] text-micro leading-snug">
         {!value.trim() ? (
@@ -288,7 +288,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
       {!offline && data.loading && <PanelLoading />}
 
       {!offline && !noDaemon && creating && (
-        <div className="mx-3 my-2 rounded-lg border border-[var(--p-line)] bg-black/20 p-2.5">
+        <div className="mx-3 my-2 rounded-lg border border-[var(--p-line)] bg-sunken p-2.5">
           <div className="mb-1.5 text-micro uppercase tracking-wider text-dim">
             {t('sched.new')}
           </div>
@@ -298,7 +298,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder={t('sched.promptPlaceholder')}
             rows={3}
-            className="mt-1.5 w-full resize-none rounded border border-[var(--p-line)] bg-black/25 px-2 py-1 text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
+            className="mt-1.5 w-full resize-none rounded border border-[var(--p-line)] bg-well px-2 py-1 text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
           />
           <div className="mt-1 flex items-start gap-1.5 text-micro leading-snug text-warn">
             <Zap size={12} strokeWidth={1.75} className="mt-[2px] shrink-0" />
@@ -332,7 +332,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
           {jobs.length === 0 && !data.loading && <PanelEmpty message={t('sched.noJobs')} />}
 
           {jobs.map((job) => (
-            <div key={job.id} className="group mx-3 mb-1.5 rounded-lg bg-white/[0.02] p-2.5">
+            <div key={job.id} className="group mx-3 mb-1.5 rounded-lg bg-raise p-2.5">
               <div className="flex items-center gap-2">
                 <Clock size={13} strokeWidth={1.75} className="shrink-0 text-dim" />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
@@ -372,7 +372,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           {heartbeat ? (
-            <div className="mx-3 mb-1.5 rounded-lg bg-white/[0.02] p-2.5">
+            <div className="mx-3 mb-1.5 rounded-lg bg-raise p-2.5">
               <div className="flex items-center gap-2">
                 <HeartPulse size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
@@ -400,7 +400,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
               <div className="mt-2 flex gap-1.5">
                 <button
                   onClick={() => void changeHeartbeat(heartbeat.status === 'paused' ? 'resume' : 'pause')}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-fg"
                 >
                   {heartbeat.status === 'paused'
                     ? <><Play size={12} strokeWidth={1.75} />{t('sched.resume')}</>
@@ -414,7 +414,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                     danger: true,
                     onConfirm: () => changeHeartbeat('clear')
                   })}
-                  className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-white/[0.06] hover:text-err"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-err"
                 >
                   <Trash2 size={12} strokeWidth={1.75} />
                   {t('sched.clear')}
@@ -422,19 +422,19 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ) : (
-            <div className="mx-3 mb-1.5 rounded-lg border border-[var(--p-line)] bg-black/20 p-2.5">
+            <div className="mx-3 mb-1.5 rounded-lg border border-[var(--p-line)] bg-sunken p-2.5">
               <ScheduleField value={hbSchedule} onChange={setHbSchedule} />
               <textarea
                 value={hbPrompt}
                 onChange={(e) => setHbPrompt(e.target.value)}
                 placeholder={t('sched.hbPromptPlaceholder')}
                 rows={2}
-                className="mt-1.5 w-full resize-none rounded border border-[var(--p-line)] bg-black/25 px-2 py-1 text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
+                className="mt-1.5 w-full resize-none rounded border border-[var(--p-line)] bg-well px-2 py-1 text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
               />
 
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="text-micro text-dim">{t('sched.delivery')}</span>
-                <div className="flex gap-0.5 rounded-md bg-black/25 p-0.5">
+                <div className="flex gap-0.5 rounded-md bg-well p-0.5">
                   {(['steer', 'follow_up'] as AgentHeartbeatDeliveryMode[]).map((m) => (
                     <button
                       key={m}

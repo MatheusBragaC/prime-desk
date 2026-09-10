@@ -51,7 +51,7 @@ function Group({ label, items, icon }: {
         return (
           <div
             key={i}
-            className="mx-1 mb-0.5 rounded bg-white/[0.03] px-2 py-1.5"
+            className="mx-1 mb-0.5 rounded bg-raise px-2 py-1.5"
             title={text}
           >
             {item.fromAgent && (
@@ -84,7 +84,7 @@ function ModeToggle({ label, value, onChange }: {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
       <span className="min-w-0 flex-1 truncate text-xs text-dim">{label}</span>
-      <div className="flex shrink-0 gap-0.5 rounded-md bg-black/25 p-0.5">
+      <div className="flex shrink-0 gap-0.5 rounded-md bg-well p-0.5">
         {(['one-at-a-time', 'all'] as QueueMode[]).map((m) => (
           <button
             key={m}
@@ -134,7 +134,7 @@ export function QueuePopover({ onClose, trigger }: {
   return (
     <div
       ref={ref}
-      className="absolute bottom-full left-0 z-dropdown mb-2 flex max-h-[min(440px,70vh)] w-[320px] flex-col animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] shadow-2xl shadow-black/60"
+      className="absolute bottom-full left-0 z-dropdown mb-2 flex max-h-[min(440px,70vh)] w-[320px] flex-col animate-fade-up rounded-field border border-[var(--p-line)] bg-[var(--p-panel)] shadow-2xl shadow-drop"
     >
       {(subagents > 0 || active) && (
         <div className="shrink-0 border-b border-[var(--p-line)] py-1.5">
@@ -144,7 +144,7 @@ export function QueuePopover({ onClose, trigger }: {
                 requestDock('agents')
                 onClose()
               }}
-              className="flex w-full items-center gap-2 px-3 py-1 text-left text-xs text-muted transition-colors hover:bg-white/[0.04] hover:text-fg"
+              className="flex w-full items-center gap-2 px-3 py-1 text-left text-xs text-muted transition-colors hover:bg-hover hover:text-fg"
             >
               <GitBranch size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
               <span className="min-w-0 flex-1">

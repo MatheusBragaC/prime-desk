@@ -23,7 +23,7 @@ export function ModelPicker() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
       >
         <Cpu size={14} strokeWidth={1.75} className="text-dim" />
         <span className="max-w-[190px] truncate">{state?.model?.name ?? '—'}</span>
@@ -31,7 +31,7 @@ export function ModelPicker() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-dropdown mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+        <div className="absolute bottom-full right-0 z-dropdown mb-2 max-h-[380px] w-[330px] animate-fade-up overflow-y-auto rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-drop">
           <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('model.label')}
           </div>
@@ -46,7 +46,7 @@ export function ModelPicker() {
                 }}
                 className={
                   'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ' +
-                  (active ? 'bg-primary/[0.16]' : 'hover:bg-white/[0.05]')
+                  (active ? 'bg-primary/[0.16]' : 'hover:bg-hover')
                 }
               >
                 <div className="min-w-0 flex-1">
@@ -82,7 +82,7 @@ export function ThinkingPicker() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg"
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
       >
         <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[level]} />
         <span>{thinkingLabel(level)}</span>
@@ -90,7 +90,7 @@ export function ThinkingPicker() {
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 z-dropdown mb-2 w-[190px] animate-fade-up rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-black/60">
+        <div className="absolute bottom-full right-0 z-dropdown mb-2 w-[190px] animate-fade-up rounded-xl border border-[var(--p-line)] bg-[var(--p-panel)] p-1.5 shadow-2xl shadow-drop">
           <div className="px-2.5 py-1.5 text-micro font-semibold uppercase tracking-wider text-dim">
             {t('thinking.label')}
           </div>
@@ -103,7 +103,7 @@ export function ThinkingPicker() {
               }}
               className={
                 'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors ' +
-                (l === level ? 'bg-primary/[0.16] text-fg' : 'text-muted hover:bg-white/[0.05]')
+                (l === level ? 'bg-primary/[0.16] text-fg' : 'text-muted hover:bg-hover')
               }
             >
               <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[l]} />

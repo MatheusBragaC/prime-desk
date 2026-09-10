@@ -85,7 +85,7 @@ export const Message = memo(function Message({
                   key={i}
                   src={`data:${img.mimeType};base64,${img.data}`}
                   alt=""
-                  className="max-h-44 rounded-card border border-white/10"
+                  className="max-h-44 rounded-card border border-lineStrong"
                 />
               ))}
             </div>
@@ -101,7 +101,7 @@ export const Message = memo(function Message({
                 <span
                   key={i}
                   title={p}
-                  className="flex max-w-[240px] items-center gap-1.5 rounded-md bg-white/[0.06] px-2 py-1"
+                  className="flex max-w-[240px] items-center gap-1.5 rounded-md bg-chip px-2 py-1"
                 >
                   <FileText size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
                   <span className="truncate text-sm text-muted">{baseName(p)}</span>
