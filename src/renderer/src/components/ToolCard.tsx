@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
-import type { ToolExec } from '../store/agent'
-import { fmtDuration, fmtElapsed } from '../lib/format'
-import { summary, codeFrom } from '../lib/toolSummary'
-import { useTurnClock, WARN_AFTER_MS } from '../lib/useTurnActivity'
-import { useT } from '../i18n'
+import type { ToolExec } from '@/store/agent'
+import { fmtDuration, fmtElapsed } from '@/lib/format'
+import { summary, codeFrom } from '@/lib/toolSummary'
+import { useTurnClock, WARN_AFTER_MS } from '@/lib/useTurnActivity'
+import { useT } from '@/i18n'
 
 const MAX_PREVIEW = 4000
 

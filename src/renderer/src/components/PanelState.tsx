@@ -1,5 +1,5 @@
 import { AlertTriangle, Loader2 } from 'lucide-react'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Estados de carga dos painéis.

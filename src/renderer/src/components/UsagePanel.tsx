@@ -1,6 +1,6 @@
-import type { UsageStats } from '../../../shared/protocol'
-import { fmtCost, fmtCount, fmtHour } from '../lib/format'
-import { t, useT } from '../i18n'
+import type { UsageStats } from '@shared/protocol'
+import { fmtCost, fmtCount, fmtHour } from '@/lib/format'
+import { t, useT } from '@/i18n'
 
 /**
  * Painel de uso agregado.

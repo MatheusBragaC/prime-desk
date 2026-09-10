@@ -1,9 +1,9 @@
 import {
   Eye, EyeOff, FolderPlus, RefreshCw, SquarePen, WandSparkles
 } from 'lucide-react'
-import { newSession, refreshSessions } from '../../store/agent'
-import type { TitlingProgress } from '../../lib/useTitleBatch'
-import { useT } from '../../i18n'
+import { newSession, refreshSessions } from '@/store/agent'
+import type { TitlingProgress } from '@/lib/useTitleBatch'
+import { useT } from '@/i18n'
 
 /**
  * Bloco de ações do topo da sidebar.

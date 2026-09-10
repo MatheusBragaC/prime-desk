@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { FileText, ExternalLink, PanelRight } from 'lucide-react'
-import { useAgent } from '../store/agent'
-import type { DetectedDocument } from '../lib/documentDetect'
-import { useT } from '../i18n'
+import { useAgent } from '@/store/agent'
+import type { DetectedDocument } from '@/lib/documentDetect'
+import { useT } from '@/i18n'
 
 /**
  * Substitui a parede de texto de um documento por um cartão compacto.

@@ -1,4 +1,4 @@
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Sinal de atividade enquanto a resposta ainda não começou a chegar.

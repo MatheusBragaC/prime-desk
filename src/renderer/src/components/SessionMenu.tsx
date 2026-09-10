@@ -3,13 +3,13 @@ import {
   FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
   Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2
 } from 'lucide-react'
-import type { SessionSummary } from '../../../shared/protocol'
+import type { SessionSummary } from '@shared/protocol'
 import {
   useAgent, mutateFolders, refreshSessions, rpc, deleteSession, generateTitleFor
-} from '../store/agent'
-import type { Group } from '../lib/grouping'
-import { usePopover } from '../lib/usePopover'
-import { useT } from '../i18n'
+} from '@/store/agent'
+import type { Group } from '@/lib/grouping'
+import { usePopover } from '@/lib/usePopover'
+import { useT } from '@/i18n'
 
 interface Props {
   session: SessionSummary

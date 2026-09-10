@@ -1,8 +1,8 @@
 import type { RefObject } from 'react'
 import { Check, Monitor, Plus, Terminal, Trash2 } from 'lucide-react'
-import { usePopover } from '../../lib/usePopover'
-import type { ExecutionInfo, SshConnection } from '../../../../shared/protocol'
-import { useT } from '../../i18n'
+import { usePopover } from '@/lib/usePopover'
+import type { ExecutionInfo, SshConnection } from '@shared/protocol'
+import { useT } from '@/i18n'
 
 /**
  * Menu de contexto de execução.

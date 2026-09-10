@@ -1,5 +1,5 @@
-import { Butterfly } from '../Butterfly'
-import { useIsMac, MAC_TRAFFIC_LIGHTS_WIDTH } from '../../lib/platform'
+import { Butterfly } from '@/components/Butterfly'
+import { useIsMac, MAC_TRAFFIC_LIGHTS_WIDTH } from '@/lib/platform'
 
 /** Barra de título da sidebar: identidade do app e área de arraste da janela. */
 export function SidebarHeader() {

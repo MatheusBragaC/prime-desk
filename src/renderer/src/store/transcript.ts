@@ -1,5 +1,5 @@
-import { isAgentEvent } from '../../../shared/protocol'
-import type { AgentEvent, AgentMessage, ContentBlock, ToolResult, Usage } from '../../../shared/protocol'
+import { isAgentEvent } from '@shared/protocol'
+import type { AgentEvent, AgentMessage, ContentBlock, ToolResult, Usage } from '@shared/protocol'
 
 export interface UiMessage {
   key: string

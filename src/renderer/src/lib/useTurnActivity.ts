@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useAgent } from '../store/agent'
-import type { ToolExec } from '../store/agent'
+import { useAgent } from '@/store/agent'
+import type { ToolExec } from '@/store/agent'
 
 /**
  * Há quanto tempo o turno não dá sinal de vida.

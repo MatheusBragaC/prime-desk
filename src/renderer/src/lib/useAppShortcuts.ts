@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { Dock } from './types'
-import { useAgent, abortTurn } from '../store/agent'
+import { useAgent, abortTurn } from '@/store/agent'
 import type { Zoom } from './useZoom'
 import { ZOOM_STEP } from './useZoom'
 

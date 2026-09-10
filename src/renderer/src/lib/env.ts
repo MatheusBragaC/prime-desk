@@ -1,5 +1,5 @@
-import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
-import { t } from '../i18n'
+import type { EnvStatus, UpdateCheck } from '@shared/protocol'
+import { t } from '@/i18n'
 import { unwrap } from './ipc'
 
 /**

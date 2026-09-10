@@ -3,17 +3,17 @@ import {
   CalendarClock, RefreshCw, Plus, Trash2, Pause, Play, HeartPulse,
   AlertTriangle, Zap, Clock
 } from 'lucide-react'
-import type { AgentCronJob, AgentHeartbeatDeliveryMode } from '../../../shared/protocol'
+import type { AgentCronJob, AgentHeartbeatDeliveryMode } from '@shared/protocol'
 import {
   useAgent, listSchedules, addSchedule, cancelSchedule,
   getHeartbeat, setHeartbeat, updateHeartbeat
-} from '../store/agent'
-import { useAsync } from '../lib/useAsync'
-import { parseSchedule, SCHEDULE_EXAMPLES } from '../lib/schedule'
-import { relTime, untilTime } from '../lib/format'
+} from '@/store/agent'
+import { useAsync } from '@/lib/useAsync'
+import { parseSchedule, SCHEDULE_EXAMPLES } from '@/lib/schedule'
+import { relTime, untilTime } from '@/lib/format'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError, PanelLoading } from './PanelState'
-import { useT } from '../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Prompts agendados e heartbeat da conversa aberta.

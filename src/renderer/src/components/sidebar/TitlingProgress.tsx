@@ -1,5 +1,5 @@
 import { WandSparkles } from 'lucide-react'
-import { useT } from '../../i18n'
+import { useT } from '@/i18n'
 
 /**
  * Progresso do lote de títulos, visível sem hover: são alguns segundos por
