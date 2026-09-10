@@ -5,6 +5,10 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# Necessário para o GITHUB_TOKEN nativo criar/atualizar a Release e anexar assets.
+permissions:
+  contents: write
+
 jobs:
   linux:
     runs-on: ubuntu-22.04
@@ -48,6 +52,17 @@ jobs:
             release/*.deb
             release/*.AppImage
 
+      # Em push de tag `v*`, anexa .deb e AppImage como assets da Release.
+      # É o que o `scripts/install.sh` consome (releases/latest). Sem isto, o
+      # pacote só existe como artefato de CI (zip, com login e retenção curta).
+      - name: Publicar assets na Release (só em tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.deb
+            release/*.AppImage
+
   macos:
     # O dmg só pode ser gerado em macOS: dmg-license é darwin-only e o
     # empacotamento usa hdiutil. Runner arm64 cobre Apple Silicon e Intel.
@@ -73,5 +88,15 @@ jobs:
         with:
           name: macos
           path: |
+            release/*.dmg
+            release/*.zip
+
+      # Anexa .dmg e .zip na mesma Release da tag (a action cria se não existir
+      # e atualiza se já existir — os dois jobs escrevem na mesma release).
+      - name: Publicar assets na Release (só em tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
             release/*.dmg
             release/*.zip
