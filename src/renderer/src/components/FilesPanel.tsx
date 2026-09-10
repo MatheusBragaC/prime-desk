@@ -189,6 +189,7 @@ export function FilesPanel({
           onClick={() => void tree.reload()}
           className="no-drag text-dim transition-colors hover:text-muted"
           title={t('common.refresh')}
+          aria-label={t('common.refresh')}
         >
           <RefreshCw
             size={14} strokeWidth={1.75}
@@ -207,7 +208,11 @@ export function FilesPanel({
               className="w-full bg-transparent text-sm text-fg outline-none placeholder:text-dim"
             />
             {filter && (
-              <button onClick={() => setFilter('')} className="shrink-0 text-dim hover:text-fg">
+              <button
+                onClick={() => setFilter('')}
+                aria-label={t('files.clearFilter')}
+                className="shrink-0 text-dim hover:text-fg"
+              >
                 <X size={14} strokeWidth={1.75} />
               </button>
             )}
