@@ -91,7 +91,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   }
 
   const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-white/[0.06] hover:text-fg'
+    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
   return (
     /*
@@ -103,7 +103,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     <div ref={ref} className="group/acct relative border-t border-[var(--p-line)]">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
+        className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-raise"
       >
         {/*
           Coluna de ícone de 20px, a mesma da linha de baixo: com 24px aqui e 14
@@ -114,7 +114,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
         <span
           className={
             'flex h-5 w-5 shrink-0 items-center justify-center rounded-full ' +
-            (label ? 'bg-white/[0.07] text-muted' : 'text-dim')
+            (label ? 'bg-chip text-muted' : 'text-dim')
           }
         >
           <UserRound size={13} strokeWidth={1.75} />
@@ -141,7 +141,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-2 right-2 z-dropdown mb-1.5 animate-fade-up rounded-lg border border-white/[0.1] bg-[var(--p-panel)] p-1 shadow-2xl shadow-black/70">
+        <div className="absolute bottom-full left-2 right-2 z-dropdown mb-1.5 animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop">
           {/* O provedor mora aqui: é de onde a credencial vem, não quem você é. */}
           {providerLabel && (
             <>
