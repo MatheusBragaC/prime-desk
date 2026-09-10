@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle
 } from 'lucide-react'
 import { useAgent } from '../store/agent'
 import { useT, setLang, getLang, LANGS } from '../i18n'
 import { usePopover } from '../lib/usePopover'
-import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
+import { logoutProvider, providerLabel as labelFor } from '../lib/env'
+import { useEnvironment } from '../lib/useEnvironment'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -13,32 +14,21 @@ import type { EnvStatus, UpdateCheck } from '../../../shared/protocol'
  * O Prime Desk não tem conta própria: o que existe é a credencial que o
  * `prime-agent` guarda. Mostramos o provedor autenticado e oferecemos entrar,
  * trocar e sair — sair equivale ao `/logout` do agente.
+ *
+ * Ambiente, nome e atualização vêm todos do `useEnvironment`: o badge só exibe.
  */
 export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const { t, lang } = useT()
-  const [status, setStatus] = useState<EnvStatus | null>(null)
+  const { status, update, userName, refresh } = useEnvironment(true)
   const [open, setOpen] = useState(false)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const notify = useAgent((s) => s.notify)
   const requestTerminal = useAgent((s) => s.requestTerminal)
   const ref = usePopover<HTMLDivElement>(() => setOpen(false), open)
 
-  const [userName, setUserName] = useState('')
-  const [update, setUpdate] = useState<UpdateCheck | null>(null)
-
-  const refresh = useCallback(async () => {
-    const r = await window.prime.checkEnvironment()
-    if (r.ok) setStatus(r.status)
-  }, [])
-
+  // A primeira leitura é do badge: o hook guarda o dado, não decide quando ler.
   useEffect(() => {
     void refresh()
-    void window.prime.appInfo().then((i) => setUserName(i.userName))
-    // Fora do caminho de boot e sem barulho: falha de rede aqui não é problema
-    // do usuário, e a checagem cai calada.
-    void window.prime.checkAgentUpdate().then((r) => {
-      if (r.ok) setUpdate(r.update)
-    })
   }, [refresh])
 
   /*
@@ -61,49 +51,6 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     })
   }
 
-  /*
-    Login e logout acontecem fora daqui — no terminal embutido, ou por `/logout`
-    numa conversa. O main já observa o `auth.json` e avisa quando muda; sem
-    assinar, o badge só atualizaria se a pessoa clicasse em "Atualizar".
-
-    O watch é global no main, mas Onboarding e AccountBadge nunca coexistem: o
-    Onboarding substitui a árvore inteira quando o ambiente está incompleto.
-  */
-  /*
-    Fim de uma aba de terminal com atualização pendente: redescobre o binário e
-    relê o ambiente. A troca de versão não mexe no `auth.json`, então o watch do
-    main não dispara — e o caminho do agente fica memorizado, podendo ter mudado
-    de prefixo. Não dá para saber qual aba fechou, mas o rescan é barato e
-    idempotente, e só roda quando havia update para fazer.
-  */
-  useEffect(() => {
-    if (!update?.available) return
-    const off = window.prime.on('terminal:exit', () => {
-      void window.prime.rescanAgent().then((r) => {
-        if (!r.ok) return
-        setStatus(r.status)
-        void window.prime.checkAgentUpdate().then((u) => {
-          if (u.ok) setUpdate(u.update)
-        })
-      })
-    })
-    return () => {
-      off()
-    }
-  }, [update?.available])
-
-  useEffect(() => {
-    const off = window.prime.on('onboarding:env', (status) => {
-      // Guarda de sanidade mantida: payload sem `auth` não descreve ambiente.
-      if (status?.auth) setStatus(status)
-    })
-    void window.prime.watchEnvironment()
-    return () => {
-      off()
-      void window.prime.unwatchEnvironment()
-    }
-  }, [])
-
   const provider = status?.auth.providers[0] ?? null
   const envKey = status?.auth.envKeys[0] ?? null
   const signedIn = Boolean(provider || envKey)
@@ -115,7 +62,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     nome de usuário e não era. Desce para o menu, junto do resto do técnico.
     Sem nome do sistema, o provedor volta a servir de rótulo.
   */
-  const providerLabel = provider ?? (envKey ? envKey.replace('_API_KEY', '').toLowerCase() : null)
+  const providerLabel = labelFor(provider, envKey)
   const label = signedIn ? (userName || providerLabel) : null
 
   function askSignOut() {
@@ -130,9 +77,10 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
       confirmLabel: t('acct.signOut'),
       danger: true,
       onConfirm: async () => {
-        const r = await window.prime.logoutProvider(provider)
-        if (!r?.ok) {
-          notify('error', r?.error ?? t('acct.signOutFailed'))
+        try {
+          await logoutProvider(provider)
+        } catch (err) {
+          notify('error', err instanceof Error ? err.message : t('acct.signOutFailed'))
           return
         }
         notify('info', t('acct.signedOut', { provider }))
