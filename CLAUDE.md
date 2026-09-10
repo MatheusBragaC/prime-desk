@@ -41,7 +41,39 @@ sem reinstalar. Apague o worktree ao terminar (`git worktree remove`).
 
 ---
 
-## 2. Verificação: o Electron não sobe aqui
+## 2. Comentário de código: sempre em inglês
+
+**Todo comentário novo é escrito em inglês** — comentário de linha, de bloco e
+JSDoc, em qualquer arquivo, em qualquer branch. Sem exceção por tipo de arquivo:
+`src/`, `scripts/`, workflows, configuração.
+
+Isso vale para comentário **novo ou reescrito**. Comentário existente em
+português não precisa ser traduzido de passagem: tradução em massa junto de
+mudança funcional esconde a mudança no diff. Se você já está reescrevendo o
+comentário por outro motivo, escreva a versão nova em inglês.
+
+O que **não** muda:
+
+- **Texto de interface** continua no `i18n`, nos três idiomas — nada de string
+  visível em inglês cravada no componente (o `check:ui` cobra isso).
+- **Mensagem de commit e descrição de PR** seguem em português, como o resto do
+  histórico deste repositório.
+
+A regra de conteúdo do `CONTRIBUTING.md` continua valendo por cima do idioma:
+comentário explica **o porquê**, não o quê. Comentário em inglês que narra o
+código é tão inútil quanto em português.
+
+```ts
+// Bad: narrates the code, and in any language it adds nothing.
+// Increment the counter
+count += 1
+
+// Good: says why, which the code cannot.
+// Counts actions, not messages: two steering entries can arrive in one turn.
+count += 1
+```
+
+## 3. Verificação: o Electron não sobe aqui
 
 `npm run dev` **não funciona** no shell do agente (sem GPU e sem `/dev/shm`
 utilizável: o browser-level CDP responde, mas `Runtime.evaluate` estoura). Para
@@ -76,7 +108,7 @@ Se algo não aparece na tela, **desconfie do stub antes do código.**
 
 ---
 
-## 3. Testes: lógica pura, sem framework
+## 4. Testes: lógica pura, sem framework
 
 `npm run test` roda `scripts/test/run.mjs`, que empacota cada módulo com esbuild
 e importa. Nove suítes hoje. Para adicionar uma, acrescente ao array `SUITES`:
@@ -96,7 +128,7 @@ de verdade, porque é ele que a heurística precisa continuar reconhecendo.
 
 ---
 
-## 4. Contratos que quebram em silêncio
+## 5. Contratos que quebram em silêncio
 
 Cada item aqui já causou um defeito invisível neste repo.
 
@@ -115,7 +147,7 @@ Cada item aqui já causou um defeito invisível neste repo.
 
 ---
 
-## 5. Não invente o `prime-agent` — vá ler
+## 6. Não invente o `prime-agent` — vá ler
 
 Versão instalada: **0.9.4**. O fonte compilado está em
 `~/.npm-global/lib/node_modules/prime-agent/dist/` e **é a fonte da verdade**,
@@ -141,7 +173,7 @@ front-end e a ordem de correção sugerida.
 
 ---
 
-## 6. Empacotar e publicar
+## 7. Empacotar e publicar
 
 ```bash
 # .deb local para teste
@@ -170,7 +202,7 @@ AppImage, `.dmg` e `.zip` na Release. Faça isso só quando o usuário pedir.
 
 ---
 
-## 7. Postura
+## 8. Postura
 
 - **Verifique contra o real**, não contra a memória. Rodar o binário, ler o
   arquivo, medir. Quase todo achado bom desta base veio daí.
