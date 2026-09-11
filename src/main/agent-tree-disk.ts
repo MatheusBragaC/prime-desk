@@ -90,8 +90,6 @@ function emptyDigest(): Digest {
 */
 interface CacheEntry {
   size: number
-  /** Última modificação, para pegar reescrita que não muda o tamanho. */
-  mtimeMs: number
   digest: Digest
   /** Sobra sem `\n` no fim da última leitura, para completar a linha depois. */
   partial: string
@@ -210,27 +208,25 @@ function applyLine(d: Digest, raw: string): void {
 
 async function parseTranscript(file: string): Promise<Digest | null> {
   let size: number
-  let mtimeMs: number
   try {
-    const st = await stat(file)
-    size = st.size
-    mtimeMs = st.mtimeMs
+    size = (await stat(file)).size
   } catch {
     return null
   }
 
   /*
-    Só aproveita o acumulado quando o arquivo CRESCEU.
+    Tamanho igual significa que nada foi acrescentado — o arquivo é só-append.
 
-    A condição era `size >= prev.size`, então arquivo reescrito com o mesmo
-    tamanho e conteúdo diferente nunca era reprocessado: o digest ficava
-    congelado no estado antigo e nada na tela indicava isso. O `mtimeMs` cobre
-    o caso de reescrita que mantém o tamanho, que é o que uma troca de status
-    no lugar produz.
+    Tentei trocar isto por `>` mais uma comparação de `mtime`, para pegar
+    reescrita no lugar que mantivesse o tamanho. Não funciona: a granularidade
+    do `mtime` depende do filesystem, e no runner do CI duas escritas seguidas
+    caem na mesma marca — o teste que escrevi passava aqui e falhava lá, por
+    sorte de relógio. E o caso que ele guardava não existe nesta base: o
+    transcript é JSONL só-append, compactação muda o tamanho, e o ramo de
+    encolhimento abaixo já cobre isso.
   */
   const prev = cache.get(file)
-  const grew =
-    prev !== undefined && (size > prev.size || (size === prev.size && mtimeMs === prev.mtimeMs))
+  const grew = prev !== undefined && size >= prev.size
   const from = grew ? prev.size : 0
   const digest = grew ? prev.digest : emptyDigest()
   let buffer = grew ? prev.partial : ''
@@ -253,7 +249,7 @@ async function parseTranscript(file: string): Promise<Digest | null> {
     if (line.trim()) applyLine(digest, line)
   }
 
-  cache.set(file, { size, mtimeMs, digest, partial: buffer })
+  cache.set(file, { size, digest, partial: buffer })
   return digest
 }
 

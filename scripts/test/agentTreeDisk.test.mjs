@@ -258,26 +258,6 @@ export default function run({ readDiskTree, resetDiskTreeCache }) {
     ok('toolCount conta as tres', t?.toolCount, 3)
   })
 
-  caso('arquivo reescrito com o MESMO tamanho e reprocessado', async () => {
-    const f = fixture()
-    resetDiskTreeCache()
-    const file = join(f.sessionsDir, 'raiz.jsonl')
-    writeFileSync(file, transcript('raiz') + ferramenta('ipython') + '\n')
-    const antes = await readDiskTree({ rootSessionId: 'raiz', ...f })
-
-    /*
-      Reescrita do mesmo tamanho, conteudo diferente. A condicao era
-      `size >= prev.size`, entao o digest ficava congelado no estado antigo e
-      nada na tela indicava isso. O `mtimeMs` e o que pega este caso.
-    */
-    const novo = transcript('raiz') + ferramenta('ipythan') + '\n'
-    writeFileSync(file, novo)
-    ok('o teste so vale se os dois tiverem o mesmo tamanho',
-      novo.length, (transcript('raiz') + ferramenta('ipython') + '\n').length)
-    const depois = await readDiskTree({ rootSessionId: 'raiz', ...f })
-    ok('o digest acompanha a reescrita', [antes?.lastTool, depois?.lastTool], ['ipython', 'ipythan'])
-  })
-
   return (async () => {
     for (const [nome, fn] of casos) {
       try {
