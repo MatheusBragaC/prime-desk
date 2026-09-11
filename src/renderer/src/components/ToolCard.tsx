@@ -62,6 +62,18 @@ export function ToolCard({
   const code = codeFrom(exec.args)
 
   /*
+    Onde a causa costuma estar: `stderr` quando existe, senão a ÚLTIMA linha
+    útil da saída — traceback de Python termina na exceção, e é ela que importa,
+    não a primeira linha do rastro.
+  */
+  const motivo = (() => {
+    const fonte = exec.stderr?.trim() || exec.text?.trim() || ''
+    if (!fonte) return ''
+    const linhas = fonte.split('\n').map((l) => l.trim()).filter(Boolean)
+    return (linhas[linhas.length - 1] ?? '').slice(0, 160)
+  })()
+
+  /*
     Relógio ao vivo enquanto roda. Antes o card mostrava o mesmo spinner para
     uma chamada de dois segundos e para uma de quarenta minutos: a única
     diferença perceptível era a paciência de quem olhava.
@@ -124,6 +136,23 @@ export function ToolCard({
         {exec.status === 'ok' && <IconDone className="shrink-0 text-ok" />}
         {failed && <IconFailed className="shrink-0 text-err" />}
       </button>
+
+      {/*
+        O motivo da falha, sem precisar abrir.
+
+        Antes a falha era só o ícone no cabeçalho: para saber POR QUE, era
+        preciso expandir o cartão — e num turno com seis chamadas isso é seis
+        cliques para achar a que quebrou. A primeira linha do erro é onde a
+        causa costuma estar; o resto continua dentro.
+      */}
+      {failed && !open && motivo && (
+        <div className="flex items-start gap-2 border-t border-err/20 bg-err/[0.06] px-3 py-2">
+          <IconFailed size={13} className="mt-[2px] shrink-0 text-err" />
+          <span className="min-w-0 flex-1 truncate font-mono text-xs leading-snug text-err">
+            {motivo}
+          </span>
+        </div>
+      )}
 
       {open && (
         <div className="animate-fade-up border-t border-[var(--p-line)]">
