@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
-  ChevronRight, GitBranch, Loader2, CheckCircle2, Circle, CornerDownRight,
-  MessageSquare, Code2, RefreshCw, Eye, Radio
+  ChevronRight, Loader2, CheckCircle2, Circle, CornerDownRight, MessageSquare, Code2, RefreshCw, Eye, Radio
 } from 'lucide-react'
 import type { AgentNode } from '@shared/protocol'
 import { useAgent, observeSession } from '@/store/agent'
@@ -12,6 +11,7 @@ import { countWorking } from '@/lib/agentMessage'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty, PanelError } from './PanelState'
 import { useT } from '@/i18n'
+import { IconAgents } from '@/icons'
 
 function StatusDot({ node }: { node: AgentNode }) {
   if (node.status === 'working') {
@@ -175,7 +175,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
       defaultWidth={310}
       min={240}
       max={680}
-      icon={<GitBranch size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      icon={<IconAgents className="text-primarySoft" />}
       title={t('tree.title')}
       onClose={onClose}
       bodyClassName="min-h-0 flex-1 overflow-y-auto py-1.5"

@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ChevronRight, Terminal, Check, X, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
+import { ChevronRight, Terminal, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
 import type { ToolExec } from '@/store/agent'
 import { fmtDuration, fmtElapsed } from '@/lib/format'
 import { summary, codeFrom } from '@/lib/toolSummary'
 import { useTurnClock, WARN_AFTER_MS } from '@/lib/useTurnActivity'
 import { useT } from '@/i18n'
+import { IconDone, IconFailed } from '@/icons'
 
 const MAX_PREVIEW = 4000
 
@@ -120,8 +121,8 @@ export function ToolCard({
             className={'shrink-0 animate-spin ' + (slow ? 'text-warn' : 'text-primary')}
           />
         )}
-        {exec.status === 'ok' && <Check size={14} strokeWidth={1.75} className="shrink-0 text-ok" />}
-        {failed && <X size={14} strokeWidth={1.75} className="shrink-0 text-err" />}
+        {exec.status === 'ok' && <IconDone className="shrink-0 text-ok" />}
+        {failed && <IconFailed className="shrink-0 text-err" />}
       </button>
 
       {open && (

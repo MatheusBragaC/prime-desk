@@ -1,11 +1,12 @@
 import type { RefObject } from 'react'
 import { useEffect } from 'react'
-import { Loader2, Zap, Clock, Bot, GitBranch, ChevronRight } from 'lucide-react'
+import { Loader2, Zap, Clock, Bot, ChevronRight } from 'lucide-react'
 import { useAgent, setSteeringMode, setFollowUpMode, refreshTree } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
 import { parseQueueItem, countWorking } from '@/lib/agentMessage'
 import type { QueueMode } from '@shared/protocol'
 import { useT } from '@/i18n'
+import { IconAgents } from '@/icons'
 
 /**
  * Conteúdo da fila de mensagens.
@@ -146,7 +147,7 @@ export function QueuePopover({ onClose, trigger }: {
               }}
               className="flex w-full items-center gap-2 px-3 py-1 text-left text-xs text-muted transition-colors hover:bg-hover hover:text-fg"
             >
-              <GitBranch size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+              <IconAgents size={13} className="shrink-0 text-primarySoft" />
               <span className="min-w-0 flex-1">
                 {working > 0
                   ? t('queue.agentsWorking', { working, total: subagents })
