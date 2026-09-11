@@ -1,6 +1,6 @@
 {
   "name": "prime-desk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Interface gráfica desktop para o prime-agent",
   "author": {
