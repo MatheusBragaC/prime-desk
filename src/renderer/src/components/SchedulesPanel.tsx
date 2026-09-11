@@ -71,7 +71,7 @@ function ScheduleField({ value, onChange }: {
   value: string
   onChange: (v: string) => void
 }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const parsed = useMemo(() => parseSchedule(value), [value])
 
   return (
@@ -89,7 +89,7 @@ function ScheduleField({ value, onChange }: {
           <span className="text-dim">
             {t(`sched.kind.${parsed.parsed.kind}`)}
             {parsed.parsed.nextRunAt
-              ? ` · ${t('sched.nextIn', { when: untilTime(parsed.parsed.nextRunAt.toISOString()) })}`
+              ? ` · ${t('sched.next', { when: untilTime(parsed.parsed.nextRunAt.toISOString(), lang) })}`
               : ` · ${t('sched.cronServer')}`}
           </span>
         ) : (
@@ -101,7 +101,7 @@ function ScheduleField({ value, onChange }: {
 }
 
 export function SchedulesPanel({ onClose }: { onClose: () => void }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const notify = useAgent((s) => s.notify)
   const requestConfirm = useAgent((s) => s.requestConfirm)
   const bridgeReady = useAgent((s) => s.status === 'ready')
@@ -356,8 +356,8 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
               <div className="mt-1 line-clamp-3 text-xs leading-snug text-fg">{job.prompt}</div>
 
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-micro text-dim">
-                {job.nextRunAt && <span>{t('sched.next', { when: untilTime(job.nextRunAt) })}</span>}
-                {job.lastRunAt && <span>{t('sched.last', { when: relTime(job.lastRunAt) })}</span>}
+                {job.nextRunAt && <span>{t('sched.next', { when: untilTime(job.nextRunAt, lang) })}</span>}
+                {job.lastRunAt && <span>{t('sched.last', { when: relTime(job.lastRunAt, lang) })}</span>}
                 <span>{t('sched.runs', { n: job.runCount })}</span>
               </div>
 
@@ -395,7 +395,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                     : t('sched.deliverySteer')}
                 </span>
                 {heartbeat.nextRunAt && (
-                  <span>{t('sched.next', { when: untilTime(heartbeat.nextRunAt) })}</span>
+                  <span>{t('sched.next', { when: untilTime(heartbeat.nextRunAt, lang) })}</span>
                 )}
                 <span>{t('sched.runs', { n: heartbeat.runCount })}</span>
               </div>

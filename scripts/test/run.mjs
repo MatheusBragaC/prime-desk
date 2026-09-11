@@ -104,6 +104,24 @@ const SUITES = [
     needsShims: false
   },
   {
+    /*
+      Paridade dos três dicionários. O módulo só puxa `useSyncExternalStore`
+      do react, que a casca padrão não tem; e `DICTS` é interno, então a cópia
+      empacotada exporta para a suíte poder comparar os três lado a lado.
+    */
+    test: './i18nParity.test.mjs',
+    src: 'src/renderer/src/i18n/index.ts',
+    needsShims: true,
+    reactShim: 'reactSync.js',
+    prepare: (source) => source.replace('const DICTS:', 'export const DICTS:'),
+    shims: { 'reactSync.js': 'export const useSyncExternalStore=(_s,get)=>get()\n' }
+  },
+  {
+    test: './formatIntl.test.mjs',
+    src: 'src/renderer/src/lib/format.ts',
+    needsShims: false
+  },
+  {
     test: './agentUsage.test.mjs',
     src: 'src/renderer/src/lib/agentUsage.ts',
     needsShims: false
