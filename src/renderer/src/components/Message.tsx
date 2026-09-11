@@ -6,7 +6,7 @@ import { DocumentCard } from './DocumentCard'
 import { detectDocument } from '@/lib/documentDetect'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
-import { fmtTokens } from '@/lib/format'
+import { fmtCost, fmtTokens } from '@/lib/format'
 import { useSmoothText } from '@/lib/useSmoothText'
 import { balanceMarkdown } from '@/lib/markdownStream'
 import { splitStream } from '@/lib/splitStream'
@@ -192,7 +192,9 @@ export const Message = memo(function Message({
           {msg.usage && !msg.streaming && msg.usage.totalTokens > 0 && (
             <div className="mt-1.5 font-mono text-xs text-dim opacity-0 transition-opacity group-hover:opacity-100">
               {fmtTokens(msg.usage.totalTokens)} tokens
-              {msg.usage.cost?.total ? ` · $${msg.usage.cost.total.toFixed(4)}` : ''}
+              {/* `fmtCost`, not a local toFixed: four decimals here against two
+                  everywhere else made the same spend read as two numbers. */}
+              {msg.usage.cost?.total ? ` · ${fmtCost(msg.usage.cost.total)}` : ''}
             </div>
           )}
         </div>

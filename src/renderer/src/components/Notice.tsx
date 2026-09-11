@@ -25,7 +25,7 @@ export function Notice() {
         className={
           'pointer-events-auto flex max-w-[620px] animate-fade-up items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl shadow-drop ' +
           (err
-            ? 'border-err/30 bg-[#20121a] text-err'
+            ? 'border-err/30 bg-errSurface text-err'
             : 'border-lineStrong bg-[var(--p-panel)] text-muted')
         }
       >

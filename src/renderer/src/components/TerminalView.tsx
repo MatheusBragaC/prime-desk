@@ -3,6 +3,11 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
+/** Reads a design token off the root element, resolved to its literal value. */
+function token(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
 /**
  * Um shell, ligado a um PTY do processo principal.
  *
@@ -37,17 +42,26 @@ export function TerminalView({ id, cwd, command, onExit }: {
     if (!el) return
 
     const term = new Terminal({
-      fontFamily: 'var(--p-mono), monospace',
+      /*
+        Resolved values, not `var(...)`.
+
+        xterm measures the glyph in a detached node and paints on a canvas, so
+        it never inherits from the document: a `var()` here reaches neither the
+        measurer nor the canvas. This was `var(--p-mono)` — a name that does not
+        exist (the token is `--font-mono`) — so every terminal silently fell
+        back to the platform monospace, and the theme colours were written by
+        hand right below it to compensate.
+      */
+      fontFamily: token('--font-mono') || 'monospace',
       fontSize: 12.5,
       lineHeight: 1.35,
       cursorBlink: true,
-      // O tema segue os tokens do app: um terminal com fundo próprio brigaria
-      // com o painel em volta.
       theme: {
-        background: '#08080a',
-        foreground: '#c9c9d1',
-        cursor: '#7a7aff',
-        selectionBackground: 'rgba(122,122,255,.28)'
+        background: token('--p-code-bg'),
+        foreground: token('--p-code-fg'),
+        cursor: token('--p-primary'),
+        // Mirrors the `::selection` rule in theme.css, which is the accent at 35%.
+        selectionBackground: `rgb(${token('--p-primary-rgb')} / 0.35)`
       },
       allowProposedApi: true
     })
