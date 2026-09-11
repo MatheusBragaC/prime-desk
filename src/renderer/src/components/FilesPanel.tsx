@@ -95,14 +95,16 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
             <button
               onClick={() => onQuote(entry)}
               title={t('files.quote')}
-              className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
+              aria-label={t('files.quote')}
+              className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft focus-visible:opacity-100 group-hover:opacity-100"
             >
               <AtSign size={14} strokeWidth={1.75} />
             </button>
             <button
               onClick={() => void window.prime.revealFile(entry.path)}
               title={t('files.openExternal')}
-              className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
+              aria-label={t('files.openExternal')}
+              className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft focus-visible:opacity-100 group-hover:opacity-100"
             >
               <ExternalLink size={14} strokeWidth={1.75} />
             </button>

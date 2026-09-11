@@ -169,7 +169,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
           size={13} strokeWidth={1.75}
           className={
             'shrink-0 text-dim transition-all ' +
-            (open ? 'rotate-180 opacity-100' : 'opacity-0 group-hover/acct:opacity-100')
+            (open ? 'rotate-180 opacity-100' : 'opacity-0 group-focus-within/acct:opacity-100 group-hover/acct:opacity-100')
           }
         />
       </button>

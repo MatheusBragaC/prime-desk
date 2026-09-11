@@ -71,7 +71,8 @@ export function ExecutionMenu({
                 <button
                   onClick={() => onRemove(c.id)}
                   title={t('exec.removeConn')}
-                  className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/conn:opacity-100"
+                  aria-label={t('exec.removeConn')}
+                  className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err focus-visible:opacity-100 group-hover/conn:opacity-100"
                 >
                   <Trash2 size={14} strokeWidth={1.75} />
                 </button>

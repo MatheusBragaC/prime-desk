@@ -399,7 +399,8 @@ export function Composer({
                 <button
                   onClick={() => setAtts((list) => list.filter((_, j) => j !== i))}
                   title={t('composer.removeAttachment')}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border border-lineStrong bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg group-hover/att:opacity-100"
+                  aria-label={t('composer.removeAttachment')}
+                  className="absolute -right-1.5 -top-1.5 rounded-full border border-lineStrong bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/att:opacity-100"
                 >
                   <X size={14} strokeWidth={1.75} />
                 </button>
@@ -450,6 +451,7 @@ export function Composer({
             disabled={!ready}
             className="rounded-md p-1.5 text-dim transition-colors hover:bg-elevated hover:text-muted disabled:opacity-40"
             title={t('composer.attach')}
+            aria-label={t('composer.attach')}
           >
             <Plus size={16} strokeWidth={1.75} />
           </button>
@@ -457,6 +459,7 @@ export function Composer({
             onClick={onOpenPalette}
             className="rounded-md p-1.5 text-dim transition-colors hover:bg-elevated hover:text-muted"
             title={t('composer.commands').replace('Ctrl', mod)}
+            aria-label={t('composer.commands').replace('Ctrl', mod)}
           >
             <Command size={16} strokeWidth={1.75} />
           </button>
@@ -484,6 +487,7 @@ export function Composer({
               onClick={() => void abortTurn()}
               className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-elevated text-fg transition-colors hover:bg-hoverStrong"
               title={t('composer.stop')}
+              aria-label={t('composer.stop')}
             >
               <Square size={14} strokeWidth={1.75} fill="currentColor" />
             </button>
@@ -493,6 +497,7 @@ export function Composer({
               disabled={!value.trim() || !ready}
               className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-fg transition-colors hover:bg-primarySoft disabled:bg-elevated disabled:text-dim"
               title={t('composer.send')}
+              aria-label={t('composer.send')}
             >
               <ArrowUp size={16} strokeWidth={2} />
             </button>

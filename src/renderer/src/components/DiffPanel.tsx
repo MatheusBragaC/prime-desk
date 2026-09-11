@@ -102,6 +102,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
           onClick={() => void list.reload()}
           className="no-drag rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-muted"
           title={t('common.refresh')}
+          aria-label={t('common.refresh')}
         >
           <RefreshCw
             size={16} strokeWidth={1.75}

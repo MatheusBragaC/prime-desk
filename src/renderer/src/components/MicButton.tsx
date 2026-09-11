@@ -149,6 +149,7 @@ export function MicButton({ onPartial, onFinal }: {
           void mic.refreshDevices()
         }}
         title={t('mic.devices')}
+        aria-label={t('mic.devices')}
         className="rounded-md p-0.5 text-dim transition-colors hover:bg-elevated hover:text-muted"
       >
         <ChevronDown size={13} strokeWidth={1.75} />

@@ -4,5 +4,6 @@
   "alpha": 0,
   "offscale": 2,
   "i18nInline": 0,
-  "hardcoded": 10
+  "hardcoded": 10,
+  "ghostFocus": 1
 }

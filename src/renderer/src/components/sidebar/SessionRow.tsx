@@ -117,7 +117,7 @@ export function SessionRow({
         className={
           'pointer-events-none absolute right-0 top-0 h-8 w-11 rounded-r-md bg-gradient-to-l to-transparent transition-opacity ' +
           (active ? 'from-[var(--p-selected)] via-[var(--p-selected)]' : 'from-elevated via-elevated') +
-          (menu ? ' opacity-100' : ' opacity-0 group-hover:opacity-100')
+          (menu ? ' opacity-100' : ' opacity-0 group-focus-within:opacity-100 group-hover:opacity-100')
         }
       />
 
@@ -129,9 +129,10 @@ export function SessionRow({
         }}
         className={
           'absolute right-1 top-1.5 rounded p-0.5 transition-opacity hover:text-fg ' +
-          (menu ? 'text-fg opacity-100' : 'text-dim opacity-0 group-hover:opacity-100')
+          (menu ? 'text-fg opacity-100' : 'text-dim opacity-0 focus-visible:opacity-100 group-hover:opacity-100')
         }
         title={t('menu.actions')}
+        aria-label={t('menu.actions')}
       >
         <MoreHorizontal size={14} strokeWidth={1.75} />
       </button>
