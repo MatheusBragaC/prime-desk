@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import {
-  Layers, Target, AlertTriangle, Minimize2, PanelLeft,
-  SquareTerminal, FileDiff, FolderTree, GitBranch, CalendarClock
+  Layers, Target, AlertTriangle, Minimize2, PanelLeft, SquareTerminal, FileDiff, FolderTree, CalendarClock
 } from 'lucide-react'
 import { useAgent, compactNow } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
@@ -9,6 +8,7 @@ import { useWinControlsInset } from '@/lib/platform'
 import { fmtCost, fmtTokens } from '@/lib/format'
 import { useT } from '@/i18n'
 import type { Dock } from '@/lib/types'
+import { IconAgents } from '@/icons'
 
 /**
  * Anel de uso da janela de contexto.
@@ -325,7 +325,7 @@ export function StatusBar({
           onClick={() => onDock('files')}
         />
         <ToolButton
-          icon={<GitBranch size={16} strokeWidth={1.75} />}
+          icon={<IconAgents />}
           title={t('toolbar.agents')}
           active={dock === 'agents'}
           badge={tree?.subagents}

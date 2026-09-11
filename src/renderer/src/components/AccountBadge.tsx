@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp,
-  ArrowUpCircle, Download
+  UserRound, LogOut, RefreshCw, KeyRound, Check, Globe, ChevronUp, ArrowUpCircle, Download
 } from 'lucide-react'
 import { useAgent } from '@/store/agent'
 import { useT, setLang, getLang, LANGS } from '@/i18n'
@@ -10,6 +9,7 @@ import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
 import { useEnvironment } from '@/lib/useEnvironment'
 import type { UpdateCheck } from '@shared/protocol'
 import { Button } from '@/components/ui/Button'
+import { IconTerminalPanel } from '@/icons'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -221,7 +221,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             }}
             title={t('acct.switchHint')}
           >
-            <Terminal size={14} strokeWidth={1.75} />
+            <IconTerminalPanel size={14} />
             {label ? t('acct.switch') : t('acct.signIn')}
           </Button>
 
