@@ -42,7 +42,7 @@ export function ConfirmDialog() {
             {t('common.cancel')}
           </Button>
           <Button
-            variant={confirm.danger ? 'danger' : 'primary'}
+            variant={confirm.danger ? 'danger' : 'accent'}
             onClick={() => void run()}
             disabled={busy}
             icon={busy ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : undefined}

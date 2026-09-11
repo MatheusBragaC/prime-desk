@@ -193,7 +193,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
             <div className="mt-3 flex items-center gap-2">
               <Button
-                variant="primary"
+                variant="accent"
                 onClick={() => void install()}
                 disabled={stage === 'installing'}
                 icon={
@@ -207,7 +207,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
               </Button>
               <Button
-                variant="subtle"
+                variant="outline"
                 onClick={() => void refreshEnvironment()}
                 icon={<RefreshCw size={14} strokeWidth={1.75} />}
               >
@@ -336,7 +336,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
             <div className="mt-3">
               <Button
-                variant="primary"
+                variant="accent"
                 onClick={() => void refreshEnvironment()}
                 icon={<RefreshCw size={14} strokeWidth={1.75} />}
               >

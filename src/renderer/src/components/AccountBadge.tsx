@@ -9,6 +9,7 @@ import { usePopover } from '@/lib/usePopover'
 import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
 import { useEnvironment } from '@/lib/useEnvironment'
 import type { UpdateCheck } from '@shared/protocol'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -124,8 +125,6 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     })
   }
 
-  const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
   return (
     /*
@@ -195,9 +194,9 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             {t('lang.title')}
           </div>
           {LANGS.map((l) => (
-            <button
+            <Button menuItem
               key={l.code}
-              className={item}
+              
               onClick={() => {
                 setLang(l.code)
                 setOpen(false)
@@ -206,13 +205,13 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
               <Globe size={14} strokeWidth={1.75} />
               <span className="flex-1">{l.label}</span>
               {getLang() === l.code && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
-            </button>
+            </Button>
           ))}
 
           <div className="my-1 border-t border-[var(--p-line)]" />
 
-          <button
-            className={item}
+          <Button menuItem
+            
             onClick={() => {
               setOpen(false)
               // `/login` é interativo (escolha de provedor no TUI + OAuth no
@@ -224,7 +223,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
           >
             <Terminal size={14} strokeWidth={1.75} />
             {label ? t('acct.switch') : t('acct.signIn')}
-          </button>
+          </Button>
 
           {envKey && !provider && (
             <div className="flex items-start gap-2 px-2 py-1.5 text-xs leading-snug text-dim">
@@ -234,36 +233,36 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
           )}
 
           {update?.available && (
-            <button className={item + ' text-primarySoft hover:text-primarySoft'} onClick={askUpdate}>
+            <Button menuItem variant="accent" onClick={askUpdate}>
               <ArrowUpCircle size={14} strokeWidth={1.75} />
               <span className="flex-1">{t('update.available')}</span>
               <span className="font-mono text-micro text-dim">{update.latest}</span>
-            </button>
+            </Button>
           )}
 
           {appUpdate?.update.available && (
-            <button
-              className={item + ' text-primarySoft hover:text-primarySoft'}
+            <Button menuItem
+              variant="accent"
               onClick={askAppUpdate}
             >
               <Download size={14} strokeWidth={1.75} />
               <span className="flex-1">{t('appUpdate.available')}</span>
               <span className="font-mono text-micro text-dim">{appUpdate.update.latest}</span>
-            </button>
+            </Button>
           )}
 
-          <button className={item} onClick={() => void refresh()}>
+          <Button menuItem onClick={() => void refresh()}>
             <RefreshCw size={14} strokeWidth={1.75} />
             {t('common.refresh')}
-          </button>
+          </Button>
 
           {provider && (
             <>
               <div className="my-1 border-t border-[var(--p-line)]" />
-              <button className={item + ' text-err hover:text-err'} onClick={askSignOut}>
+              <Button menuItem variant="danger" onClick={askSignOut}>
                 <LogOut size={14} strokeWidth={1.75} />
                 {t('acct.signOut')}
-              </button>
+              </Button>
             </>
           )}
 
