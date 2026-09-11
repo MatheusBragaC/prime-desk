@@ -41,7 +41,7 @@ function TaskBadge({ node }: { node: AgentNode }) {
 }
 
 function Node({ node, level }: { node: AgentNode; level: number }) {
-  const { t } = useT()
+  const { t, lang } = useT()
   const [open, setOpen] = useState(level < 2)
   const [showCode, setShowCode] = useState(false)
   const hasChildren = node.children.length > 0
@@ -108,7 +108,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
               {node.messageCount}
             </span>
             {node.modelName && <span className="truncate">{node.modelName}</span>}
-            {node.lastActivityAt && <span>{relTime(node.lastActivityAt)}</span>}
+            {node.lastActivityAt && <span>{relTime(node.lastActivityAt, lang)}</span>}
             {/*
               Gasto próprio do nó — `usage` vem ausente (não zero) em versão do
               prime-agent que não relata isso, ou sessão que ainda não gastou

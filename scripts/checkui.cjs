@@ -78,7 +78,16 @@ const found = {
     const cls = m[0].replace(/disabled:opacity-0/g, '')
     if (!/\bopacity-0\b/.test(cls)) return false
     return !/(?:focus-visible|group-focus-within(?:\/[a-z]+)?):opacity-100/.test(cls)
-  })
+  }),
+  /*
+    Locale cravado em chamada de formatação.
+
+    `relTime` caía num `toLocaleDateString('pt-BR')` fixo, então a data
+    absoluta saía em português com a interface em inglês, e não havia como
+    perceber sem trocar de idioma na mão. Formatação passa pelo `lang` da
+    interface — ver `locale()` em lib/format.ts.
+  */
+  intlBypass: hits(/(?:toLocale\w*|Intl\.\w+)\(\s*['"][a-z]{2}(?:-[A-Z]{2})?['"]/g, () => true)
 }
 
 function hits(re, keep, scope = files) {
@@ -130,6 +139,12 @@ const MEASURES = [
     label: 'escondido por opacity-0 sem foco visivel',
     mode: 'ratchet',
     fix: 'controle: focus-visible:opacity-100; adorno dentro de controle: group-focus-within:opacity-100'
+  },
+  {
+    key: 'intlBypass',
+    label: 'locale cravado em toLocale*() ou new Intl.*()',
+    mode: 'zero',
+    fix: 'passe o lang da interface (ver locale() em lib/format.ts)'
   }
 ]
 
