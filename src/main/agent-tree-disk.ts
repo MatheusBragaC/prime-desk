@@ -341,7 +341,10 @@ async function subDirs(dir: string): Promise<string[]> {
 const ORFAO_APOS_MS = 3 * 60_000
 
 function statusOf(meta: SubagentMeta, ultimaAtividade: string): AgentNode['status'] {
-  if (meta.status === 'completed' || meta.status === 'deleted') return 'done'
+  if (meta.status === 'completed') return 'done'
+  // Descartado pelo pai depois de usar (`rlm.delete_subagent`): terminou e foi
+  // dispensado. Não é o mesmo que nunca ter começado.
+  if (meta.status === 'deleted') return 'ended'
   if (meta.status !== 'running') return 'idle'
 
   /*
@@ -352,7 +355,7 @@ function statusOf(meta: SubagentMeta, ultimaAtividade: string): AgentNode['statu
   */
   const marca = Date.parse(ultimaAtividade || meta.updatedAt || '')
   if (Number.isNaN(marca)) return 'working'
-  return Date.now() - marca > ORFAO_APOS_MS ? 'idle' : 'working'
+  return Date.now() - marca > ORFAO_APOS_MS ? 'stale' : 'working'
 }
 
 async function readSubagent(

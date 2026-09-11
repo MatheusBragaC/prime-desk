@@ -159,8 +159,13 @@ export default function run({ readDiskTree, resetDiskTreeCache }) {
       [1, 'props-a', 2])
     ok('running vira trabalhando', porNome['fix-tipagem'].status, 'working')
     ok('completed vira concluido', porNome['audit-tipagem'].status, 'done')
-    ok('deleted tambem e concluido, nao ocioso',
-      porNome['audit-tipagem'].children[0].status, 'done')
+    /*
+      `deleted` e' descartado pelo pai depois de usar: terminou e foi
+      dispensado. Tem nome proprio porque cair em `done` o fazia parecer
+      entrega normal, e cair em `idle` o fazia parecer que nunca comecou.
+    */
+    ok('deleted tem estado proprio, nao e done nem idle',
+      porNome['audit-tipagem'].children[0].status, 'ended')
     ok('respondeu sai de agent_message.send, nao de ter terminado',
       [porNome['audit-tipagem'].replied, porNome['fix-tipagem'].replied], [true, false])
     ok('raiz sabe que tem filho rodando', t?.hasRunningChildren, true)
@@ -224,7 +229,7 @@ export default function run({ readDiskTree, resetDiskTreeCache }) {
       morre. Sem sinal recente a afirmacao cai, em vez de o spinner prometer
       atividade que nao existe ha horas.
     */
-    ok('o que parou ha quatro horas vira ocioso', porNome['orfao'].status, 'idle')
+    ok('o que parou ha quatro horas vira sem sinal', porNome['orfao'].status, 'stale')
     ok('a raiz nao conta o orfao como filho rodando', t?.hasRunningChildren, true)
   })
 

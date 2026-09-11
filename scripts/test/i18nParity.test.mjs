@@ -20,6 +20,7 @@ import { join } from 'node:path'
 */
 const PREFIXOS_DINAMICOS = [
   'thinking.',
+  'tree.state.',
   'welcome.',
   'queue.phase.',
   'sched.status.',

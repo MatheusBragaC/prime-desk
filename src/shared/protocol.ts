@@ -300,7 +300,13 @@ export interface AgentNode {
   rlmChildId?: string
   /** Código Python que originou o subagente, reportado pelo daemon. */
   spawnCode?: string
-  status: 'working' | 'idle' | 'done'
+  /**
+   * `stale` é `running` que parou de dar sinal — o arquivo diz que roda, mas
+   * ninguém reescreve quando o worker morre. `ended` é sessão descartada de
+   * propósito pelo pai. Os dois caíam em `idle`/`done` e sumiam na mesma
+   * aparência de quem nunca começou.
+   */
+  status: 'working' | 'idle' | 'done' | 'stale' | 'ended'
   taskState: string
   replied: boolean
   hasRunningChildren: boolean
