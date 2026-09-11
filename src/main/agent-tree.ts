@@ -163,6 +163,61 @@ function collectIds(nodes: AgentNode[], into: Set<string>): void {
   }
 }
 
+/**
+ * Funde o nó lido do disco no nó equivalente do daemon.
+ *
+ * O daemon vence no que é dele: `taskState`, e o `activeSessionId` que o
+ * `observe` exige. O disco entra com o que só ele tem — a tarefa encomendada,
+ * o início, a última ferramenta — e com os FILHOS, que é o que mais importa:
+ * `prime-agent list --json` só enxerga sessão residente, então o nó do daemon
+ * costuma chegar com `children: []` mesmo havendo subagentes trabalhando.
+ */
+function fundir(daemon: AgentNode, disco: AgentNode): AgentNode {
+  const porId = new Map<string, AgentNode>()
+  for (const c of disco.children) if (c.sessionId) porId.set(c.sessionId, c)
+
+  const filhos = daemon.children.map((c) => {
+    const par = c.sessionId ? porId.get(c.sessionId) : undefined
+    if (par) porId.delete(c.sessionId)
+    return par ? fundir(c, par) : c
+  })
+  // O que o daemon não conhecia entra na ordem em que o disco listou.
+  const somenteDisco = disco.children.filter((c) => !c.sessionId || porId.has(c.sessionId))
+  const todos = [...filhos, ...somenteDisco]
+
+  return {
+    ...daemon,
+    firstMessage: daemon.firstMessage || disco.firstMessage,
+    startedAt: daemon.startedAt ?? disco.startedAt,
+    lastTool: daemon.lastTool ?? disco.lastTool,
+    toolCount: daemon.toolCount ?? disco.toolCount,
+    spawnCode: daemon.spawnCode ?? disco.spawnCode,
+    usage: daemon.usage ?? disco.usage,
+    children: todos,
+    hasRunningChildren: todos.some((c) => c.status === 'working' || c.hasRunningChildren)
+  }
+}
+
+/** Aplica `fundir` no nó da floresta cujo `sessionId` bate. */
+function fundirNaFloresta(nodes: AgentNode[], disco: AgentNode): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].sessionId && nodes[i].sessionId === disco.sessionId) {
+      nodes[i] = fundir(nodes[i], disco)
+      return true
+    }
+    if (fundirNaFloresta(nodes[i].children, disco)) {
+      nodes[i] = {
+        ...nodes[i],
+        hasRunningChildren: nodes[i].children.some(
+          (c) => c.status === 'working' || c.hasRunningChildren
+        )
+      }
+      return true
+    }
+  }
+  return false
+}
+
 export async function getAgentTree(query: AgentTreeQuery = {}): Promise<AgentTreeSnapshot> {
   const binary = query.binary ?? agentBinary()
 
@@ -182,11 +237,19 @@ export async function getAgentTree(query: AgentTreeQuery = {}): Promise<AgentTre
 
   const diskRoot = fromDisk.status === 'fulfilled' ? fromDisk.value : null
   if (diskRoot) {
-    // Se o daemon já descreve essa sessão, a versão dele fica: tem `taskState` e
-    // o `activeSessionId` que o `observe` exige.
+    /*
+      Funde, não descarta.
+
+      Antes: se o `sessionId` da raiz de disco aparecesse em QUALQUER nó do
+      daemon, a árvore de disco inteira era jogada fora — filhos inclusive. E o
+      nó do daemon chega sem filhos, porque `list --json` só vê sessão
+      residente. O resultado era a árvore esvaziar justamente quando o daemon
+      conhecia a conversa.
+    */
     const known = new Set<string>()
     collectIds(roots, known)
     if (!known.has(diskRoot.sessionId)) roots.unshift(diskRoot)
+    else fundirNaFloresta(roots, diskRoot)
   }
 
   /*

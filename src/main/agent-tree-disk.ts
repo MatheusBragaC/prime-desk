@@ -328,10 +328,31 @@ async function subDirs(dir: string): Promise<string[]> {
  * Status desconhecido vira `idle`: melhor um nó sem cor forte do que afirmar
  * conclusão que o arquivo não afirma.
  */
-function statusOf(meta: SubagentMeta): AgentNode['status'] {
-  if (meta.status === 'running') return 'working'
+/**
+ * A partir daqui um `running` parado deixa de ser tratado como vivo.
+ *
+ * Mesmo número do `NOTICE_AFTER_MS` de `lib/useTurnActivity.ts`, que é quando a
+ * interface começa a falar sobre turno silencioso. Os dois não compartilham a
+ * constante porque vivem em processos diferentes e `shared/` guarda tipo de
+ * protocolo, não limiar de interface — mas o valor é deliberadamente o mesmo:
+ * dois números diferentes para "parou de dar sinal" produziriam uma tela que
+ * discorda de si mesma.
+ */
+const ORFAO_APOS_MS = 3 * 60_000
+
+function statusOf(meta: SubagentMeta, ultimaAtividade: string): AgentNode['status'] {
   if (meta.status === 'completed' || meta.status === 'deleted') return 'done'
-  return 'idle'
+  if (meta.status !== 'running') return 'idle'
+
+  /*
+    `running` é o que o ARQUIVO diz, não o que o processo está fazendo. Quando o
+    worker morre, ninguém reescreve o arquivo — e o nó girava para sempre, com
+    o spinner afirmando atividade que não existe há horas. Sem sinal recente, a
+    afirmação cai para ociosa: o dado não sustenta mais o "trabalhando".
+  */
+  const marca = Date.parse(ultimaAtividade || meta.updatedAt || '')
+  if (Number.isNaN(marca)) return 'working'
+  return Date.now() - marca > ORFAO_APOS_MS ? 'idle' : 'working'
 }
 
 async function readSubagent(
@@ -365,7 +386,7 @@ async function readSubagent(
     parentActiveSessionId: parentSessionId,
     rlmChildId: name,
     spawnCode: meta.spawnCode,
-    status: statusOf(meta),
+    status: statusOf(meta, digest.lastActivityAt),
     taskState: '',
     // Heurística honesta: "respondeu" é ter chamado `agent_message.send`, não
     // apenas ter terminado. Filho pode concluir sem responder ao pai.
