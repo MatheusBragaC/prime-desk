@@ -92,10 +92,16 @@ export async function logoutProvider(provider: string): Promise<void> {
   if (!r?.ok) throw new Error(r?.error ?? t('acct.signOutFailed'))
 }
 
-/** Nome de exibição da pessoa, do sistema operacional. */
-export async function appUserName(): Promise<string> {
+/**
+ * Display name and app version, from the one `app:info` round trip.
+ *
+ * These used to be two facts from the same call with only the name kept — the
+ * version was read and dropped, which is why the app could not say which
+ * version it was.
+ */
+export async function appIdentity(): Promise<{ userName: string; version: string }> {
   const info = await window.prime.appInfo()
-  return info.userName
+  return { userName: info.userName, version: info.version }
 }
 
 /**

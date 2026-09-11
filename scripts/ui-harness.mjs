@@ -198,8 +198,15 @@ const STUB_JS = `
     },
     get_messages: { messages: fakeMessages }
   }
+  /*
+    Versao instalada do proprio app. Uma constante so, porque appInfo e
+    checkAppUpdate precisam concordar: com as duas independentes, o rodape
+    dizia estar na 1.0.0 enquanto o item acima oferecia atualizar PARA a 1.0.0.
+    (Sem crase aqui: este bloco inteiro mora numa template literal.)
+  */
+  const versaoDoApp = new URLSearchParams(location.search).has('noappupdate') ? '1.0.0' : '0.2.6'
   window.prime = {
-    appInfo: async () => ({ version: '0.2.0', home: '/home/dev', platform: 'linux', userName: 'Matheus Carvalho' }),
+    appInfo: async () => ({ version: versaoDoApp, home: '/home/dev', platform: 'linux', userName: 'Matheus Carvalho' }),
     checkEnvironment: async () => ({ ok: true, status: {
       agent: { installed: true, path: '/usr/bin/prime-agent', version: '0.8.0' },
       auth: { ok: true, providers: ['anthropic'], envKeys: [] }
@@ -375,9 +382,9 @@ const STUB_JS = `
     */
     checkAppUpdate: async () => ({
       ok: true,
-      update: new URLSearchParams(location.search).has('noappupdate')
-        ? { current: '1.0.0', latest: '1.0.0', available: false }
-        : { current: '0.2.6', latest: '1.0.0', available: true },
+      update: versaoDoApp === '1.0.0'
+        ? { current: versaoDoApp, latest: '1.0.0', available: false }
+        : { current: versaoDoApp, latest: '1.0.0', available: true },
       command: 'curl -fsSL https://raw.githubusercontent.com/MatheusBragaC/prime-desk/main/scripts/install.sh | sh'
     }),
     rescanAgent: async () => ({ ok: true, status: {

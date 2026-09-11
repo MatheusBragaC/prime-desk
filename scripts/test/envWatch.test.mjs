@@ -181,6 +181,28 @@ export default async function run({
   k.desmontar()
   ok('e o ciclo fecha com unwatch', conta('unwatch'), 2)
 
+  /*
+    A versão do app chega ao estado.
+
+    `app:info` sempre devolveu `version` junto do `userName`, e o caminho lia os
+    dois para guardar só um — por isso o app não sabia dizer qual versão era. A
+    asserção é sobre o estado, não sobre a tela: se o descarte voltar, o rodapé
+    fica mudo sem quebrar typecheck nem build.
+
+    Só o consumidor que observa atualização faz essa leitura (`watchUpdates`),
+    então aqui o hook é montado com ela ligada e os efeitos guardados pela casca
+    são disparados à mão.
+  */
+  beginRender()
+  useEnvironment(true)
+  const comUpdates = hooks.store
+  ok('antes do efeito, a versao ainda nao chegou', comUpdates.snapshot().appVersion, '')
+  for (const { fn } of hooks.effects) fn()
+  await Promise.resolve()
+  await Promise.resolve()
+  ok('a versao do app chega ao estado', comUpdates.snapshot().appVersion, '9.9.9')
+  ok('e o nome continua chegando na mesma ida', comUpdates.snapshot().userName, 'dev')
+
   console.log(falhas ? `\n${falhas} teste(s) falharam` : '\ntodos passaram')
   return falhas === 0
 }
