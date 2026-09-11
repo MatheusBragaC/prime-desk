@@ -32,8 +32,8 @@ export async function checkUpdate(): Promise<unknown> {
 export async function runInstall(): Promise<boolean> {
   return true
 }
-export async function appUserName(): Promise<string> {
-  return 'dev'
+export async function appIdentity(): Promise<{ userName: string; version: string }> {
+  return { userName: 'dev', version: '9.9.9' }
 }
 export async function openLoginTerminal(): Promise<Record<string, never>> {
   return {}

@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/Button'
  */
 export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
   const { t } = useT()
-  const { status, update, userName, refresh } = useEnvironment(true)
+  const { status, update, userName, appVersion, refresh } = useEnvironment(true)
   const [open, setOpen] = useState(false)
   /*
     Atualização do PRÓPRIO app, separada da do agente: as fontes são diferentes
@@ -263,8 +263,19 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             </>
           )}
 
-          <div className="px-2 pb-1 pt-1 text-micro text-dim">
-            {t('acct.credsNote')}
+          {/*
+            Which Prime Desk this is. The version was already crossing the
+            bridge on every `app:info` and being dropped, so the app could not
+            answer the plainest question about itself — and the update dialog,
+            the one place it appeared, only shows up when a newer one exists.
+          */}
+          <div className="flex items-baseline justify-between gap-2 px-2 pb-1 pt-1 text-micro text-dim">
+            <span>{t('acct.credsNote')}</span>
+            {appVersion && (
+              <span className="shrink-0 font-mono" title={`${t('acct.appVersion')} ${appVersion}`}>
+                v{appVersion}
+              </span>
+            )}
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import type { EnvStatus, UpdateCheck } from '@shared/protocol'
 import { t } from '@/i18n'
 import {
-  appUserName, checkUpdate, openLoginTerminal, readEnvironment, rescanAgent, runInstall,
+  appIdentity, checkUpdate, openLoginTerminal, readEnvironment, rescanAgent, runInstall,
   stageFor, unwatchEnvironment, watchEnvironment, type Stage
 } from './env'
 
@@ -28,9 +28,11 @@ interface EnvState {
   error: string | null
   update: UpdateCheck | null
   userName: string
+  /** Version of Prime Desk itself, not of the agent. Empty until `app:info` answers. */
+  appVersion: string
 }
 
-let state: EnvState = { status: null, from: 'none', error: null, update: null, userName: '' }
+let state: EnvState = { status: null, from: 'none', error: null, update: null, userName: '', appVersion: '' }
 
 const listeners = new Set<() => void>()
 
@@ -132,7 +134,7 @@ export function useEnvironment(watchUpdates = false): Environment {
 
   useEffect(() => {
     if (!watchUpdates) return
-    void appUserName().then((name) => write({ userName: name }))
+    void appIdentity().then((i) => write({ userName: i.userName, appVersion: i.version }))
     void refreshUpdate()
   }, [watchUpdates])
 
