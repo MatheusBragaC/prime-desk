@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  CheckCircle2, Circle, Loader2, Download, Terminal, KeyRound, RefreshCw,
-  Copy, Check, ArrowRight, AlertTriangle
-} from 'lucide-react'
+import { IconDone, Circle, Loader2, Download, IconCommand, KeyRound, RefreshCw, Copy, IconConfirm, ArrowRight, IconFailed } from '@/icons'
 import { Butterfly } from './Butterfly'
 import { Button } from './Modal'
 import { copyText } from '@/lib/clipboard'
@@ -24,11 +21,11 @@ function StepRow({
   return (
     <div className="flex items-start gap-2.5 py-1.5">
       {busy ? (
-        <Loader2 size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 animate-spin text-primary" />
+        <Loader2 size={16} className="mt-[1px] shrink-0 animate-spin text-primary" />
       ) : done ? (
-        <CheckCircle2 size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 text-ok" />
+        <IconDone size={16} className="mt-[1px] shrink-0 text-ok" />
       ) : (
-        <Circle size={16} strokeWidth={1.75} className="mt-[1px] shrink-0 text-dim" />
+        <Circle size={16} className="mt-[1px] shrink-0 text-dim" />
       )}
       <div className="min-w-0">
         <div className={'text-sm ' + (done ? 'text-fg' : 'text-muted')}>{title}</div>
@@ -162,7 +159,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
         {error && (
           <div className="animate-fade-up mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-sm leading-snug text-err">
-            <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+            <IconFailed size={16} className="mt-[2px] shrink-0" />
             {error}
           </div>
         )}
@@ -187,29 +184,29 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                 className="shrink-0 rounded p-1 text-dim transition-colors hover:text-fg"
                 title={t('common.copy')}
               >
-                {copied ? <Check size={14} strokeWidth={1.75} className="text-ok" /> : <Copy size={14} strokeWidth={1.75} />}
+                {copied ? <IconConfirm size={14} className="text-ok" /> : <Copy size={14} />}
               </button>
             </div>
 
             <div className="mt-3 flex items-center gap-2">
               <Button
-                variant="primary"
+                variant="accent"
                 onClick={() => void install()}
                 disabled={stage === 'installing'}
                 icon={
                   stage === 'installing' ? (
-                    <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                   ) : (
-                    <Download size={14} strokeWidth={1.75} />
+                    <Download size={14} />
                   )
                 }
               >
                 {stage === 'installing' ? t('onb.installing') : t('onb.installNow')}
               </Button>
               <Button
-                variant="subtle"
+                variant="outline"
                 onClick={() => void refreshEnvironment()}
-                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+                icon={<RefreshCw size={14} />}
               >
                 {t('onb.alreadyInstalled')}
               </Button>
@@ -242,7 +239,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
               disabled={opening}
               className="mt-3 flex w-full items-start gap-3 rounded-lg border border-[var(--p-line)] p-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
             >
-              <Terminal size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-primarySoft" />
+              <IconCommand size={16} className="mt-[2px] shrink-0 text-primarySoft" />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-fg">
                   {opening ? t('onb.opening') : t('onb.subTitle')}
@@ -251,13 +248,13 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                   {t('onb.subDesc')}
                 </span>
               </span>
-              <ArrowRight size={14} strokeWidth={1.75} className="mt-[3px] shrink-0 text-dim" />
+              <ArrowRight size={14} className="mt-[3px] shrink-0 text-dim" />
             </button>
 
             {portBusy !== null && (
               <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
                 <div className="flex items-start gap-2 text-xs leading-snug text-warn">
-                  <AlertTriangle size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+                  <IconFailed size={14} className="mt-[2px] shrink-0" />
                   <span>
                     {t('onb.portBusy', { port: portBusy })}
                     <span className="mt-1.5 block">{t('onb.portBusyCmd')}</span>
@@ -272,7 +269,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             {termOpened && !termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-ok/25 bg-ok/[0.06] p-3">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-ok">
-                  <CheckCircle2 size={14} strokeWidth={1.75} />
+                  <IconDone size={14} />
                   {t('onb.termOpened')}
                 </div>
                 <ol className="mt-2 space-y-1.5 text-xs leading-snug text-muted">
@@ -295,7 +292,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
                   </li>
                 </ol>
                 <div className="mt-2 flex items-center gap-1.5 border-t border-[var(--p-line)] pt-2 text-xs text-dim">
-                  <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                   {t('onb.waiting')}
                 </div>
               </div>
@@ -304,7 +301,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             {termError && (
               <div className="mt-2 animate-fade-up rounded-lg border border-warn/30 bg-warn/[0.07] p-3">
                 <div className="flex items-start gap-2 text-xs leading-snug text-warn">
-                  <AlertTriangle size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+                  <IconFailed size={14} className="mt-[2px] shrink-0" />
                   <span>
                     {t('onb.termFailed')}
                     <code className="mt-1.5 block rounded border border-lineStrong bg-codeWell p-2 font-mono text-xs text-mint">
@@ -318,7 +315,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
             )}
 
             <div className="mt-2 flex items-start gap-3 rounded-lg border border-[var(--p-line)] p-3">
-              <KeyRound size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-warn" />
+              <KeyRound size={16} className="mt-[2px] shrink-0 text-warn" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium text-fg">{t('onb.keyTitle')}</div>
                 <div className="mt-0.5 text-xs leading-snug text-dim">
@@ -336,9 +333,9 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
             <div className="mt-3">
               <Button
-                variant="primary"
+                variant="accent"
                 onClick={() => void refreshEnvironment()}
-                icon={<RefreshCw size={14} strokeWidth={1.75} />}
+                icon={<RefreshCw size={14} />}
               >
                 {t('onb.recheck')}
               </Button>
@@ -348,7 +345,7 @@ export function Onboarding({ onReady }: { onReady: () => void }) {
 
         {stage === 'ready' && (
           <div className="animate-fade-up mt-4 flex items-center justify-center gap-2 text-sm text-ok">
-            <CheckCircle2 size={16} strokeWidth={1.75} />
+            <IconDone size={16} />
             {auto ? `${t('onb.detected')} · ${t('onb.allSet')}` : t('onb.allSet')}
           </div>
         )}

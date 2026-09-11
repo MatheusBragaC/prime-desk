@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Copy, Check } from 'lucide-react'
+import { FileText, Copy, IconConfirm } from '@/icons'
 import { DockPanel } from './DockPanel'
 import { PanelEmpty } from './PanelState'
 import { Markdown } from './Markdown'
@@ -34,7 +34,7 @@ export function DocumentPanel({ onClose }: { onClose: () => void }) {
       defaultWidth={420}
       min={320}
       max={720}
-      icon={<FileText size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      icon={<FileText size={16} className="text-primarySoft" />}
       title={doc?.title || t('document.title')}
       onClose={onClose}
       actions={
@@ -45,9 +45,9 @@ export function DocumentPanel({ onClose }: { onClose: () => void }) {
             title={copied ? t('common.copied') : t('common.copy')}
           >
             {copied ? (
-              <Check size={15} strokeWidth={1.75} className="text-ok" />
+              <IconConfirm size={15} className="text-ok" />
             ) : (
-              <Copy size={15} strokeWidth={1.75} />
+              <Copy size={15} />
             )}
           </button>
         )

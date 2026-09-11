@@ -1,4 +1,4 @@
-import { Clock, Square, Bot } from 'lucide-react'
+import { Clock, Square, Bot } from '@/icons'
 import { useAgent, abortTurn } from '@/store/agent'
 import { useTurnActivity } from '@/lib/useTurnActivity'
 import { summary } from '@/lib/toolSummary'
@@ -37,7 +37,7 @@ export function StalledTurnNotice() {
 
   return (
     <div className="mx-3 mb-1.5 flex items-center gap-2 rounded-field border border-warn/25 bg-warn/[0.06] px-2.5 py-1.5 animate-fade-up">
-      <Clock size={13} strokeWidth={1.75} className="shrink-0 text-warn" />
+      <Clock size={13} className="shrink-0 text-warn" />
 
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs text-fg">
@@ -47,7 +47,7 @@ export function StalledTurnNotice() {
 
         {queued > 0 && (
           <div className="mt-0.5 flex items-center gap-1 text-micro text-warn">
-            <Bot size={10} strokeWidth={1.75} className="shrink-0" />
+            <Bot size={10} className="shrink-0" />
             {t('stall.queueBlocked', { n: queued })}
           </div>
         )}

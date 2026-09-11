@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Sparkles, Zap } from 'lucide-react'
+import { Search, Sparkles, Zap } from '@/icons'
 import { useAgent, sendPrompt, newSession, compactNow } from '@/store/agent'
 import { useT } from '@/i18n'
 import { useDialogA11y } from '@/lib/useDialogA11y'
@@ -98,7 +98,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         onKeyDown={onKeyDown}
       >
         <div className="flex items-center gap-2.5 border-b border-[var(--p-line)] px-4 py-3">
-          <Search size={16} strokeWidth={1.75} className="text-dim" />
+          <Search size={16} className="text-dim" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -125,9 +125,9 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               }
             >
               {item.id === 'new' || item.id === 'compact' ? (
-                <Zap size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                <Zap size={14} className="shrink-0 text-primarySoft" />
               ) : (
-                <Sparkles size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+                <Sparkles size={14} className="shrink-0 text-dim" />
               )}
               <span className="shrink-0 font-mono text-sm text-fg">{item.label}</span>
               <span className="truncate text-xs text-dim">{item.hint}</span>

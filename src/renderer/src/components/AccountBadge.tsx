@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
-import {
-  UserRound, LogOut, RefreshCw, Terminal, KeyRound, Check, Globe, ChevronUp,
-  ArrowUpCircle, Download
-} from 'lucide-react'
+import { IconTerminalPanel, UserRound, LogOut, RefreshCw, KeyRound, IconConfirm, Globe, ChevronUp, ArrowUpCircle, Download } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { useT, setLang, getLang, LANGS } from '@/i18n'
 import { usePopover } from '@/lib/usePopover'
 import { logoutProvider, providerLabel as labelFor } from '@/lib/env'
 import { useEnvironment } from '@/lib/useEnvironment'
 import type { UpdateCheck } from '@shared/protocol'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Identidade do usuário no rodapé da sidebar.
@@ -124,8 +122,6 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
     })
   }
 
-  const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
   return (
     /*
@@ -151,7 +147,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             (label ? 'bg-chip text-muted' : 'text-dim')
           }
         >
-          <UserRound size={13} strokeWidth={1.75} />
+          <UserRound size={13} />
         </span>
         {(update?.available || appUpdate?.update.available) && !open && (
           <span
@@ -166,7 +162,7 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
           {kind && <span className="block truncate text-micro text-dim">{kind}</span>}
         </span>
         <ChevronUp
-          size={13} strokeWidth={1.75}
+          size={13}
           className={
             'shrink-0 text-dim transition-all ' +
             (open ? 'rotate-180 opacity-100' : 'opacity-0 group-focus-within/acct:opacity-100 group-hover/acct:opacity-100')
@@ -195,24 +191,24 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             {t('lang.title')}
           </div>
           {LANGS.map((l) => (
-            <button
+            <Button menuItem
               key={l.code}
-              className={item}
+              
               onClick={() => {
                 setLang(l.code)
                 setOpen(false)
               }}
             >
-              <Globe size={14} strokeWidth={1.75} />
+              <Globe size={14} />
               <span className="flex-1">{l.label}</span>
-              {getLang() === l.code && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
-            </button>
+              {getLang() === l.code && <IconConfirm size={14} className="text-primarySoft" />}
+            </Button>
           ))}
 
           <div className="my-1 border-t border-[var(--p-line)]" />
 
-          <button
-            className={item}
+          <Button menuItem
+            
             onClick={() => {
               setOpen(false)
               // `/login` é interativo (escolha de provedor no TUI + OAuth no
@@ -222,48 +218,48 @@ export function AccountBadge({ onSignedOut }: { onSignedOut: () => void }) {
             }}
             title={t('acct.switchHint')}
           >
-            <Terminal size={14} strokeWidth={1.75} />
+            <IconTerminalPanel size={14} />
             {label ? t('acct.switch') : t('acct.signIn')}
-          </button>
+          </Button>
 
           {envKey && !provider && (
             <div className="flex items-start gap-2 px-2 py-1.5 text-xs leading-snug text-dim">
-              <KeyRound size={14} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+              <KeyRound size={14} className="mt-[2px] shrink-0" />
               {t('acct.envHint')}: <span className="font-mono">{envKey}</span>
             </div>
           )}
 
           {update?.available && (
-            <button className={item + ' text-primarySoft hover:text-primarySoft'} onClick={askUpdate}>
-              <ArrowUpCircle size={14} strokeWidth={1.75} />
+            <Button menuItem variant="accent" onClick={askUpdate}>
+              <ArrowUpCircle size={14} />
               <span className="flex-1">{t('update.available')}</span>
               <span className="font-mono text-micro text-dim">{update.latest}</span>
-            </button>
+            </Button>
           )}
 
           {appUpdate?.update.available && (
-            <button
-              className={item + ' text-primarySoft hover:text-primarySoft'}
+            <Button menuItem
+              variant="accent"
               onClick={askAppUpdate}
             >
-              <Download size={14} strokeWidth={1.75} />
+              <Download size={14} />
               <span className="flex-1">{t('appUpdate.available')}</span>
               <span className="font-mono text-micro text-dim">{appUpdate.update.latest}</span>
-            </button>
+            </Button>
           )}
 
-          <button className={item} onClick={() => void refresh()}>
-            <RefreshCw size={14} strokeWidth={1.75} />
+          <Button menuItem onClick={() => void refresh()}>
+            <RefreshCw size={14} />
             {t('common.refresh')}
-          </button>
+          </Button>
 
           {provider && (
             <>
               <div className="my-1 border-t border-[var(--p-line)]" />
-              <button className={item + ' text-err hover:text-err'} onClick={askSignOut}>
-                <LogOut size={14} strokeWidth={1.75} />
+              <Button menuItem variant="danger" onClick={askSignOut}>
+                <LogOut size={14} />
                 {t('acct.signOut')}
-              </button>
+              </Button>
             </>
           )}
 

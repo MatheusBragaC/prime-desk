@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AlertTriangle, Info, X } from 'lucide-react'
+import { IconFailed, Info, IconClose } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { useT } from '@/i18n'
 
@@ -22,6 +22,13 @@ export function Notice() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--p-titlebar)+12px)] z-toast flex justify-center px-6">
       <div
+        /*
+          Único canal de erro passageiro do app, e nenhum leitor de tela o
+          anunciava. Erro interrompe a leitura (`alert`); aviso espera a pausa
+          (`status`). A distinção já existia na variável, faltava chegar ao DOM.
+        */
+        role={err ? 'alert' : 'status'}
+        aria-live={err ? 'assertive' : 'polite'}
         className={
           'pointer-events-auto flex max-w-[620px] animate-fade-up items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl shadow-drop ' +
           (err
@@ -30,9 +37,9 @@ export function Notice() {
         }
       >
         {err ? (
-          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+          <IconFailed size={16} className="mt-[2px] shrink-0" />
         ) : (
-          <Info size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+          <Info size={16} className="mt-[2px] shrink-0" />
         )}
         <span className="text-sm leading-snug">{notice.text}</span>
         <button
@@ -40,7 +47,7 @@ export function Notice() {
           aria-label={t('common.close')}
           className="mt-[2px] shrink-0 opacity-60 transition-opacity hover:opacity-100"
         >
-          <X size={14} strokeWidth={1.75} />
+          <IconClose size={14} />
         </button>
       </div>
     </div>

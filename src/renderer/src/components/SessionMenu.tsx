@@ -1,8 +1,5 @@
 import { useState, type RefObject } from 'react'
-import {
-  FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
-  Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2
-} from 'lucide-react'
+import { FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore, Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2 } from '@/icons'
 import type { SessionSummary } from '@shared/protocol'
 import {
   useAgent, mutateFolders, refreshSessions, rpc, deleteSession, generateTitleFor
@@ -10,6 +7,7 @@ import {
 import type { Group } from '@/lib/grouping'
 import { usePopover } from '@/lib/usePopover'
 import { useT } from '@/i18n'
+import { Button } from '@/components/ui/Button'
 
 interface Props {
   session: SessionSummary
@@ -22,8 +20,6 @@ interface Props {
   trigger: RefObject<HTMLElement | null>
 }
 
-const item =
-  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
 export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename, trigger }: Props) {
   const folders = useAgent((s) => s.folders)
@@ -132,85 +128,85 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       ref={ref}
       className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
-      <button className={item} onClick={onOpen}>
-        <ExternalLink size={14} strokeWidth={1.75} />
+      <Button menuItem onClick={onOpen}>
+        <ExternalLink size={14} />
         {t('menu.open')}
-      </button>
+      </Button>
 
-      <button className={item} onClick={() => void togglePin()}>
-        {pinned ? <PinOff size={14} strokeWidth={1.75} /> : <Pin size={14} strokeWidth={1.75} />}
+      <Button menuItem onClick={() => void togglePin()}>
+        {pinned ? <PinOff size={14} /> : <Pin size={14} />}
         {pinned ? t('menu.unpin') : t('menu.pin')}
-      </button>
+      </Button>
 
-      <button className={item} onClick={onRename}>
-        <Pencil size={14} strokeWidth={1.75} />
+      <Button menuItem onClick={onRename}>
+        <Pencil size={14} />
         {t('menu.rename')}
-      </button>
+      </Button>
 
       {/*
         Gerar título fica ao lado do renomear porque é a mesma ação, feita por
         outro. O nome vai para o mesmo lugar, e continua editável e apagável.
       */}
-      <button
-        className={item + (titling ? ' pointer-events-none' : '')}
+      <Button menuItem
+        className={(titling ? ' pointer-events-none' : '')}
         onClick={() => void title()}
         title={session.named ? t('menu.retitleHint') : t('menu.titleHint')}
       >
         {titling ? (
-          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
+          <Loader2 size={14} className="animate-spin text-primary" />
         ) : (
-          <WandSparkles size={14} strokeWidth={1.75} />
+          <WandSparkles size={14} />
         )}
         {session.named ? t('menu.retitle') : t('menu.title')}
-      </button>
+      </Button>
 
-      <button
-        className={item + (isActive ? '' : ' pointer-events-none opacity-40')}
+      <Button menuItem
+        className={(isActive ? '' : ' pointer-events-none opacity-40')}
         onClick={() => void duplicate()}
         title={isActive ? t('menu.duplicateHint') : t('menu.duplicateOnlyActive')}
       >
-        <Copy size={14} strokeWidth={1.75} />
+        <Copy size={14} />
         {t('menu.duplicate')}
-      </button>
+      </Button>
 
       <div className="my-1 border-t border-[var(--p-line)]" />
 
       <div className="relative">
-        <button className={item} onClick={() => setSubmenu((v) => !v)}>
-          <FolderInput size={14} strokeWidth={1.75} />
+        <Button menuItem onClick={() => setSubmenu((v) => !v)}>
+          <FolderInput size={14} />
           <span className="flex-1">{t('menu.moveToFolder')}</span>
-          <ChevronRight size={14} strokeWidth={1.75} className={submenu ? 'rotate-90' : ''} />
-        </button>
+          <ChevronRight size={14} className={submenu ? 'rotate-90' : ''} />
+        </Button>
         {submenu && (
           <div className="mt-0.5 pl-2">
             {folderGroups.length === 0 && (
               <div className="px-2 py-1 text-xs italic text-dim">{t('menu.noFolders')}</div>
             )}
             {folderGroups.map((g) => (
-              <button key={g.key} className={item} onClick={() => void moveTo(g.folderId!)}>
-                <FolderOpen size={14} strokeWidth={1.75} />
+              <Button menuItem key={g.key}  onClick={() => void moveTo(g.folderId!)}>
+                <FolderOpen size={14} />
                 <span className="truncate">{g.label}</span>
-              </button>
+              </Button>
             ))}
-            <button className={item} onClick={() => void moveTo(null)}>
-              <Trash2 size={14} strokeWidth={1.75} />
+            <Button menuItem onClick={() => void moveTo(null)}>
+              <Trash2 size={14} />
               {t('menu.removeFromFolder')}
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
-      <button className={item} onClick={() => void toggleArchive()}>
-        {archived ? <ArchiveRestore size={14} strokeWidth={1.75} /> : <Archive size={14} strokeWidth={1.75} />}
+      <Button menuItem onClick={() => void toggleArchive()}>
+        {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
         {archived ? t('menu.unarchive') : t('menu.archive')}
-      </button>
+      </Button>
 
       <div className="my-1 border-t border-[var(--p-line)]" />
 
-      <button className={item + ' text-err hover:text-err'} onClick={askRemove}>
-        <Trash2 size={14} strokeWidth={1.75} />
+      <Button menuItem variant="danger" onClick={askRemove}>
+        <Trash2 size={14} />
         {t('menu.delete')}
-      </button>
+      </Button>
     </div>
   )
 }

@@ -1,8 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
-import {
-  Layers, Target, AlertTriangle, Minimize2, PanelLeft,
-  SquareTerminal, FileDiff, FolderTree, GitBranch, CalendarClock
-} from 'lucide-react'
+import { IconAgents, Layers, Target, IconFailed, Minimize2, PanelLeft, IconTerminalPanel, FileDiff, FolderTree, CalendarClock } from '@/icons'
 import { useAgent, compactNow } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
 import { useWinControlsInset } from '@/lib/platform'
@@ -131,7 +128,7 @@ function MetricsPopover({ onClose, trigger }: {
       {state?.goal?.active && (
         <div className={row}>
           <span className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-dim">
-            <Target size={14} strokeWidth={1.75} className="shrink-0" />
+            <Target size={14} className="shrink-0" />
             <span className="truncate">{t('app.goalActive')}</span>
           </span>
           <span className="shrink-0 truncate text-sm text-primarySoft">{state.goal.status}</span>
@@ -148,7 +145,7 @@ function MetricsPopover({ onClose, trigger }: {
           className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-muted transition-colors hover:bg-elevated hover:text-fg disabled:opacity-40"
           title={t('app.compactTitle')}
         >
-          <Layers size={16} strokeWidth={1.75} />
+          <Layers size={16} />
           {t('app.compact')}
         </button>
       </div>
@@ -260,7 +257,7 @@ export function StatusBar({
           title={t('sidebar.toggle')}
           aria-label={t('sidebar.toggle')}
         >
-          <PanelLeft size={16} strokeWidth={1.75} />
+          <PanelLeft size={16} />
         </button>
       )}
 
@@ -279,14 +276,14 @@ export function StatusBar({
 
       {retry && (
         <div className="no-drag flex shrink-0 items-center gap-1.5 text-xs text-warn">
-          <AlertTriangle size={14} strokeWidth={1.75} />
+          <IconFailed size={14} />
           {t('app.retry')} {retry.attempt}/{retry.max}
         </div>
       )}
 
       {compacting && (
         <div className="no-drag flex shrink-0 items-center gap-1.5 text-xs text-info">
-          <Minimize2 size={14} strokeWidth={1.75} className="animate-pulse-soft" />
+          <Minimize2 size={14} className="animate-pulse-soft" />
           {t('app.compacting')}
         </div>
       )}
@@ -301,31 +298,31 @@ export function StatusBar({
       */}
       <div className="flex items-center gap-0.5">
         <ToolButton
-          icon={<SquareTerminal size={16} strokeWidth={1.75} />}
+          icon={<IconTerminalPanel size={16} />}
           title={t('toolbar.terminal')}
           active={dock === 'terminal'}
           onClick={() => onDock('terminal')}
         />
         <ToolButton
-          icon={<CalendarClock size={16} strokeWidth={1.75} />}
+          icon={<CalendarClock size={16} />}
           title={t('toolbar.schedules')}
           active={dock === 'schedules'}
           onClick={() => onDock('schedules')}
         />
         <ToolButton
-          icon={<FileDiff size={16} strokeWidth={1.75} />}
+          icon={<FileDiff size={16} />}
           title={t('toolbar.diff')}
           active={dock === 'diff'}
           onClick={() => onDock('diff')}
         />
         <ToolButton
-          icon={<FolderTree size={16} strokeWidth={1.75} />}
+          icon={<FolderTree size={16} />}
           title={t('toolbar.files')}
           active={dock === 'files'}
           onClick={() => onDock('files')}
         />
         <ToolButton
-          icon={<GitBranch size={16} strokeWidth={1.75} />}
+          icon={<IconAgents />}
           title={t('toolbar.agents')}
           active={dock === 'agents'}
           badge={tree?.subagents}

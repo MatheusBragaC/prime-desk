@@ -77,6 +77,15 @@ const found = {
   ghostFocus: hits(/["'`][^"'`]*\bopacity-0\b[^"'`]*["'`]/g, (m) => {
     const cls = m[0].replace(/disabled:opacity-0/g, '')
     if (!/\bopacity-0\b/.test(cls)) return false
+    /*
+      Prosa que CITA a classe não é uso dela.
+
+      A regex não distingue string de comentário, e `opacity-0` entre crases num
+      comentário parece template literal — foi o que aconteceu no próprio
+      primitivo de botão, que explica a regra e caiu nela. Atributo de classe
+      real sempre tem mais de uma classe; menção isolada, não.
+    */
+    if (!/\s/.test(cls.slice(1, -1).trim())) return false
     return !/(?:focus-visible|group-focus-within(?:\/[a-z]+)?):opacity-100/.test(cls)
   }),
   /*
@@ -87,7 +96,20 @@ const found = {
     perceber sem trocar de idioma na mão. Formatação passa pelo `lang` da
     interface — ver `locale()` em lib/format.ts.
   */
-  intlBypass: hits(/(?:toLocale\w*|Intl\.\w+)\(\s*['"][a-z]{2}(?:-[A-Z]{2})?['"]/g, () => true)
+  intlBypass: hits(/(?:toLocale\w*|Intl\.\w+)\(\s*['"][a-z]{2}(?:-[A-Z]{2})?['"]/g, () => true),
+  /*
+    `<button>` cru, fora dos primitivos de `components/ui`.
+
+    Sem semântica de propósito: não tenta distinguir botão migrável de botão
+    que precisa ficar cru. Mede o total. Migrar baixa o número e o aviso pede
+    o `--update`; criar um botão cru novo sobe e derruba o build. Era o que
+    faltava para o primitivo parar de perder para a cópia e cola — ele existia
+    com 4 variantes e cobria 8 lugares, contra 113 botões crus em 35 arquivos.
+  */
+  rawButton: hits(
+    /<button\b/g,
+    (_m, file) => !file.includes(`${path.sep}components${path.sep}ui${path.sep}`)
+  )
 }
 
 function hits(re, keep, scope = files) {
@@ -145,6 +167,12 @@ const MEASURES = [
     label: 'locale cravado em toLocale*() ou new Intl.*()',
     mode: 'zero',
     fix: 'passe o lang da interface (ver locale() em lib/format.ts)'
+  },
+  {
+    key: 'rawButton',
+    label: 'botao cru fora de components/ui',
+    mode: 'ratchet',
+    fix: 'use o <Button> de components/ui/Button.tsx'
   }
 ]
 

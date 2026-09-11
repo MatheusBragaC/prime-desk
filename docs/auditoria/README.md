@@ -45,6 +45,26 @@ dependencias entre camadas**.
 - **`Modal.Button` ignora `className` externo**: `Modal.tsx:202-205` (`className` antes de `{...rest}`).
 - **Byte NUL literal** em `ObservedPanel.tsx:49`.
 
+## Sistema visual — o que ja foi feito
+
+Doze PRs derivadas do canvas `Sistema Visual do Prime Desk`. Cada uma nasceu de
+um numero medido nesta base, nao de preferencia estetica.
+
+- Tokens: tres cores solidas sem nome viraram token; `--p-mono` nao existia e o
+  xterm caia na fonte do sistema.
+- Foco: 14 botoes revelados no hover desenhavam o anel de foco a 0%. Catraca
+  `ghostFocus`, hoje em zero.
+- i18n: 23 chaves mortas removidas; `Intl` no lugar de `pt-BR` cravado. Suites
+  `i18nParity` e `formatIntl`, catraca `intlBypass`.
+- Botao: primitivo em `components/ui/Button.tsx`, catraca `rawButton`.
+- Icones: papel no lugar de desenho, e `lucide-react` preso a `icons.tsx` por
+  regra de eslint.
+- Arvore de agentes: `modelId` no lugar do hash do evento, `prompt` e
+  `createdAt` lidos, fusao daemon+disco no lugar do descarte, sete estados com
+  forma propria.
+- Conversa: `role="log"` sem regiao viva mais regiao de status que anuncia o
+  turno FECHADO, chamadas seguidas agrupadas, motivo da falha sem abrir.
+
 ## Ordem de correcao sugerida
 
 1. `shared/protocol.ts` como fonte unica dos 6 tipos de contrato + `lib/types.ts` para quebrar

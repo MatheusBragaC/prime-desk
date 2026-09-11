@@ -1,4 +1,4 @@
-import { WandSparkles } from 'lucide-react'
+import { WandSparkles } from '@/icons'
 import { useT } from '@/i18n'
 
 /**
@@ -12,7 +12,7 @@ export function TitlingProgress({ done, total }: { done: number; total: number }
   return (
     <div className="mx-2 mb-1 flex items-center gap-2 rounded-sm bg-primary/[0.07] px-2 py-1.5 animate-fade-up">
       <WandSparkles
-        size={13} strokeWidth={1.75}
+        size={13}
         className="shrink-0 animate-pulse-soft text-primarySoft"
       />
       <span className="min-w-0 flex-1 truncate text-xs text-muted">

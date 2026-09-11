@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { Sparkles, FileText, Puzzle } from 'lucide-react'
+import { Sparkles, FileText, Puzzle } from '@/icons'
 import type { CommandInfo } from '@/store/agent'
 import { useT } from '@/i18n'
 
 function SourceIcon({ source }: { source: string }) {
-  if (source === 'skill') return <Sparkles size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
-  if (source === 'template') return <FileText size={14} strokeWidth={1.75} className="shrink-0 text-info" />
-  return <Puzzle size={14} strokeWidth={1.75} className="shrink-0 text-warn" />
+  if (source === 'skill') return <Sparkles size={14} className="shrink-0 text-primarySoft" />
+  if (source === 'template') return <FileText size={14} className="shrink-0 text-info" />
+  return <Puzzle size={14} className="shrink-0 text-warn" />
 }
 
 /**

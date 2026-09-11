@@ -300,12 +300,30 @@ export interface AgentNode {
   rlmChildId?: string
   /** Código Python que originou o subagente, reportado pelo daemon. */
   spawnCode?: string
-  status: 'working' | 'idle' | 'done'
+  /**
+   * `stale` é `running` que parou de dar sinal — o arquivo diz que roda, mas
+   * ninguém reescreve quando o worker morre. `ended` é sessão descartada de
+   * propósito pelo pai. Os dois caíam em `idle`/`done` e sumiam na mesma
+   * aparência de quem nunca começou.
+   */
+  status: 'working' | 'idle' | 'done' | 'stale' | 'ended'
   taskState: string
   replied: boolean
   hasRunningChildren: boolean
   messageCount: number
   firstMessage: string
+  /**
+   * Quando o subagente foi criado, em ISO.
+   *
+   * Vem do `createdAt` do `rlm-subagent.json`, que existia no arquivo e nunca
+   * era lido — por isso não havia como mostrar duração, só "última atividade".
+   * Ausente no root e em nó vindo do daemon.
+   */
+  startedAt?: string
+  /** Nome da última ferramenta chamada. É o "o que está fazendo agora". */
+  lastTool?: string
+  /** Quantas ferramentas este nó rodou. */
+  toolCount?: number
   cwd: string
   modelName: string
   lastActivityAt: string

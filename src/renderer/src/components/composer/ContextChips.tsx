@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Folder, Monitor, Terminal } from 'lucide-react'
+import { Folder, Monitor, IconCommand } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { BranchPicker } from '@/components/BranchPicker'
 import { ExecutionMenu } from './ExecutionMenu'
@@ -56,7 +56,7 @@ export function ContextChips({
           className={chip}
           title={t('chips.execTitle')}
         >
-          {execution.kind === 'ssh' ? <Terminal size={14} strokeWidth={1.75} /> : <Monitor size={14} strokeWidth={1.75} />}
+          {execution.kind === 'ssh' ? <IconCommand size={14} /> : <Monitor size={14} />}
           {execution.kind === 'ssh' ? (execution.target ?? 'SSH') : t('exec.local')}
         </button>
         {menu && (
@@ -85,7 +85,7 @@ export function ContextChips({
       <span className="select-none text-xs text-grid">·</span>
 
       <button onClick={onPickCwd} className={chip} title={cwd || t('chips.pickDir')}>
-        <Folder size={14} strokeWidth={1.75} />
+        <Folder size={14} />
         {short}
       </button>
 

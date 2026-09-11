@@ -37,6 +37,10 @@ interface SubagentMeta {
   status?: string
   model?: { modelId?: string }
   updatedAt?: string
+  /** Tarefa que o pai encomendou. Estava no arquivo e não era lido. */
+  prompt?: string
+  /** Epoch ms da criação. Idem — sem ele não há duração. */
+  createdAt?: number
 }
 
 /** O que se extrai de um transcript. Acumulável: ver `parseTranscript`. */
@@ -49,6 +53,19 @@ interface Digest {
   depth: number
   /** Alguém chamou `agent_message.send` — base para "respondeu". */
   sentToParent: boolean
+  /**
+   * Tarefa vinda do pai.
+   *
+   * Subagente não tem mensagem de usuário: em 47 de 47 transcripts reais só há
+   * `assistant` e `toolResult`, e por isso `firstMessage` ficava sempre vazio.
+   * O texto está num `custom_message` com `customType: 'agent_message'`,
+   * prefixado por `[task from parent]`.
+   */
+  taskFromParent: string
+  /** Nome da última ferramenta chamada — o "o que está fazendo agora". */
+  lastTool: string
+  /** Quantas ferramentas rodaram, para o resumo do que já foi feito. */
+  toolCount: number
   input: number
   output: number
   cost: number
@@ -57,7 +74,8 @@ interface Digest {
 function emptyDigest(): Digest {
   return {
     messageCount: 0, firstMessage: '', lastActivityAt: '', modelName: '',
-    cwd: '', depth: 0, sentToParent: false, input: 0, output: 0, cost: 0
+    cwd: '', depth: 0, sentToParent: false, taskFromParent: '', lastTool: '',
+    toolCount: 0, input: 0, output: 0, cost: 0
   }
 }
 
@@ -92,11 +110,16 @@ interface TranscriptLine {
   type?: string
   cwd?: string
   rlmDepth?: number
+  /** Hash do EVENTO. Não é o modelo — ver `model_change` em `applyLine`. */
   id?: string
+  modelId?: string
   timestamp?: string
   provider?: string
+  customType?: string
+  content?: unknown
   message?: {
     role?: string
+    toolName?: string
     content?: unknown
     timestamp?: number | string
     usage?: {
@@ -126,8 +149,26 @@ function applyLine(d: Digest, raw: string): void {
     if (typeof e.rlmDepth === 'number') d.depth = e.rlmDepth
     return
   }
-  if (e.type === 'model_change' && typeof e.id === 'string') {
-    d.modelName = e.id
+  /*
+    `modelId`, não `id`.
+
+    A linha traz os dois — `{"type":"model_change","id":"fd2d437d",…,
+    "modelId":"claude-opus-5"}` — e `id` é o hash do evento. Lendo o hash, a
+    raiz da árvore exibia "fd2d437d" no lugar do nome do modelo. O subagente
+    escapava por acidente, porque `meta.model.modelId` tem precedência sobre o
+    digest mais abaixo.
+  */
+  if (e.type === 'model_change' && typeof e.modelId === 'string') {
+    d.modelName = e.modelId
+    return
+  }
+
+  /* A tarefa que o pai mandou chega como mensagem própria, não como `message`. */
+  if (e.type === 'custom_message' && e.customType === 'agent_message') {
+    if (!d.taskFromParent) {
+      const texto = textOf(e.content)
+      d.taskFromParent = texto.replace(/^\[task from parent\]\s*/, '').slice(0, 400)
+    }
     return
   }
   if (e.type !== 'message' || !e.message?.role) return
@@ -136,6 +177,16 @@ function applyLine(d: Digest, raw: string): void {
 
   if (!d.firstMessage && e.message.role === 'user') {
     d.firstMessage = textOf(e.message.content).slice(0, 400)
+  }
+
+  /*
+    `toolResult` carrega `toolName` na própria mensagem, então a última
+    ferramenta sai da mesma passada que já monta o digest — sem custo de
+    varrer os blocos de `content` de cada mensagem do assistente.
+  */
+  if (e.message.role === 'toolResult' && typeof e.message.toolName === 'string') {
+    d.lastTool = e.message.toolName
+    d.toolCount += 1
   }
 
   const ts = e.message.timestamp
@@ -163,6 +214,17 @@ async function parseTranscript(file: string): Promise<Digest | null> {
     return null
   }
 
+  /*
+    Tamanho igual significa que nada foi acrescentado — o arquivo é só-append.
+
+    Tentei trocar isto por `>` mais uma comparação de `mtime`, para pegar
+    reescrita no lugar que mantivesse o tamanho. Não funciona: a granularidade
+    do `mtime` depende do filesystem, e no runner do CI duas escritas seguidas
+    caem na mesma marca — o teste que escrevi passava aqui e falhava lá, por
+    sorte de relógio. E o caso que ele guardava não existe nesta base: o
+    transcript é JSONL só-append, compactação muda o tamanho, e o ramo de
+    encolhimento abaixo já cobre isso.
+  */
   const prev = cache.get(file)
   const grew = prev !== undefined && size >= prev.size
   const from = grew ? prev.size : 0
@@ -207,12 +269,39 @@ async function transcriptIn(dir: string): Promise<string | null> {
   }
 }
 
+/*
+  `status` e `updatedAt` mudam; `prompt`, `createdAt`, `spawnCode` e `model`
+  não. O arquivo é pequeno e relido a cada tique de 2s por subagente, então o
+  que é imutável fica guardado e só os dois campos vivos são relidos.
+*/
+interface MetaFixo {
+  sessionName?: string
+  sessionFile?: string
+  spawnCode?: string
+  model?: { modelId?: string }
+  prompt?: string
+  createdAt?: number
+}
+const metaCache = new Map<string, MetaFixo>()
+
 async function readMeta(dir: string): Promise<SubagentMeta> {
+  let bruto: SubagentMeta
   try {
-    return JSON.parse(await readFile(join(dir, 'rlm-subagent.json'), 'utf8')) as SubagentMeta
+    bruto = JSON.parse(await readFile(join(dir, 'rlm-subagent.json'), 'utf8')) as SubagentMeta
   } catch {
     return {}
   }
+  if (!metaCache.has(dir)) {
+    metaCache.set(dir, {
+      sessionName: bruto.sessionName,
+      sessionFile: bruto.sessionFile,
+      spawnCode: bruto.spawnCode,
+      model: bruto.model,
+      prompt: bruto.prompt,
+      createdAt: bruto.createdAt
+    })
+  }
+  return { ...metaCache.get(dir), status: bruto.status, updatedAt: bruto.updatedAt }
 }
 
 async function subDirs(dir: string): Promise<string[]> {
@@ -239,10 +328,34 @@ async function subDirs(dir: string): Promise<string[]> {
  * Status desconhecido vira `idle`: melhor um nó sem cor forte do que afirmar
  * conclusão que o arquivo não afirma.
  */
-function statusOf(meta: SubagentMeta): AgentNode['status'] {
-  if (meta.status === 'running') return 'working'
-  if (meta.status === 'completed' || meta.status === 'deleted') return 'done'
-  return 'idle'
+/**
+ * A partir daqui um `running` parado deixa de ser tratado como vivo.
+ *
+ * Mesmo número do `NOTICE_AFTER_MS` de `lib/useTurnActivity.ts`, que é quando a
+ * interface começa a falar sobre turno silencioso. Os dois não compartilham a
+ * constante porque vivem em processos diferentes e `shared/` guarda tipo de
+ * protocolo, não limiar de interface — mas o valor é deliberadamente o mesmo:
+ * dois números diferentes para "parou de dar sinal" produziriam uma tela que
+ * discorda de si mesma.
+ */
+const ORFAO_APOS_MS = 3 * 60_000
+
+function statusOf(meta: SubagentMeta, ultimaAtividade: string): AgentNode['status'] {
+  if (meta.status === 'completed') return 'done'
+  // Descartado pelo pai depois de usar (`rlm.delete_subagent`): terminou e foi
+  // dispensado. Não é o mesmo que nunca ter começado.
+  if (meta.status === 'deleted') return 'ended'
+  if (meta.status !== 'running') return 'idle'
+
+  /*
+    `running` é o que o ARQUIVO diz, não o que o processo está fazendo. Quando o
+    worker morre, ninguém reescreve o arquivo — e o nó girava para sempre, com
+    o spinner afirmando atividade que não existe há horas. Sem sinal recente, a
+    afirmação cai para ociosa: o dado não sustenta mais o "trabalhando".
+  */
+  const marca = Date.parse(ultimaAtividade || meta.updatedAt || '')
+  if (Number.isNaN(marca)) return 'working'
+  return Date.now() - marca > ORFAO_APOS_MS ? 'stale' : 'working'
 }
 
 async function readSubagent(
@@ -276,14 +389,24 @@ async function readSubagent(
     parentActiveSessionId: parentSessionId,
     rlmChildId: name,
     spawnCode: meta.spawnCode,
-    status: statusOf(meta),
+    status: statusOf(meta, digest.lastActivityAt),
     taskState: '',
     // Heurística honesta: "respondeu" é ter chamado `agent_message.send`, não
     // apenas ter terminado. Filho pode concluir sem responder ao pai.
     replied: digest.sentToParent,
     hasRunningChildren: children.some((c) => c.status === 'working' || c.hasRunningChildren),
     messageCount: digest.messageCount,
-    firstMessage: digest.firstMessage,
+    /*
+      Ordem de preferência para a tarefa: o `prompt` do metadado é o texto que
+      o pai realmente encomendou; o `[task from parent]` do transcript é o
+      mesmo texto já entregue ao filho; `firstMessage` fica por último e, na
+      prática, nunca é alcançado num subagente — nenhum dos 47 transcripts
+      reais tem mensagem de usuário.
+    */
+    firstMessage: meta.prompt?.trim().slice(0, 400) || digest.taskFromParent || digest.firstMessage,
+    startedAt: meta.createdAt ? new Date(meta.createdAt).toISOString() : undefined,
+    lastTool: digest.lastTool || undefined,
+    toolCount: digest.toolCount,
     cwd: digest.cwd,
     modelName: meta.model?.modelId ?? digest.modelName,
     lastActivityAt: digest.lastActivityAt || meta.updatedAt || '',
@@ -340,6 +463,8 @@ export async function readDiskTree(opts: DiskTreeOptions): Promise<AgentNode | n
     hasRunningChildren: children.some((c) => c.status === 'working' || c.hasRunningChildren),
     messageCount: d.messageCount,
     firstMessage: d.firstMessage,
+    lastTool: d.lastTool || undefined,
+    toolCount: d.toolCount,
     cwd: d.cwd,
     modelName: d.modelName,
     lastActivityAt: d.lastActivityAt,
@@ -352,4 +477,5 @@ export async function readDiskTree(opts: DiskTreeOptions): Promise<AgentNode | n
 /** Só para teste: o cache é global e sobreviveria entre casos. */
 export function resetDiskTreeCache(): void {
   cache.clear()
+  metaCache.clear()
 }

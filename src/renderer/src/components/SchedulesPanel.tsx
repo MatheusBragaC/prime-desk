@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CalendarClock, RefreshCw, Plus, Trash2, Pause, Play, HeartPulse,
-  AlertTriangle, Zap, Clock
-} from 'lucide-react'
+import { CalendarClock, RefreshCw, Plus, Trash2, Pause, Play, HeartPulse, IconFailed, Zap, Clock } from '@/icons'
 import type { AgentCronJob, AgentHeartbeatDeliveryMode } from '@shared/protocol'
 import {
   useAgent, listSchedules, addSchedule, cancelSchedule,
@@ -243,7 +240,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
       defaultWidth={380}
       min={300}
       max={760}
-      icon={<CalendarClock size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      icon={<CalendarClock size={16} className="text-primarySoft" />}
       title={t('sched.title')}
       onClose={onClose}
       bodyClassName="min-h-0 flex-1 overflow-y-auto pb-2"
@@ -256,7 +253,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             title={t('sched.new')}
             aria-label={t('sched.new')}
           >
-            <Plus size={16} strokeWidth={1.75} />
+            <Plus size={16} />
           </button>
           <button
             onClick={() => void data.reload()}
@@ -265,7 +262,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             aria-label={t('common.refresh')}
           >
             <RefreshCw
-              size={16} strokeWidth={1.75}
+              size={16}
               className={data.loading || data.refreshing ? 'animate-spin' : ''}
             />
           </button>
@@ -281,7 +278,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
 
       {!offline && noDaemon && (
         <div className="mx-3 my-2 flex items-start gap-2 rounded-lg border border-warn/25 bg-warn/[0.06] p-2.5 text-xs leading-snug text-warn">
-          <AlertTriangle size={14} strokeWidth={1.75} className="mt-[1px] shrink-0" />
+          <IconFailed size={14} className="mt-[1px] shrink-0" />
           {t('sched.noDaemon')}
         </div>
       )}
@@ -303,7 +300,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             className="mt-1.5 w-full resize-none rounded border border-[var(--p-line)] bg-well px-2 py-1 text-xs text-fg outline-none placeholder:text-dim focus:border-primary/40"
           />
           <div className="mt-1 flex items-start gap-1.5 text-micro leading-snug text-warn">
-            <Zap size={12} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+            <Zap size={12} className="mt-[2px] shrink-0" />
             {t('sched.firesAlone')}
           </div>
           <div className="mt-2 flex justify-end gap-1.5">
@@ -336,7 +333,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
           {jobs.map((job) => (
             <div key={job.id} className="group mx-3 mb-1.5 rounded-lg bg-raise p-2.5">
               <div className="flex items-center gap-2">
-                <Clock size={13} strokeWidth={1.75} className="shrink-0 text-dim" />
+                <Clock size={13} className="shrink-0 text-dim" />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
                   {job.schedule.expression}
                 </span>
@@ -348,7 +345,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                     aria-label={t('sched.cancelRun')}
                     className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err focus-visible:opacity-100 group-hover:opacity-100"
                   >
-                    <Trash2 size={13} strokeWidth={1.75} />
+                    <Trash2 size={13} />
                   </button>
                 )}
               </div>
@@ -377,7 +374,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
           {heartbeat ? (
             <div className="mx-3 mb-1.5 rounded-lg bg-raise p-2.5">
               <div className="flex items-center gap-2">
-                <HeartPulse size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                <HeartPulse size={13} className="shrink-0 text-primarySoft" />
                 <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">
                   {heartbeat.schedule.expression}
                 </span>
@@ -406,8 +403,8 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                   className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-fg"
                 >
                   {heartbeat.status === 'paused'
-                    ? <><Play size={12} strokeWidth={1.75} />{t('sched.resume')}</>
-                    : <><Pause size={12} strokeWidth={1.75} />{t('sched.pause')}</>}
+                    ? <><Play size={12} />{t('sched.resume')}</>
+                    : <><Pause size={12} />{t('sched.pause')}</>}
                 </button>
                 <button
                   onClick={() => requestConfirm({
@@ -419,7 +416,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                   })}
                   className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-err"
                 >
-                  <Trash2 size={12} strokeWidth={1.75} />
+                  <Trash2 size={12} />
                   {t('sched.clear')}
                 </button>
               </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Square, X, Command, Plus, ArrowUp, FileText } from 'lucide-react'
+import { Square, IconClose, Command, Plus, ArrowUp, FileText } from '@/icons'
 import { useAgent, sendPrompt, abortTurn } from '@/store/agent'
 import { ModelPicker, ThinkingPicker } from './ModelPicker'
 import { SlashMenu } from './SlashMenu'
@@ -312,11 +312,17 @@ export function Composer({
             {queued > 0 ? t('composer.queued', { n: queued }) : t('queue.title')}
           </button>
 
+          {/*
+            `aria-pressed` porque é um segmentado: sem ele o leitor de tela
+            anuncia dois botões iguais e não diz qual está valendo — a seleção
+            existia só na cor de fundo.
+          */}
           <div className="flex gap-0.5 rounded-md bg-well p-0.5">
             {(['steer', 'followUp'] as DeliveryBehavior[]).map((b) => (
               <button
                 key={b}
                 onClick={() => chooseDelivery(b)}
+                aria-pressed={delivery === b}
                 title={b === 'steer' ? t('queue.steerHint') : t('queue.followUpHint')}
                 className={
                   'rounded px-1.5 py-0.5 text-micro transition-colors ' +
@@ -387,7 +393,7 @@ export function Composer({
                     title={a.path}
                     className="flex h-14 max-w-[220px] items-center gap-2 rounded-card border border-lineStrong bg-[var(--p-panel)] px-3"
                   >
-                    <FileText size={18} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                    <FileText size={18} className="shrink-0 text-primarySoft" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm text-fg">{baseName(a.path)}</span>
                       <span className="block truncate text-micro uppercase tracking-wider text-dim">
@@ -402,7 +408,7 @@ export function Composer({
                   aria-label={t('composer.removeAttachment')}
                   className="absolute -right-1.5 -top-1.5 rounded-full border border-lineStrong bg-[var(--p-panel)] p-0.5 text-muted opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/att:opacity-100"
                 >
-                  <X size={14} strokeWidth={1.75} />
+                  <IconClose size={14} />
                 </button>
               </div>
             ))}
@@ -453,7 +459,7 @@ export function Composer({
             title={t('composer.attach')}
             aria-label={t('composer.attach')}
           >
-            <Plus size={16} strokeWidth={1.75} />
+            <Plus size={16} />
           </button>
           <button
             onClick={onOpenPalette}
@@ -461,7 +467,7 @@ export function Composer({
             title={t('composer.commands').replace('Ctrl', mod)}
             aria-label={t('composer.commands').replace('Ctrl', mod)}
           >
-            <Command size={16} strokeWidth={1.75} />
+            <Command size={16} />
           </button>
 
           {/*
@@ -489,7 +495,7 @@ export function Composer({
               title={t('composer.stop')}
               aria-label={t('composer.stop')}
             >
-              <Square size={14} strokeWidth={1.75} fill="currentColor" />
+              <Square size={14} fill="currentColor" />
             </button>
           ) : (
             <button

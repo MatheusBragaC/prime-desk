@@ -1,6 +1,4 @@
-import {
-  Eye, EyeOff, FolderPlus, RefreshCw, SquarePen, WandSparkles
-} from 'lucide-react'
+import { Eye, EyeOff, FolderPlus, RefreshCw, SquarePen, WandSparkles } from '@/icons'
 import { newSession, refreshSessions } from '@/store/agent'
 import type { TitlingProgress } from '@/lib/useTitleBatch'
 import { useT } from '@/i18n'
@@ -38,7 +36,7 @@ export function SidebarActions({
           onClick={() => void newSession()}
           className="no-drag flex flex-1 items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-sm text-fg transition-colors hover:bg-elevated"
         >
-          <SquarePen size={16} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+          <SquarePen size={16} className="shrink-0 text-primarySoft" />
           {t('sidebar.newChat')}
         </button>
 
@@ -48,7 +46,7 @@ export function SidebarActions({
           title={t('sidebar.newFolder')}
           aria-label={t('sidebar.newFolder')}
         >
-          <FolderPlus size={16} strokeWidth={1.75} />
+          <FolderPlus size={16} />
         </button>
         {archivedCount > 0 && (
           <button
@@ -59,7 +57,7 @@ export function SidebarActions({
             }
             title={showArchived ? t('sidebar.hideArchived') : t('sidebar.showArchived')}
           >
-            {showArchived ? <EyeOff size={16} strokeWidth={1.75} /> : <Eye size={16} strokeWidth={1.75} />}
+            {showArchived ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         )}
         {/*
@@ -89,7 +87,7 @@ export function SidebarActions({
             }
           >
             <WandSparkles
-              size={16} strokeWidth={1.75}
+              size={16}
               className={titling ? 'animate-pulse-soft' : ''}
             />
           </button>
@@ -101,7 +99,7 @@ export function SidebarActions({
           title={t('sidebar.reload')}
           aria-label={t('sidebar.reload')}
         >
-          <RefreshCw size={16} strokeWidth={1.75} />
+          <RefreshCw size={16} />
         </button>
       </div>
     </div>
