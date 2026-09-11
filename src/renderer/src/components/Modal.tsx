@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { IconClose } from '@/icons'
 import { useT } from '@/i18n'
 import { useDialogA11y } from '@/lib/useDialogA11y'
 
@@ -91,7 +91,7 @@ export function Modal({
             className="rounded-md p-1 text-dim transition-colors hover:bg-hover hover:text-fg"
             aria-label={t('common.close')}
           >
-            <X size={16} strokeWidth={1.75} />
+            <IconClose size={16} />
           </button>
         </div>
 

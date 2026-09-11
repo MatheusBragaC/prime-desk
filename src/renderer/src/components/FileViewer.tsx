@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import hljs from 'highlight.js'
-import {
-  X, Save, Pencil, Eye, Copy, ExternalLink, AlertTriangle, Loader2, FileWarning
-} from 'lucide-react'
+import { IconClose, Save, Pencil, Eye, Copy, ExternalLink, IconFailed, Loader2, FileWarning } from '@/icons'
 import { copyText } from '@/lib/clipboard'
 import { useT } from '@/i18n'
 import { fmtSize } from '@/lib/format'
@@ -139,7 +137,7 @@ export function FileViewer({ path, onClose, active = true }: {
               title={t('viewer.copyContent')}
               aria-label={t('viewer.copyContent')}
             >
-              <Copy size={16} strokeWidth={1.75} />
+              <Copy size={16} />
             </button>
             <button
               onClick={() => setEditing((v) => !v)}
@@ -150,7 +148,7 @@ export function FileViewer({ path, onClose, active = true }: {
               }
               title={meta.truncated ? t('viewer.truncatedTitle') : t('viewer.edit')}
             >
-              {editing ? <Eye size={14} strokeWidth={1.75} /> : <Pencil size={14} strokeWidth={1.75} />}
+              {editing ? <Eye size={14} /> : <Pencil size={14} />}
               {editing ? t('viewer.view') : t('viewer.edit')}
             </button>
             <button
@@ -159,7 +157,7 @@ export function FileViewer({ path, onClose, active = true }: {
               className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/15 px-2.5 py-1.5 text-sm text-fg transition-colors hover:bg-primary/25 disabled:border-[var(--p-line)] disabled:bg-transparent disabled:text-dim"
               title={t('viewer.saveTitle')}
             >
-              {saving ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : <Save size={14} strokeWidth={1.75} />}
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {t('viewer.save')}
             </button>
           </>
@@ -171,20 +169,20 @@ export function FileViewer({ path, onClose, active = true }: {
           title={t('files.openExternal')}
           aria-label={t('files.openExternal')}
         >
-          <ExternalLink size={16} strokeWidth={1.75} />
+          <ExternalLink size={16} />
         </button>
         <button
           onClick={onClose}
           aria-label={t('common.close')}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
         >
-          <X size={16} strokeWidth={1.75} />
+          <IconClose size={16} />
         </button>
       </div>
 
       {error && (
         <div className="mx-5 mt-3 flex items-start gap-2 rounded-xl border border-err/25 bg-err/[0.07] p-3 text-sm text-err">
-          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+          <IconFailed size={16} className="mt-[2px] shrink-0" />
           {error}
         </div>
       )}
@@ -198,14 +196,14 @@ export function FileViewer({ path, onClose, active = true }: {
       <div className="min-h-0 flex-1 overflow-auto">
         {state === 'loading' && (
           <div className="flex h-full items-center justify-center text-sm text-dim">
-            <Loader2 size={16} strokeWidth={1.75} className="mr-2 animate-spin" />
+            <Loader2 size={16} className="mr-2 animate-spin" />
             {t('common.loading')}
           </div>
         )}
 
         {state === 'ready' && meta.binary && (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-dim">
-            <FileWarning size={16} strokeWidth={1.75} />
+            <FileWarning size={16} />
             <span className="text-sm">{t('viewer.binary')}</span>
             <button
               onClick={() => void window.prime.revealFile(path)}

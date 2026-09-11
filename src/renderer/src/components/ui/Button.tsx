@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2 } from '@/icons'
 
 /**
  * O botão do app.
@@ -121,7 +121,7 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <Loader2 size={14} strokeWidth={1.75} className="shrink-0 animate-spin" />
+        <Loader2 size={14} className="shrink-0 animate-spin" />
       ) : (
         icon
       )}

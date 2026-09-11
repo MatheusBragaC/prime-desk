@@ -29,6 +29,18 @@ atualizar o baseline estão em `docs/auditoria/README.md` ("Lacuna de processo")
   (alphas crus, escala tipográfica, i18n hardcoded) contra
   `scripts/ui-baseline.json`. Falha só se a dívida aumentar.
 
+## Ícones
+
+Entram por `@/icons`, nunca direto do `lucide-react` — há regra de eslint. O
+módulo aplica traço e `aria-hidden`, e nomeia os papéis onde o mesmo desenho
+servia a dois: `IconClose` fecha, `IconFailed` falha; `IconDone` é estado
+concluído, `IconConfirm` é confirmação passageira; `IconAgents` é a árvore,
+`IconBranch` é git; `IconTerminalPanel` é o lugar, `IconCommand` é o comando
+executado.
+
+Escolher pelo papel, não pelo desenho. Se o papel não existe ainda, crie-o no
+módulo em vez de importar o glifo cru.
+
 ## Princípios do projeto
 
 1. **A GUI é um cliente fino.** Nada de reimplementar contexto, compactação,

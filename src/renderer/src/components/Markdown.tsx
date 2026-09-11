@@ -2,7 +2,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { memo, useRef, useState, type ReactNode } from 'react'
-import { Check, Copy } from 'lucide-react'
+import { IconConfirm, Copy } from '@/icons'
 import { copyText } from '@/lib/clipboard'
 import { useT } from '@/i18n'
 
@@ -43,7 +43,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
             : 'border-[var(--p-line)] bg-[var(--p-panel)] text-dim opacity-45 hover:border-lineHover hover:text-fg hover:opacity-100 group-hover/code:opacity-90')
         }
       >
-        {copied ? <Check size={14} strokeWidth={1.75} /> : <Copy size={14} strokeWidth={1.75} />}
+        {copied ? <IconConfirm size={14} /> : <Copy size={14} />}
         {copied ? t('common.copied') : t('common.copy').toLowerCase()}
       </button>
     </div>

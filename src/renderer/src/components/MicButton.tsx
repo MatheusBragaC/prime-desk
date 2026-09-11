@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Mic, MicOff, ChevronDown, Check, Loader2, Download, Wrench } from 'lucide-react'
+import { Mic, MicOff, ChevronDown, IconConfirm, Loader2, Download, Wrench } from '@/icons'
 import { useDictation } from '@/lib/useDictation'
 import { usePopover } from '@/lib/usePopover'
 import { useAgent } from '@/store/agent'
@@ -131,15 +131,15 @@ export function MicButton({ onPartial, onFinal }: {
         }
       >
         {busy ? (
-          <Loader2 size={15} strokeWidth={1.75} className="animate-spin" />
+          <Loader2 size={15} className="animate-spin" />
         ) : mic.status === 'denied' ? (
-          <MicOff size={15} strokeWidth={1.75} />
+          <MicOff size={15} />
         ) : (
-          <Mic size={15} strokeWidth={1.75} />
+          <Mic size={15} />
         )}
         {recording && <LevelMeter level={mic.level} />}
         {dictation.working && (
-          <Loader2 size={12} strokeWidth={1.75} className="animate-spin text-dim" />
+          <Loader2 size={12} className="animate-spin text-dim" />
         )}
       </button>
 
@@ -153,7 +153,7 @@ export function MicButton({ onPartial, onFinal }: {
         aria-label={t('mic.devices')}
         className="rounded-md p-0.5 text-dim transition-colors hover:bg-elevated hover:text-muted"
       >
-        <ChevronDown size={13} strokeWidth={1.75} />
+        <ChevronDown size={13} />
       </button>
 
       {menu && (
@@ -178,10 +178,10 @@ export function MicButton({ onPartial, onFinal }: {
               }}
               
             >
-              <Mic size={13} strokeWidth={1.75} className="shrink-0" />
+              <Mic size={13} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate" title={d.label}>{d.label}</span>
               {mic.deviceId === d.id && (
-                <Check size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                <IconConfirm size={13} className="shrink-0 text-primarySoft" />
               )}
             </Button>
           ))}
@@ -198,7 +198,7 @@ export function MicButton({ onPartial, onFinal }: {
 
             {speech && !speech.ready && speech.missing.length > 0 && (
               <div className="flex items-start gap-2 px-2 pb-1.5 text-xs leading-snug text-warn">
-                <Wrench size={13} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+                <Wrench size={13} className="mt-[2px] shrink-0" />
                 <span>{t('mic.missingTools', { tools: speech.missing.join(', ') })}</span>
               </div>
             )}
@@ -210,7 +210,7 @@ export function MicButton({ onPartial, onFinal }: {
                   onClick={() => void install(m.id)}
                   
                 >
-                  <Download size={13} strokeWidth={1.75} className="shrink-0" />
+                  <Download size={13} className="shrink-0" />
                   <span className="flex-1">{m.label}</span>
                   <span className="font-mono text-micro text-dim">{fmtSize(m.bytes)}</span>
                 </Button>

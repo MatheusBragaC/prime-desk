@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, CheckCircle2, AlertTriangle, Plug } from 'lucide-react'
+import { Loader2, IconDone, IconFailed, Plug } from '@/icons'
 import { Modal, Field, Button, inputClass } from './Modal'
 import { useT } from '@/i18n'
 import type { SshForm } from '@/lib/types'
@@ -116,12 +116,12 @@ export function SshModal({
         <Button variant="outline" onClick={() => void test()} disabled={!hostOk || testing}>
           {testing ? (
             <span className="flex items-center gap-1.5">
-              <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
               {t('ssh.testing')}
             </span>
           ) : (
             <span className="flex items-center gap-1.5">
-              <Plug size={14} strokeWidth={1.75} />
+              <Plug size={14} />
               {t('ssh.test')}
             </span>
           )}
@@ -135,9 +135,9 @@ export function SshModal({
             }
           >
             {result.ok ? (
-              <CheckCircle2 size={14} strokeWidth={1.75} className="mt-[1px] shrink-0" />
+              <IconDone size={14} className="mt-[1px] shrink-0" />
             ) : (
-              <AlertTriangle size={14} strokeWidth={1.75} className="mt-[1px] shrink-0" />
+              <IconFailed size={14} className="mt-[1px] shrink-0" />
             )}
             {result.message}
           </span>

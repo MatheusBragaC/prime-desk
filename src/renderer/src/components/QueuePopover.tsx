@@ -1,12 +1,11 @@
 import type { RefObject } from 'react'
 import { useEffect } from 'react'
-import { Loader2, Zap, Clock, Bot, ChevronRight } from 'lucide-react'
+import { IconAgents, Loader2, Zap, Clock, Bot, ChevronRight } from '@/icons'
 import { useAgent, setSteeringMode, setFollowUpMode, refreshTree } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
 import { parseQueueItem, countWorking } from '@/lib/agentMessage'
 import type { QueueMode } from '@shared/protocol'
 import { useT } from '@/i18n'
-import { IconAgents } from '@/icons'
 
 /**
  * Conteúdo da fila de mensagens.
@@ -57,7 +56,7 @@ function Group({ label, items, icon }: {
           >
             {item.fromAgent && (
               <div className="mb-0.5 flex items-center gap-1 text-micro text-primarySoft">
-                <Bot size={11} strokeWidth={1.75} className="shrink-0" />
+                <Bot size={11} className="shrink-0" />
                 <span className="min-w-0 truncate">{item.from ?? t('queue.fromAgent')}</span>
               </div>
             )}
@@ -153,7 +152,7 @@ export function QueuePopover({ onClose, trigger }: {
                   ? t('queue.agentsWorking', { working, total: subagents })
                   : t('queue.agentsIdle', { total: subagents })}
               </span>
-              <ChevronRight size={13} strokeWidth={1.75} className="shrink-0 text-dim" />
+              <ChevronRight size={13} className="shrink-0 text-dim" />
             </button>
           )}
 
@@ -161,7 +160,6 @@ export function QueuePopover({ onClose, trigger }: {
             <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted">
               <Loader2
                 size={13}
-                strokeWidth={1.75}
                 className="shrink-0 animate-spin text-primary"
               />
               <span className="min-w-0 flex-1 truncate">
@@ -179,12 +177,12 @@ export function QueuePopover({ onClose, trigger }: {
         <Group
           label={t('queue.steering')}
           items={steering}
-          icon={<Zap size={12} strokeWidth={1.75} />}
+          icon={<Zap size={12} />}
         />
         <Group
           label={t('queue.followUps')}
           items={followUps}
-          icon={<Clock size={12} strokeWidth={1.75} />}
+          icon={<Clock size={12} />}
         />
 
         {nothing && (

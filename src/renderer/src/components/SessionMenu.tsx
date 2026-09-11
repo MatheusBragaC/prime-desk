@@ -1,8 +1,5 @@
 import { useState, type RefObject } from 'react'
-import {
-  FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore,
-  Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2
-} from 'lucide-react'
+import { FolderInput, Pin, PinOff, Pencil, Copy, FolderOpen, Archive, ArchiveRestore, Trash2, ChevronRight, ExternalLink, WandSparkles, Loader2 } from '@/icons'
 import type { SessionSummary } from '@shared/protocol'
 import {
   useAgent, mutateFolders, refreshSessions, rpc, deleteSession, generateTitleFor
@@ -132,17 +129,17 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
       <Button menuItem onClick={onOpen}>
-        <ExternalLink size={14} strokeWidth={1.75} />
+        <ExternalLink size={14} />
         {t('menu.open')}
       </Button>
 
       <Button menuItem onClick={() => void togglePin()}>
-        {pinned ? <PinOff size={14} strokeWidth={1.75} /> : <Pin size={14} strokeWidth={1.75} />}
+        {pinned ? <PinOff size={14} /> : <Pin size={14} />}
         {pinned ? t('menu.unpin') : t('menu.pin')}
       </Button>
 
       <Button menuItem onClick={onRename}>
-        <Pencil size={14} strokeWidth={1.75} />
+        <Pencil size={14} />
         {t('menu.rename')}
       </Button>
 
@@ -156,9 +153,9 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
         title={session.named ? t('menu.retitleHint') : t('menu.titleHint')}
       >
         {titling ? (
-          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
+          <Loader2 size={14} className="animate-spin text-primary" />
         ) : (
-          <WandSparkles size={14} strokeWidth={1.75} />
+          <WandSparkles size={14} />
         )}
         {session.named ? t('menu.retitle') : t('menu.title')}
       </Button>
@@ -168,7 +165,7 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
         onClick={() => void duplicate()}
         title={isActive ? t('menu.duplicateHint') : t('menu.duplicateOnlyActive')}
       >
-        <Copy size={14} strokeWidth={1.75} />
+        <Copy size={14} />
         {t('menu.duplicate')}
       </Button>
 
@@ -176,9 +173,9 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
 
       <div className="relative">
         <Button menuItem onClick={() => setSubmenu((v) => !v)}>
-          <FolderInput size={14} strokeWidth={1.75} />
+          <FolderInput size={14} />
           <span className="flex-1">{t('menu.moveToFolder')}</span>
-          <ChevronRight size={14} strokeWidth={1.75} className={submenu ? 'rotate-90' : ''} />
+          <ChevronRight size={14} className={submenu ? 'rotate-90' : ''} />
         </Button>
         {submenu && (
           <div className="mt-0.5 pl-2">
@@ -187,12 +184,12 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
             )}
             {folderGroups.map((g) => (
               <Button menuItem key={g.key}  onClick={() => void moveTo(g.folderId!)}>
-                <FolderOpen size={14} strokeWidth={1.75} />
+                <FolderOpen size={14} />
                 <span className="truncate">{g.label}</span>
               </Button>
             ))}
             <Button menuItem onClick={() => void moveTo(null)}>
-              <Trash2 size={14} strokeWidth={1.75} />
+              <Trash2 size={14} />
               {t('menu.removeFromFolder')}
             </Button>
           </div>
@@ -200,14 +197,14 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       </div>
 
       <Button menuItem onClick={() => void toggleArchive()}>
-        {archived ? <ArchiveRestore size={14} strokeWidth={1.75} /> : <Archive size={14} strokeWidth={1.75} />}
+        {archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
         {archived ? t('menu.unarchive') : t('menu.archive')}
       </Button>
 
       <div className="my-1 border-t border-[var(--p-line)]" />
 
       <Button menuItem variant="danger" onClick={askRemove}>
-        <Trash2 size={14} strokeWidth={1.75} />
+        <Trash2 size={14} />
         {t('menu.delete')}
       </Button>
     </div>

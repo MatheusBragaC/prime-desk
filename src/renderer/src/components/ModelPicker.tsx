@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronDown, Brain, Cpu } from 'lucide-react'
+import { IconConfirm, ChevronDown, Brain, Cpu } from '@/icons'
 import { useAgent, setModel, setThinking } from '@/store/agent'
 import { THINKING_LEVELS, type ThinkingLevel } from '@shared/protocol'
 import { usePopover } from '@/lib/usePopover'
@@ -25,9 +25,9 @@ export function ModelPicker() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
       >
-        <Cpu size={14} strokeWidth={1.75} className="text-dim" />
+        <Cpu size={14} className="text-dim" />
         <span className="max-w-[190px] truncate">{state?.model?.name ?? '—'}</span>
-        <ChevronDown size={14} strokeWidth={1.75} className="text-dim" />
+        <ChevronDown size={14} className="text-dim" />
       </button>
 
       {open && (
@@ -58,10 +58,10 @@ export function ModelPicker() {
                 </div>
                 {m.reasoning && (
                   <span className="shrink-0" title={t('model.reasoning')}>
-                    <Brain size={14} strokeWidth={1.75} className="text-dim" />
+                    <Brain size={14} className="text-dim" />
                   </span>
                 )}
-                {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
+                {active && <IconConfirm size={14} className="shrink-0 text-primarySoft" />}
               </button>
             )
           })}
@@ -84,9 +84,9 @@ export function ThinkingPicker() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
       >
-        <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[level]} />
+        <Brain size={14} className={THINKING_COLOR[level]} />
         <span>{thinkingLabel(level)}</span>
-        <ChevronDown size={14} strokeWidth={1.75} className="text-dim" />
+        <ChevronDown size={14} className="text-dim" />
       </button>
 
       {open && (
@@ -106,9 +106,9 @@ export function ThinkingPicker() {
                 (l === level ? 'bg-primary/[0.16] text-fg' : 'text-muted hover:bg-hover')
               }
             >
-              <Brain size={14} strokeWidth={1.75} className={THINKING_COLOR[l]} />
+              <Brain size={14} className={THINKING_COLOR[l]} />
               <span className="flex-1">{thinkingLabel(l)}</span>
-              {l === level && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
+              {l === level && <IconConfirm size={14} className="text-primarySoft" />}
             </button>
           ))}
         </div>

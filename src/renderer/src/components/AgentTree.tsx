@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, CornerDownRight, Code2, RefreshCw, Eye, Radio } from 'lucide-react'
-import { IconAgents } from '@/icons'
+import { IconAgents, ChevronRight, CornerDownRight, Code2, RefreshCw, Eye, Radio } from '@/icons'
 import type { AgentNode, AgentTreeSnapshot } from '@shared/protocol'
 import { useAgent, observeSession } from '@/store/agent'
 import { Butterfly } from './Butterfly'
@@ -126,7 +125,7 @@ function Node({
             className="block disabled:opacity-0"
           >
             <ChevronRight
-              size={14} strokeWidth={1.75}
+              size={14}
               className={'text-dim transition-transform duration-200 ' + (fechado ? '' : 'rotate-90')}
             />
           </button>
@@ -146,7 +145,7 @@ function Node({
         {level === 0 ? (
           <Butterfly size={13} className="mt-[3px] shrink-0" />
         ) : (
-          <CornerDownRight size={14} strokeWidth={1.75} className="mt-[3px] shrink-0 text-grid" />
+          <CornerDownRight size={14} className="mt-[3px] shrink-0 text-grid" />
         )}
 
         <div className="min-w-0 flex-1">
@@ -171,7 +170,7 @@ function Node({
             */}
             {node.source === 'disk' ? null : watching ? (
               <span className="flex shrink-0 items-center gap-1 text-micro text-ok">
-                <Radio size={12} strokeWidth={1.75} className="animate-pulse-soft" />
+                <Radio size={12} className="animate-pulse-soft" />
                 {t('tree.watching')}
               </span>
             ) : (
@@ -181,7 +180,7 @@ function Node({
                 title={t('tree.watch')}
                 aria-label={t('tree.watch')}
               >
-                <Eye size={14} strokeWidth={1.75} />
+                <Eye size={14} />
               </button>
             )}
           </div>
@@ -244,7 +243,7 @@ function Node({
                 onClick={() => setShowCode((v) => !v)}
                 className="mt-1 flex items-center gap-1 text-micro text-dim transition-colors hover:text-muted"
               >
-                <Code2 size={12} strokeWidth={1.75} />
+                <Code2 size={12} />
                 {showCode ? t('tree.hideSpawn') : t('tree.showSpawn')}
               </button>
               {showCode && (
@@ -353,7 +352,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
             title={t('common.refresh')}
             aria-label={t('common.refresh')}
           >
-            <RefreshCw size={14} strokeWidth={1.75} />
+            <RefreshCw size={14} />
           </button>
         </>
       }

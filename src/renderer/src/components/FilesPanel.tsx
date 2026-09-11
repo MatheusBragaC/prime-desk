@@ -1,8 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  ChevronRight, Folder, FolderOpen, FileCode2, FileText, FileJson, Image as ImageIcon,
-  Search, X, RefreshCw, ExternalLink, FolderTree, AtSign
-} from 'lucide-react'
+import { ChevronRight, Folder, FolderOpen, FileCode2, FileText, FileJson, Image as ImageIcon, Search, IconClose, RefreshCw, ExternalLink, FolderTree, AtSign } from '@/icons'
 import type { DirEntry } from '@shared/protocol'
 import { fmtSize } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
@@ -17,10 +14,10 @@ const IMG = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'])
 
 function FileIcon({ name }: { name: string }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (IMG.has(ext)) return <ImageIcon size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
-  if (DATA.has(ext)) return <FileJson size={14} strokeWidth={1.75} className="shrink-0 text-warn" />
-  if (CODE.has(ext)) return <FileCode2 size={14} strokeWidth={1.75} className="shrink-0 text-info" />
-  return <FileText size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+  if (IMG.has(ext)) return <ImageIcon size={14} className="shrink-0 text-primarySoft" />
+  if (DATA.has(ext)) return <FileJson size={14} className="shrink-0 text-warn" />
+  if (CODE.has(ext)) return <FileCode2 size={14} className="shrink-0 text-info" />
+  return <FileText size={14} className="shrink-0 text-dim" />
 }
 
 interface NodeProps {
@@ -67,18 +64,18 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
           <>
             <button onClick={() => void toggle()} className="shrink-0">
               <ChevronRight
-                size={14} strokeWidth={1.75}
+                size={14}
                 className={'text-dim transition-transform duration-150 ' + (open ? 'rotate-90' : '')}
               />
             </button>
             <button onClick={() => void toggle()} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
               {open ? (
-                <FolderOpen size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                <FolderOpen size={14} className="shrink-0 text-primarySoft" />
               ) : (
-                <Folder size={14} strokeWidth={1.75} className="shrink-0 text-muted" />
+                <Folder size={14} className="shrink-0 text-muted" />
               )}
               <span className="truncate text-sm text-fg">{entry.name}</span>
-              {loading && <RefreshCw size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-dim" />}
+              {loading && <RefreshCw size={14} className="shrink-0 animate-spin text-dim" />}
             </button>
           </>
         ) : (
@@ -98,7 +95,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
               aria-label={t('files.quote')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft focus-visible:opacity-100 group-hover:opacity-100"
             >
-              <AtSign size={14} strokeWidth={1.75} />
+              <AtSign size={14} />
             </button>
             <button
               onClick={() => void window.prime.revealFile(entry.path)}
@@ -106,7 +103,7 @@ function Node({ entry, level, filter, onOpen, onQuote }: NodeProps) {
               aria-label={t('files.openExternal')}
               className="shrink-0 text-dim opacity-0 transition-opacity hover:text-primarySoft focus-visible:opacity-100 group-hover:opacity-100"
             >
-              <ExternalLink size={14} strokeWidth={1.75} />
+              <ExternalLink size={14} />
             </button>
           </>
         )}
@@ -182,7 +179,7 @@ export function FilesPanel({
       defaultWidth={320}
       min={240}
       max={700}
-      icon={<FolderTree size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      icon={<FolderTree size={16} className="text-primarySoft" />}
       title={shortRoot}
       onClose={onClose}
       bodyClassName="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2"
@@ -194,7 +191,7 @@ export function FilesPanel({
           aria-label={t('common.refresh')}
         >
           <RefreshCw
-            size={14} strokeWidth={1.75}
+            size={14}
             className={tree.loading || tree.refreshing ? 'animate-spin' : ''}
           />
         </button>
@@ -202,7 +199,7 @@ export function FilesPanel({
       subheader={
         <div className="px-3 py-2">
           <div className="flex items-center gap-2 rounded-[9px] border border-[var(--p-line)] bg-well px-2.5 py-1.5 focus-within:border-primary/40">
-            <Search size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+            <Search size={14} className="shrink-0 text-dim" />
             <input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -215,7 +212,7 @@ export function FilesPanel({
                 aria-label={t('files.clearFilter')}
                 className="shrink-0 text-dim hover:text-fg"
               >
-                <X size={14} strokeWidth={1.75} />
+                <IconClose size={14} />
               </button>
             )}
           </div>

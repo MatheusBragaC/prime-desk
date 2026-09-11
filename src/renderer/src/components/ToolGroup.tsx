@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, Terminal, Loader2 } from 'lucide-react'
-import { IconDone, IconFailed } from '@/icons'
+import { IconDone, IconFailed, ChevronRight, IconCommand, Loader2 } from '@/icons'
 import type { ToolExec } from '@/store/agent'
 import { ToolCard } from './ToolCard'
 import { fmtDuration } from '@/lib/format'
@@ -47,10 +46,10 @@ export function ToolGroup({
         className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-left font-normal hover:bg-elevated"
       >
         <ChevronRight
-          size={14} strokeWidth={1.75}
+          size={14}
           className={'shrink-0 text-dim transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
         />
-        <Terminal size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+        <IconCommand size={14} className="shrink-0 text-dim" />
         <span className="flex-1 truncate text-sm text-muted">
           {t('tool.steps', { n: execs.length })}
         </span>
@@ -58,7 +57,7 @@ export function ToolGroup({
           <span className="shrink-0 font-mono text-xs text-dim">{fmtDuration(total)}</span>
         )}
         {rodando ? (
-          <Loader2 size={14} strokeWidth={1.75} className="shrink-0 animate-spin text-primary" />
+          <Loader2 size={14} className="shrink-0 animate-spin text-primary" />
         ) : falhou ? (
           <IconFailed className="shrink-0 text-err" />
         ) : (

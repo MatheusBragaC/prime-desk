@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AlertTriangle, Info, X } from 'lucide-react'
+import { IconFailed, Info, IconClose } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { useT } from '@/i18n'
 
@@ -37,9 +37,9 @@ export function Notice() {
         }
       >
         {err ? (
-          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+          <IconFailed size={16} className="mt-[2px] shrink-0" />
         ) : (
-          <Info size={16} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+          <Info size={16} className="mt-[2px] shrink-0" />
         )}
         <span className="text-sm leading-snug">{notice.text}</span>
         <button
@@ -47,7 +47,7 @@ export function Notice() {
           aria-label={t('common.close')}
           className="mt-[2px] shrink-0 opacity-60 transition-opacity hover:opacity-100"
         >
-          <X size={14} strokeWidth={1.75} />
+          <IconClose size={14} />
         </button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileDiff, RefreshCw, ChevronRight } from 'lucide-react'
+import { FileDiff, RefreshCw, ChevronRight } from '@/icons'
 import { useAsync } from '@/lib/useAsync'
 import { unwrap } from '@/lib/ipc'
 import { DockPanel } from './DockPanel'
@@ -93,7 +93,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
       min={300}
       max={900}
       headerBorder={false}
-      icon={<FileDiff size={16} strokeWidth={1.75} className="text-primarySoft" />}
+      icon={<FileDiff size={16} className="text-primarySoft" />}
       title={t('diff.title')}
       onClose={onClose}
       bodyClassName="min-h-0 flex-1 overflow-y-auto pb-2"
@@ -105,7 +105,7 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
           aria-label={t('common.refresh')}
         >
           <RefreshCw
-            size={16} strokeWidth={1.75}
+            size={16}
             className={list.loading || list.refreshing ? 'animate-spin' : ''}
           />
         </button>
@@ -140,7 +140,6 @@ export function DiffPanel({ onClose }: { onClose: () => void }) {
             >
               <ChevronRight
                 size={16}
-                strokeWidth={1.75}
                 className={'shrink-0 text-dim transition-transform ' + (isOpen ? 'rotate-90' : '')}
               />
               <span className={'w-3 shrink-0 font-mono text-xs ' + m.className} title={m.title}>

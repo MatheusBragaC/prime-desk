@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, Sparkles } from 'lucide-react'
+import { ChevronRight, Sparkles } from '@/icons'
 import { useT } from '@/i18n'
 
 export function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
@@ -14,10 +14,10 @@ export function ThinkingBlock({ text, streaming }: { text: string; streaming: bo
         className="group flex items-center gap-1.5 text-sm text-dim transition-colors hover:text-muted"
       >
         <ChevronRight
-          size={16} strokeWidth={1.75}
+          size={16}
           className={'transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
         />
-        <Sparkles size={14} strokeWidth={1.75} className={streaming ? 'animate-pulse-soft text-primary' : 'text-dim'} />
+        <Sparkles size={14} className={streaming ? 'animate-pulse-soft text-primary' : 'text-dim'} />
         <span className={streaming ? 'animate-pulse-soft' : ''}>
           {streaming ? t('thinking.streaming') : t('thinking.label')}
         </span>
