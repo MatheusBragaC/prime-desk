@@ -491,7 +491,7 @@ export function Composer({
             <button
               onClick={() => void submit()}
               disabled={!value.trim() || !ready}
-              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primarySoft disabled:bg-elevated disabled:text-dim"
+              className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-fg transition-colors hover:bg-primarySoft disabled:bg-elevated disabled:text-dim"
               title={t('composer.send')}
             >
               <ArrowUp size={16} strokeWidth={2} />

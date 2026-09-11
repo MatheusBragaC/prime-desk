@@ -37,7 +37,10 @@ export default {
         well: 'var(--p-well)',
         codeWell: 'var(--p-code-well)',
         scrim: 'var(--p-scrim)',
-        drop: 'var(--p-shadow)'
+        drop: 'var(--p-shadow)',
+        codeBg: 'var(--p-code-bg)',
+        codeFg: 'var(--p-code-fg)',
+        errSurface: 'var(--p-error-surface)'
       },
       /*
         Escala de sete degraus. Antes eram 21 tamanhos arbitrários

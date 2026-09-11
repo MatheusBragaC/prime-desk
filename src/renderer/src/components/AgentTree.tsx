@@ -143,7 +143,7 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
                 {showCode ? t('tree.hideSpawn') : t('tree.showSpawn')}
               </button>
               {showCode && (
-                <pre className="mt-1 max-h-32 animate-fade-up overflow-auto rounded-md border border-[var(--p-line)] bg-[#08080a] p-2 font-mono text-micro leading-relaxed text-mint">
+                <pre className="mt-1 max-h-32 animate-fade-up overflow-auto rounded-md border border-[var(--p-line)] bg-codeBg p-2 font-mono text-micro leading-relaxed text-mint">
                   {node.spawnCode.trim()}
                 </pre>
               )}

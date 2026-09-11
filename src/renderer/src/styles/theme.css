@@ -49,6 +49,24 @@
   --p-diff-removed: #f85149;
 
   /*
+    Superfícies SÓLIDAS que `--p-code-well` não resolve.
+
+    O poço de código é rgba sobre o que estiver atrás, e serve para bloco
+    dentro de painel. Terminal, visualizador de arquivo e bloco de spawn
+    precisam de cor opaca: o xterm pinta o próprio fundo fora da árvore do
+    app, e o visualizador cobre o palco inteiro. Os três já usavam #08080a
+    escrito à mão, em três arquivos — o valor estava certo, faltava o nome.
+
+    A tinta monoespaçada era #c9c9d1 no TSX e #d4d4d8 na regra `.md code`:
+    dois tons para o mesmo papel. Unificados aqui no mais escuro dos dois.
+  */
+  --p-code-bg: #08080a;
+  --p-code-fg: #c9c9d1;
+  /* Aviso de erro flutuante: o vermelho já assentado sobre o fundo, opaco
+     porque o toast tem sombra e não pode deixar o palco vazar por baixo. */
+  --p-error-surface: #20121a;
+
+  /*
     Sobreposições por PAPEL, não por número. O tema já tinha `--p-line`, mas
     hover, contorno de superfície flutuante, poço de campo, bloco de código e
     véu eram escritos com alpha literal na classe — 22 valores distintos para
@@ -214,7 +232,7 @@ body {
   border: 1px solid var(--p-line);
   border-radius: var(--r-xs);
   padding: 0.12em 0.4em;
-  color: #d4d4d8;
+  color: var(--p-code-fg);
 }
 .md pre {
   background: var(--p-surface);

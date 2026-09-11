@@ -29,7 +29,7 @@ function ContextRing({ pct, size = 15 }: { pct: number | null; size?: number }) 
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
       <circle
         cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2"
+        fill="none" stroke="var(--p-line-strong)" strokeWidth="2"
         strokeDasharray={pct === null ? '2 2' : undefined}
       />
       {pct !== null && (
@@ -106,15 +106,27 @@ function MetricsPopover({ onClose, trigger }: {
         </div>
       )}
 
-      <div className={row}>
-        <span className={label} title={t('app.tokensTitle')}>{t('app.sessionUsage')}</span>
-        <span className={value}>{fmtTokens(totals.tokens)}</span>
-      </div>
+      {/*
+        Nothing reported yet is not zero.
 
-      <div className={row}>
-        <span className={label} title={t('app.costTitle')}>{t('app.costTitle')}</span>
-        <span className={value}>{fmtCost(totals.cost)}</span>
-      </div>
+        `totals` accumulates from the usage of each message (store/transcript.ts),
+        so a fresh conversation sits at 0/0 — and rendering that printed a
+        confident "0 tokens · $0.00" for a turn whose cost is simply unknown.
+        Same guard `ObservedPanel` already uses for the very same number.
+      */}
+      {totals.tokens > 0 && (
+        <>
+          <div className={row}>
+            <span className={label} title={t('app.tokensTitle')}>{t('app.sessionUsage')}</span>
+            <span className={value}>{fmtTokens(totals.tokens)}</span>
+          </div>
+
+          <div className={row}>
+            <span className={label} title={t('app.costTitle')}>{t('app.costTitle')}</span>
+            <span className={value}>{fmtCost(totals.cost)}</span>
+          </div>
+        </>
+      )}
 
       {state?.goal?.active && (
         <div className={row}>
@@ -172,7 +184,7 @@ function ToolButton({
     >
       {icon}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-fg">
           {badge}
         </span>
       )}

@@ -221,12 +221,12 @@ export function FileViewer({ path, onClose, active = true }: {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
-            className="h-full w-full resize-none bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65] text-[#c9c9d1] outline-none"
+            className="h-full w-full resize-none bg-codeBg px-5 py-4 font-mono text-sm leading-[1.65] text-codeFg outline-none"
           />
         )}
 
         {state === 'ready' && !meta.binary && !editing && (
-          <pre className="min-h-full bg-[#08080a] px-5 py-4 font-mono text-sm leading-[1.65]">
+          <pre className="min-h-full bg-codeBg px-5 py-4 font-mono text-sm leading-[1.65]">
             {/* Só HTML do highlight.js entra aqui — ver a invariante em `highlighted`. */}
             <code
               className="hljs bg-transparent"
