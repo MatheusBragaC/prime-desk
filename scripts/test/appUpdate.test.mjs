@@ -38,6 +38,9 @@ export default function run({ latestFromRelease, compareVersions, appUpdateComma
     disponivel('0.2.6', 'v0.2.5'), false)
   ok('0.9.9 instalada, v0.10.0 publicada -> atualiza (compara numero, nao texto)',
     disponivel('0.9.9', 'v0.10.0'), true)
+  // O salto desta release: o major sobe e o resto zera.
+  ok('0.2.6 instalada, v1.0.0 publicada -> atualiza',
+    disponivel('0.2.6', 'v1.0.0'), true)
 
   // --- o comando de instalacao
   const cmd = appUpdateCommand()
