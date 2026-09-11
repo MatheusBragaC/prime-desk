@@ -189,8 +189,13 @@ export const Message = memo(function Message({
             return null
           })}
 
+          {/*
+            Visível ao fim do turno, não só sob o ponteiro. Nascia em
+            `opacity-0`: o número existia no DOM e não chegava a quem navega por
+            teclado nem a quem usa leitor de tela.
+          */}
           {msg.usage && !msg.streaming && msg.usage.totalTokens > 0 && (
-            <div className="mt-1.5 font-mono text-xs text-dim opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="mt-1.5 font-mono text-xs text-dim">
               {fmtTokens(msg.usage.totalTokens)} tokens
               {/* `fmtCost`, not a local toFixed: four decimals here against two
                   everywhere else made the same spend read as two numbers. */}

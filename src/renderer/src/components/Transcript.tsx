@@ -1,9 +1,11 @@
 import type { RefObject } from 'react'
+import { ArrowDown } from 'lucide-react'
 import { Message } from './Message'
 import { Welcome } from './Welcome'
 import { PendingBubble } from './PendingBubble'
 import type { ToolExec, UiMessage } from '@/store/agent'
 import { useT } from '@/i18n'
+import { Button } from '@/components/ui/Button'
 
 /**
  * O palco da conversa: falha fatal, carregamento, tela inicial ou mensagens.
@@ -25,6 +27,9 @@ export interface TranscriptProps {
   showPending: boolean
   scrollRef: RefObject<HTMLDivElement>
   onScroll: () => void
+  /** Conversa colada no fim. Falso enquanto o usuário lê atrás. */
+  atBottom: boolean
+  onBackToEnd: () => void
 }
 
 export function Transcript({
@@ -37,14 +42,34 @@ export function Transcript({
   onLoadOlder,
   showPending,
   scrollRef,
-  onScroll
+  onScroll,
+  atBottom,
+  onBackToEnd
 }: TranscriptProps) {
   const { t } = useT()
+
+  /*
+    Texto do último turno JÁ FECHADO, para a região de status.
+
+    Só entra quando `streaming` é falso: é isso que garante uma leitura só, com
+    a resposta inteira, em vez de uma releitura por quadro.
+  */
+  const ultimoFechado = [...messages]
+    .reverse()
+    .find((m) => m.role === 'assistant' && !m.streaming)
+  const anuncio = ultimoFechado
+    ? ultimoFechado.content
+        .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+        .map((b) => b.text)
+        .join(' ')
+        .trim()
+    : ''
 
   if (fatal) {
     return (
       <div className="flex flex-1 items-center justify-center p-10">
-        <div className="max-w-[560px] rounded-xl border border-err/30 bg-err/[0.07] p-5">
+        {/* `alert` e nao `status`: a ponte caiu e nada mais vai chegar. */}
+        <div role="alert" className="max-w-[560px] rounded-xl border border-err/30 bg-err/[0.07] p-5">
           <div className="text-base font-semibold text-err">{t('bridge.fatalTitle')}</div>
           <pre className="mt-2.5 max-h-64 overflow-auto whitespace-pre-wrap font-mono text-sm text-muted">
             {fatal}
@@ -59,6 +84,17 @@ export function Transcript({
     <div
       ref={scrollRef}
       onScroll={onScroll}
+      role="log"
+      aria-label={t('chat.log')}
+      /*
+        `role="log"` dá navegação e contexto, mas SEM `aria-live` aqui.
+
+        A resposta chega token a token no mesmo nó de texto: com região viva na
+        lista, o leitor de tela releria a mensagem inteira a cada quadro — pior
+        que o silêncio de hoje. O anúncio sai da região de status abaixo, uma
+        vez, com o turno já fechado.
+      */
+      aria-live="off"
       className={'relative z-10 overflow-y-auto ' + (isEmpty ? 'shrink-0' : 'min-h-0 flex-1')}
     >
       {loadingSession ? (
@@ -92,6 +128,33 @@ export function Transcript({
           {showPending && <PendingBubble />}
           <div className="h-6" />
         </div>
+      )}
+
+      {/*
+        Uma leitura por turno, com a resposta completa.
+
+        Fica fora do `role="log"` de propósito: dentro dele herdaria o
+        `aria-live="off"` e não anunciaria nada.
+      */}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {anuncio}
+      </span>
+
+      {/*
+        A adesão solta com 90px de folga e não havia nada que devolvesse o fim —
+        quem subia para reler ficava sem caminho de volta, e o texto novo
+        continuava chegando fora da vista.
+      */}
+      {!atBottom && !isEmpty && messages.length > 0 && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onBackToEnd}
+          icon={<ArrowDown size={13} strokeWidth={1.75} />}
+          className="sticky bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-field bg-[var(--p-panel)] shadow-2xl shadow-drop"
+        >
+          {t('chat.backToEnd')}
+        </Button>
       )}
     </div>
   )

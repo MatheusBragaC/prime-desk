@@ -143,6 +143,8 @@ export function App() {
             showPending={awaitingFirstBlock(messages, streaming)}
             scrollRef={scroll.ref}
             onScroll={scroll.onScroll}
+            atBottom={scroll.atBottom}
+            onBackToEnd={scroll.scrollToEnd}
           />
 
           <div className="relative z-10 mx-auto w-full max-w-col">
