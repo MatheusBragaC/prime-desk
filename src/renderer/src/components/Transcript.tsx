@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { ArrowDown } from '@/icons'
 import { Message } from './Message'
 import { Welcome } from './Welcome'
 import { PendingBubble } from './PendingBubble'
@@ -150,7 +150,7 @@ export function Transcript({
           size="sm"
           variant="outline"
           onClick={onBackToEnd}
-          icon={<ArrowDown size={13} strokeWidth={1.75} />}
+          icon={<ArrowDown size={13} />}
           className="sticky bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-field bg-[var(--p-panel)] shadow-2xl shadow-drop"
         >
           {t('chat.backToEnd')}

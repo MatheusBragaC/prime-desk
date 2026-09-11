@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { IconClose } from '@/icons'
 import type { ReactNode } from 'react'
 import { useResizable } from '@/lib/useResizable'
 import { useWinControlsInset } from '@/lib/platform'
@@ -103,7 +103,7 @@ export function DockPanel({
             aria-label={t('common.close')}
             className="no-drag rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
           >
-            <X size={16} strokeWidth={1.75} />
+            <IconClose size={16} />
           </button>
         </div>
       )}

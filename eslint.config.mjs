@@ -92,10 +92,29 @@ export default tseslint.config(
               group: ['**/main/*', '**/main/**', '**/src/main/**', '@main/*', '@main/**'],
               message: 'renderer não importa de src/main — use src/shared (@shared) ou o preload'
             }
+          ],
+          /*
+            O conjunto de ícones entra por `@/icons`, não pela biblioteca.
+
+            Importando direto, o mesmo desenho voltava a servir a dois papéis —
+            o `X` fechava modal em dez lugares e marcava ferramenta com erro num
+            décimo primeiro — e o traço de 1,75 era reescrito à mão em 203 usos.
+            O módulo aplica os padrões e nomeia os papéis ambíguos.
+          */
+          paths: [
+            {
+              name: 'lucide-react',
+              message: 'importe de @/icons — lá o papel tem nome e o traço já vem certo'
+            }
           ]
         }
       ]
     }
+  },
+  {
+    // O módulo de ícones é, por definição, quem fala com a biblioteca.
+    files: ['src/renderer/src/icons.tsx'],
+    rules: { 'no-restricted-imports': 'off' }
   },
 
   // Inversão de camada desfeita em 7a4bb32: `lib/` é a camada de baixo.

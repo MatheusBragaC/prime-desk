@@ -12,7 +12,7 @@ import { useSmoothText } from '@/lib/useSmoothText'
 import { balanceMarkdown } from '@/lib/markdownStream'
 import { splitStream } from '@/lib/splitStream'
 import { splitTrailingPaths, baseName } from '@/lib/attachments'
-import { FileText } from 'lucide-react'
+import { FileText } from '@/icons'
 
 /**
  * Bloco de texto do assistente, com revelação suave enquanto transmite.
@@ -104,7 +104,7 @@ export const Message = memo(function Message({
                   title={p}
                   className="flex max-w-[240px] items-center gap-1.5 rounded-md bg-chip px-2 py-1"
                 >
-                  <FileText size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                  <FileText size={14} className="shrink-0 text-primarySoft" />
                   <span className="truncate text-sm text-muted">{baseName(p)}</span>
                 </span>
               ))}

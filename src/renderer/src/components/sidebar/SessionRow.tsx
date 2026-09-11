@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { MoreHorizontal, Pin } from 'lucide-react'
+import { MoreHorizontal, Pin } from '@/icons'
 import { useAgent, mutateFolders } from '@/store/agent'
 import type { Group } from '@/lib/grouping'
 import { SessionMenu } from '@/components/SessionMenu'
@@ -88,7 +88,7 @@ export function SessionRow({
               className="h-[6px] w-[6px] animate-pulse-soft rounded-full bg-primary"
             />
           ) : pinned ? (
-            <Pin size={13} strokeWidth={1.75} className="text-primarySoft" />
+            <Pin size={13} className="text-primarySoft" />
           ) : inUse ? (
             <span
               title={t('session.inUse')}
@@ -134,7 +134,7 @@ export function SessionRow({
         title={t('menu.actions')}
         aria-label={t('menu.actions')}
       >
-        <MoreHorizontal size={14} strokeWidth={1.75} />
+        <MoreHorizontal size={14} />
       </button>
 
       {menu && (

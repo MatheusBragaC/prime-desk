@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { ChevronRight, Terminal, Loader2, RotateCcw, CircleSlash } from 'lucide-react'
+import { IconDone, IconFailed, ChevronRight, IconCommand, Loader2, RotateCcw, CircleSlash } from '@/icons'
 import type { ToolExec } from '@/store/agent'
 import { fmtDuration, fmtElapsed } from '@/lib/format'
 import { summary, codeFrom } from '@/lib/toolSummary'
 import { useTurnClock, WARN_AFTER_MS } from '@/lib/useTurnActivity'
 import { useT } from '@/i18n'
-import { IconDone, IconFailed } from '@/icons'
 
 const MAX_PREVIEW = 4000
 
@@ -39,7 +38,7 @@ export function ToolCard({
     if (live) {
       return (
         <div className="my-2 flex items-center gap-2 rounded-card border border-[var(--p-line)] bg-[var(--p-surface)] px-3 py-2 text-sm text-dim">
-          <Loader2 size={14} strokeWidth={1.75} className="animate-spin text-primary" />
+          <Loader2 size={14} className="animate-spin text-primary" />
           <span>{t('tool.preparing', { name: pendingName ?? 'tool' })}</span>
         </div>
       )
@@ -50,7 +49,7 @@ export function ToolCard({
         title={t('tool.noResultHint')}
         className="my-2 flex items-center gap-2 rounded-card border border-[var(--p-line)] bg-[var(--p-surface)] px-3 py-2 text-sm text-warn"
       >
-        <CircleSlash size={14} strokeWidth={1.75} className="shrink-0" />
+        <CircleSlash size={14} className="shrink-0" />
         <span className="font-mono text-sm opacity-80">{pendingName ?? 'tool'}</span>
         <span className="opacity-90">· {t('tool.noResult')}</span>
       </div>
@@ -103,17 +102,17 @@ export function ToolCard({
         className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-elevated"
       >
         <ChevronRight
-          size={14} strokeWidth={1.75}
+          size={14}
           className={'shrink-0 text-dim transition-transform duration-200 ' + (open ? 'rotate-90' : '')}
         />
-        <Terminal size={14} strokeWidth={1.75} className="shrink-0 text-dim" />
+        <IconCommand size={14} className="shrink-0 text-dim" />
         <span className="flex-1 truncate font-mono text-sm text-dim">
           {summary(exec.name, exec.args)}
         </span>
 
         {exec.kernelRestarted && (
           <span className="shrink-0" title={t('tool.kernelRestarted')}>
-            <RotateCcw size={14} strokeWidth={1.75} className="text-warn" />
+            <RotateCcw size={14} className="text-warn" />
           </span>
         )}
         {exec.durationMs !== undefined && !running && (
@@ -129,7 +128,7 @@ export function ToolCard({
         )}
         {running && (
           <Loader2
-            size={14} strokeWidth={1.75}
+            size={14}
             className={'shrink-0 animate-spin ' + (slow ? 'text-warn' : 'text-primary')}
           />
         )}

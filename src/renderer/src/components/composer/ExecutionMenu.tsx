@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { Check, Monitor, Plus, Terminal, Trash2 } from 'lucide-react'
+import { IconConfirm, Monitor, Plus, IconCommand, Trash2 } from '@/icons'
 import { usePopover } from '@/lib/usePopover'
 import type { ExecutionInfo, SshConnection } from '@shared/protocol'
 import { useT } from '@/i18n'
@@ -42,9 +42,9 @@ export function ExecutionMenu({
       className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
       <Button menuItem onClick={onLocal}>
-        <Monitor size={14} strokeWidth={1.75} />
+        <Monitor size={14} />
         <span className="flex-1">{t('exec.local')}</span>
-        {execution.kind === 'local' && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
+        {execution.kind === 'local' && <IconConfirm size={14} className="text-primarySoft" />}
       </Button>
 
       {connections.length > 0 && (
@@ -57,7 +57,7 @@ export function ExecutionMenu({
             return (
               <div key={c.id} className="group/conn relative">
                 <Button menuItem className="pr-7" onClick={() => onConnect(c)}>
-                  <Terminal size={14} strokeWidth={1.75} />
+                  <IconCommand size={14} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{c.name}</span>
                     <span className="block truncate font-mono text-micro text-dim">
@@ -65,7 +65,7 @@ export function ExecutionMenu({
                       {c.port ? `:${c.port}` : ''}
                     </span>
                   </span>
-                  {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
+                  {active && <IconConfirm size={14} className="shrink-0 text-primarySoft" />}
                 </Button>
                 <button
                   onClick={() => onRemove(c.id)}
@@ -73,7 +73,7 @@ export function ExecutionMenu({
                   aria-label={t('exec.removeConn')}
                   className="absolute right-1 top-2 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err focus-visible:opacity-100 group-hover/conn:opacity-100"
                 >
-                  <Trash2 size={14} strokeWidth={1.75} />
+                  <Trash2 size={14} />
                 </button>
               </div>
             )
@@ -83,7 +83,7 @@ export function ExecutionMenu({
 
       <div className="mt-1 border-t border-[var(--p-line)] pt-1">
         <Button menuItem onClick={onAdd}>
-          <Plus size={14} strokeWidth={1.75} />
+          <Plus size={14} />
           {t('exec.addSsh')}
         </Button>
       </div>

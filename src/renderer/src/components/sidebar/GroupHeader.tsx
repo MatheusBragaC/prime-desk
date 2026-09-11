@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ChevronRight, Trash2, Pencil } from 'lucide-react'
+import { Plus, ChevronRight, Trash2, Pencil } from '@/icons'
 import { useAgent, newSession, mutateFolders } from '@/store/agent'
 import type { Group } from '@/lib/grouping'
 import { InlineEdit } from '@/components/ui/InlineEdit'
@@ -58,7 +58,7 @@ export function GroupHeader({
     <div className="group/h flex items-center gap-1 px-2 pb-1.5 pt-5">
       <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-1 text-left">
         <ChevronRight
-          size={14} strokeWidth={1.75}
+          size={14}
           className={
             'shrink-0 text-dim opacity-0 transition-all duration-200 group-focus-within/h:opacity-100 group-hover/h:opacity-100 ' +
             (collapsed ? '' : 'rotate-90')
@@ -94,7 +94,7 @@ export function GroupHeader({
         title={t('sidebar.newChat')}
         aria-label={t('sidebar.newChat')}
       >
-        <Plus size={14} strokeWidth={1.75} />
+        <Plus size={14} />
       </button>
 
       {group.kind === 'folder' && (
@@ -105,7 +105,7 @@ export function GroupHeader({
             title={t('menu.rename')}
             aria-label={t('menu.rename')}
           >
-            <Pencil size={14} strokeWidth={1.75} />
+            <Pencil size={14} />
           </button>
           <button
             onClick={() => void removeFolder()}
@@ -113,7 +113,7 @@ export function GroupHeader({
             title={t('menu.delete')}
             aria-label={t('menu.delete')}
           >
-            <Trash2 size={14} strokeWidth={1.75} />
+            <Trash2 size={14} />
           </button>
         </>
       )}

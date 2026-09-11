@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3 } from '@/icons'
 import { Butterfly } from './Butterfly'
 import { Modal } from './Modal'
 import { UsagePanel } from './UsagePanel'
@@ -51,7 +51,7 @@ export function Welcome() {
           style={{ animationDelay: '80ms' }}
           className="animate-fade-up mt-7 flex items-center gap-2 rounded-field px-3 py-1.5 text-sm text-dim transition-colors hover:bg-elevated hover:text-muted"
         >
-          <BarChart3 size={16} strokeWidth={1.75} />
+          <BarChart3 size={16} />
           {t('welcome.viewUsage')}
         </button>
       )}

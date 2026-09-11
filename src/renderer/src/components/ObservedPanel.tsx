@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, Radio, AlertTriangle, CircleOff, Loader2 } from 'lucide-react'
+import { IconClose, Radio, IconFailed, CircleOff, Loader2 } from '@/icons'
 import { useAgent, unobserveSession, type Observed } from '@/store/agent'
 import { Message } from './Message'
 import { fmtTokens } from '@/lib/format'
@@ -22,20 +22,20 @@ import { useT } from '@/i18n'
 function StatusIcon({ obs, size }: { obs: Observed; size: number }) {
   const fresh = Date.now() - obs.lastEventAt < 4000
   if (obs.status === 'loading') {
-    return <Loader2 size={size} strokeWidth={1.75} className="shrink-0 animate-spin text-primary" />
+    return <Loader2 size={size} className="shrink-0 animate-spin text-primary" />
   }
   if (obs.status === 'live') {
     return (
       <Radio
-        size={size} strokeWidth={1.75}
+        size={size}
         className={'shrink-0 ' + (fresh ? 'animate-pulse-soft text-ok' : 'text-primarySoft')}
       />
     )
   }
   if (obs.status === 'closed') {
-    return <CircleOff size={size} strokeWidth={1.75} className="shrink-0 text-dim" />
+    return <CircleOff size={size} className="shrink-0 text-dim" />
   }
-  return <AlertTriangle size={size} strokeWidth={1.75} className="shrink-0 text-err" />
+  return <IconFailed size={size} className="shrink-0 text-err" />
 }
 
 export function ObservedPanel() {
@@ -120,7 +120,7 @@ export function ObservedPanel() {
                   aria-label={t('observed.stop')}
                   className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
                 >
-                  <X size={11} strokeWidth={2} />
+                  <IconClose size={11} strokeWidth={2} />
                 </button>
               </div>
             )
@@ -159,7 +159,7 @@ export function ObservedPanel() {
           aria-label={t('observed.stop')}
           className="rounded-lg p-1.5 text-dim transition-colors hover:bg-hover hover:text-fg"
         >
-          <X size={16} strokeWidth={1.75} />
+          <IconClose size={16} />
         </button>
       </div>
 

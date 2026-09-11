@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { FileText, ExternalLink, PanelRight } from 'lucide-react'
+import { FileText, ExternalLink, PanelRight } from '@/icons'
 import { useAgent } from '@/store/agent'
 import type { DetectedDocument } from '@/lib/documentDetect'
 import { useT } from '@/i18n'
@@ -49,7 +49,7 @@ export function DocumentCard({
       }
     >
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primarySoft">
-        <FileText size={16} strokeWidth={1.75} />
+        <FileText size={16} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium text-fg">{detected.title}</div>
@@ -61,9 +61,9 @@ export function DocumentCard({
       </div>
       <div className="mt-1 shrink-0 text-dim transition-colors group-hover/doc:text-fg">
         {isOpen ? (
-          <PanelRight size={15} strokeWidth={1.75} />
+          <PanelRight size={15} />
         ) : (
-          <ExternalLink size={15} strokeWidth={1.75} />
+          <ExternalLink size={15} />
         )}
       </div>
     </button>

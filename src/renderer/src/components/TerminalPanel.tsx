@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import { X, Plus, SquareTerminal, FileCode2, FolderOpen } from 'lucide-react'
+import { IconClose, Plus, IconTerminalPanel, FileCode2, FolderOpen } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { useTerminalTabs } from '@/store/terminal'
 import { DockPanel } from './DockPanel'
@@ -108,8 +108,8 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
                 className="flex min-w-0 items-center gap-1.5 text-left"
               >
                 {tab.kind === 'shell'
-                  ? <SquareTerminal size={13} strokeWidth={1.75} className="shrink-0" />
-                  : <FileCode2 size={13} strokeWidth={1.75} className="shrink-0" />}
+                  ? <IconTerminalPanel size={13} className="shrink-0" />
+                  : <FileCode2 size={13} className="shrink-0" />}
                 <span className="max-w-[120px] truncate">{tab.title}</span>
               </button>
               {/* `focus-visible` porque o fechar só aparece no hover: sem isso, quem navega por teclado foca um botão invisível. */}
@@ -118,7 +118,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
                 aria-label={t('terminal.closeTab')}
                 className="rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover:opacity-100"
               >
-                <X size={11} strokeWidth={2} />
+                <IconClose size={11} strokeWidth={2} />
               </button>
             </div>
           ))}
@@ -130,7 +130,7 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
           title={t('terminal.newShell')}
           aria-label={t('terminal.newShell')}
         >
-          <Plus size={15} strokeWidth={1.75} />
+          <Plus size={15} />
         </button>
         <button
           onClick={() => void openFile()}
@@ -138,14 +138,14 @@ export function TerminalPanel({ onClose }: { onClose: () => void }) {
           title={t('terminal.openFile')}
           aria-label={t('terminal.openFile')}
         >
-          <FolderOpen size={15} strokeWidth={1.75} />
+          <FolderOpen size={15} />
         </button>
         <button
           onClick={onClose}
           aria-label={t('common.close')}
           className="no-drag shrink-0 rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg"
         >
-          <X size={15} strokeWidth={1.75} />
+          <IconClose size={15} />
         </button>
         </div>
       }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { IconFailed, Loader2 } from '@/icons'
 import { Modal, Button } from './Modal'
 import { useAgent } from '@/store/agent'
 import { useT } from '@/i18n'
@@ -45,7 +45,7 @@ export function ConfirmDialog() {
             variant={confirm.danger ? 'danger' : 'accent'}
             onClick={() => void run()}
             disabled={busy}
-            icon={busy ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : undefined}
+            icon={busy ? <Loader2 size={14} className="animate-spin" /> : undefined}
           >
             {busy ? t('common.processing') : (confirm.confirmLabel ?? t('common.confirm'))}
           </Button>
@@ -54,7 +54,7 @@ export function ConfirmDialog() {
     >
       <div className="flex items-start gap-3">
         {confirm.danger && (
-          <AlertTriangle size={16} strokeWidth={1.75} className="mt-[2px] shrink-0 text-err" />
+          <IconFailed size={16} className="mt-[2px] shrink-0 text-err" />
         )}
         <div className="min-w-0">
           <p className="text-sm leading-relaxed text-fg">{confirm.message}</p>

@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { Search } from '@/icons'
 import { useT } from '@/i18n'
 
 export function SidebarSearch({
@@ -13,7 +13,7 @@ export function SidebarSearch({
   return (
     <div className="px-2 pb-1">
       <div className="flex items-center gap-2 rounded-sm px-2 py-1.5 transition-colors focus-within:bg-elevated hover:bg-elevated">
-        <Search size={16} strokeWidth={1.75} className="shrink-0 text-dim" />
+        <Search size={16} className="shrink-0 text-dim" />
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}

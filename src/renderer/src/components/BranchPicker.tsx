@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GitBranch, Check, Loader2, AlertTriangle } from 'lucide-react'
+import { IconBranch, IconConfirm, Loader2, IconFailed } from '@/icons'
 import { useAgent } from '@/store/agent'
 import { usePopover } from '@/lib/usePopover'
 import { useT } from '@/i18n'
@@ -107,9 +107,9 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
           title={t('branch.title')}
         >
           {switching ? (
-            <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" />
           ) : (
-            <GitBranch size={14} strokeWidth={1.75} />
+            <IconBranch size={14} />
           )}
           <span className="max-w-[180px] truncate">{switching ?? current}</span>
           {dirty && (
@@ -141,19 +141,19 @@ export function BranchPicker({ chipClass }: { chipClass: string }) {
                     : 'text-muted hover:bg-hover hover:text-fg')
                 }
               >
-                <GitBranch size={13} strokeWidth={1.75} className="shrink-0 text-dim" />
+                <IconBranch size={13} className="shrink-0 text-dim" />
                 <span className="min-w-0 flex-1 truncate" title={b.upstream ?? b.name}>
                   {b.name}
                 </span>
                 {b.current && (
-                  <Check size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
+                  <IconConfirm size={13} className="shrink-0 text-primarySoft" />
                 )}
               </button>
             ))}
 
             {dirty && (
               <div className="mt-1 flex items-start gap-2 border-t border-[var(--p-line)] px-2 pt-1.5 text-micro leading-snug text-warn">
-                <AlertTriangle size={12} strokeWidth={1.75} className="mt-[2px] shrink-0" />
+                <IconFailed size={12} className="mt-[2px] shrink-0" />
                 {t('branch.dirtyNote')}
               </div>
             )}
