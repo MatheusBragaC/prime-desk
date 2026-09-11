@@ -144,6 +144,26 @@ const SUITES = [
     }
   },
   {
+    /*
+      Fusão daemon+disco. `agent-tree.ts` fala com processo (`execFile`) e com o
+      leitor de disco, mas o que se afirma aqui é só a fusão — as duas funções
+      são reexportadas da cópia empacotada, e nenhum caso passa perto do spawn.
+    */
+    test: './agentTreeMerge.test.mjs',
+    src: 'src/main/agent-tree.ts',
+    needsShims: false,
+    platform: 'node',
+    prepare: (source) =>
+      source.replaceAll("from './agent-tree-disk.js'", "from './diskShim.js'") +
+      '\nexport { fundir, fundirNaFloresta }\n',
+    shims: {
+      'diskShim.js': 'export async function readDiskTree() { return null }\n',
+      // `runList` spawns the agent; no case here reaches it.
+      'agent-path.js':
+        "export const agentBinary = () => 'prime-agent'\nexport const agentEnv = () => ({})\n"
+    }
+  },
+  {
     test: './env.test.mjs',
     src: 'src/renderer/src/lib/env.ts',
     needsShims: false,

@@ -81,7 +81,12 @@ function subagente(dir, { childId, name, status, sessionId, opts = {} }) {
   writeFileSync(join(dir, 'rlm-subagent.json'), JSON.stringify({
     type: 'rlm_subagent', childId, sessionName: name, sessionFile: file,
     status, model: { provider: 'anthropic', modelId: 'claude-opus-5' },
-    updatedAt: '2026-09-09T14:00:00.000Z'
+    /*
+      Relativo ao agora, não data cravada: `running` só conta como trabalhando
+      se deu sinal há pouco, e uma marca fixa de setembro envelhece junto com o
+      repositório — o caso passaria hoje e falharia amanhã.
+    */
+    updatedAt: opts.updatedAt ?? new Date().toISOString()
   }))
   return file
 }
@@ -194,6 +199,33 @@ export default function run({ readDiskTree, resetDiskTreeCache }) {
       depois?.firstMessage, 'primeira')
     ok('usage aparece so depois de existir',
       [antes?.usage, depois?.usage?.inputTokens], [undefined, 7])
+  })
+
+  caso('running parado ha muito tempo para de girar', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    writeFileSync(join(f.sessionsDir, 'raiz.jsonl'), transcript('raiz'))
+    const raizDir = join(f.artifactsDir, 'raiz')
+
+    // Um deu sinal agora; o outro, ha quatro horas. Os dois dizem `running`.
+    subagente(join(raizDir, 'sub-vivo'), {
+      childId: 'sub-vivo', name: 'vivo', status: 'running', sessionId: 'v1', opts: { depth: 1 }
+    })
+    subagente(join(raizDir, 'sub-orfao'), {
+      childId: 'sub-orfao', name: 'orfao', status: 'running', sessionId: 'o1',
+      opts: { depth: 1, updatedAt: new Date(Date.now() - 4 * 60 * 60_000).toISOString() }
+    })
+
+    const t = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    const porNome = Object.fromEntries((t?.children ?? []).map((c) => [c.name, c]))
+    ok('o que deu sinal agora continua trabalhando', porNome['vivo'].status, 'working')
+    /*
+      O arquivo continua dizendo `running` — ninguem reescreve quando o worker
+      morre. Sem sinal recente a afirmacao cai, em vez de o spinner prometer
+      atividade que nao existe ha horas.
+    */
+    ok('o que parou ha quatro horas vira ocioso', porNome['orfao'].status, 'idle')
+    ok('a raiz nao conta o orfao como filho rodando', t?.hasRunningChildren, true)
   })
 
   caso('o nome do modelo vem de modelId, nao do hash do evento', async () => {
