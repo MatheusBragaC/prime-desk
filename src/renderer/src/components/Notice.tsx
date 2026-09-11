@@ -22,6 +22,13 @@ export function Notice() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-[calc(var(--p-titlebar)+12px)] z-toast flex justify-center px-6">
       <div
+        /*
+          Único canal de erro passageiro do app, e nenhum leitor de tela o
+          anunciava. Erro interrompe a leitura (`alert`); aviso espera a pausa
+          (`status`). A distinção já existia na variável, faltava chegar ao DOM.
+        */
+        role={err ? 'alert' : 'status'}
+        aria-live={err ? 'assertive' : 'polite'}
         className={
           'pointer-events-auto flex max-w-[620px] animate-fade-up items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl shadow-drop ' +
           (err

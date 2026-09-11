@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
  * Rolagem da conversa: abre no fim e adere ao fim enquanto a resposta cresce.
@@ -25,6 +25,10 @@ const SETTLE_MS = 2000
 export interface StickyScroll {
   ref: React.RefObject<HTMLDivElement>
   onScroll: () => void
+  /** A conversa está colada no fim. Falso enquanto o usuário está lendo atrás. */
+  atBottom: boolean
+  /** Volta para o fim e volta a colar. */
+  scrollToEnd: () => void
 }
 
 export interface StickyScrollOptions {
@@ -46,6 +50,14 @@ export function useStickyScroll({
 }: StickyScrollOptions): StickyScroll {
   const ref = useRef<HTMLDivElement>(null)
   const pinned = useRef(true)
+  /*
+    Espelho em estado do `pinned`.
+
+    O ref sozinho não re-renderiza, e a pílula de voltar ao fim precisa
+    aparecer no instante em que a adesão solta. Só escreve quando o valor muda,
+    para não disparar render a cada evento de rolagem.
+  */
+  const [atBottom, setAtBottom] = useState(true)
   /** Conversa cuja abertura já foi posicionada no fim. */
   const scrolledFor = useRef<string | null>(null)
 
@@ -95,8 +107,18 @@ export function useStickyScroll({
   const onScroll = useCallback(() => {
     const el = ref.current
     if (!el) return
-    pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_SLACK
+    const colado = el.scrollHeight - el.scrollTop - el.clientHeight < STICK_SLACK
+    pinned.current = colado
+    setAtBottom((antes) => (antes === colado ? antes : colado))
   }, [])
 
-  return { ref, onScroll }
+  const scrollToEnd = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    pinned.current = true
+    setAtBottom(true)
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [])
+
+  return { ref, onScroll, atBottom, scrollToEnd }
 }
