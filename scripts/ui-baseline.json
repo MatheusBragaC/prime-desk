@@ -5,6 +5,7 @@
   "offscale": 2,
   "i18nInline": 0,
   "hardcoded": 10,
-  "ghostFocus": 1,
+  "ghostFocus": 0,
+  "intlBypass": 0,
   "rawButton": 91
 }

@@ -6,6 +6,7 @@ import { DocumentCard } from './DocumentCard'
 import { detectDocument } from '@/lib/documentDetect'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
+import { ToolGroup } from './ToolGroup'
 import { fmtCost, fmtTokens } from '@/lib/format'
 import { useSmoothText } from '@/lib/useSmoothText'
 import { balanceMarkdown } from '@/lib/markdownStream'
@@ -118,6 +119,29 @@ export const Message = memo(function Message({
   const lastIdx = msg.content.length - 1
 
   /*
+    Junta chamadas SEGUIDAS num só item de renderização.
+
+    A corrida é o caso comum em turno agêntico, e empilhar um cartão por chamada
+    empurrava o texto da resposta para fora da tela. O agrupamento é estrutural:
+    não interpreta o que a ferramenta fez, só reconhece que veio em rajada.
+  */
+  const itens: ({ tipo: 'bloco'; bloco: ContentBlock; i: number }
+    | { tipo: 'grupo'; chamadas: { id: string; name?: string }[]; i: number })[] = []
+  for (let i = 0; i < msg.content.length; i++) {
+    const b = msg.content[i]
+    if (b.type !== 'toolCall') {
+      itens.push({ tipo: 'bloco', bloco: b, i })
+      continue
+    }
+    const anterior = itens[itens.length - 1]
+    if (anterior?.tipo === 'grupo') {
+      anterior.chamadas.push({ id: b.id, name: b.name })
+    } else {
+      itens.push({ tipo: 'grupo', chamadas: [{ id: b.id, name: b.name }], i })
+    }
+  }
+
+  /*
     Blocos vazios existem no começo do turno: o `thinking` chega antes de ter
     texto e o `ThinkingBlock` não desenha nada. Sem esta saída, a mensagem
     ocuparia um turno inteiro de respiro sem nada dentro, logo acima da bolha de
@@ -145,7 +169,30 @@ export const Message = memo(function Message({
       */}
       <div className="flex">
         <div className="min-w-0 flex-1">
-          {msg.content.map((block, i) => {
+          {itens.map((item) => {
+            if (item.tipo === 'grupo') {
+              const chamadas = item.chamadas.map((c) => ({
+                id: c.id || String(item.i),
+                name: c.name,
+                exec: tools[c.id]
+              }))
+              // Chamada solta continua cartão: agrupar uma só seria um clique a mais
+              // sem informação a mais.
+              if (chamadas.length === 1) {
+                return (
+                  <ToolCard
+                    key={chamadas[0].id}
+                    exec={chamadas[0].exec}
+                    pendingName={chamadas[0].name}
+                    live={msg.streaming}
+                  />
+                )
+              }
+              return <ToolGroup key={`g${item.i}`} execs={chamadas} live={msg.streaming} />
+            }
+
+            const block = item.bloco
+            const i = item.i
             if (block.type === 'thinking') {
               return (
                 <ThinkingBlock
@@ -175,16 +222,6 @@ export const Message = memo(function Message({
                 )
               }
               return <StreamingText key={i} text={block.text} live={live} />
-            }
-            if (block.type === 'toolCall') {
-              return (
-                <ToolCard
-                  key={block.id || i}
-                  exec={tools[block.id]}
-                  pendingName={block.name}
-                  live={msg.streaming}
-                />
-              )
             }
             return null
           })}
