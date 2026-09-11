@@ -6,6 +6,7 @@ import { useAgent } from '@/store/agent'
 import { fmtSize } from '@/lib/format'
 import { useT } from '@/i18n'
 import type { SpeechStatus } from '@shared/protocol'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Ditado por voz no composer.
@@ -169,20 +170,20 @@ export function MicButton({ onPartial, onFinal }: {
           )}
 
           {mic.devices.map((d) => (
-            <button
+            <Button menuItem
               key={d.id}
               onClick={() => {
                 mic.chooseDevice(d.id)
                 setMenu(false)
               }}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
+              
             >
               <Mic size={13} strokeWidth={1.75} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate" title={d.label}>{d.label}</span>
               {mic.deviceId === d.id && (
                 <Check size={13} strokeWidth={1.75} className="shrink-0 text-primarySoft" />
               )}
-            </button>
+            </Button>
           ))}
 
           {/* Estado do motor: a parte que decide se ditar funciona. */}
@@ -204,15 +205,15 @@ export function MicButton({ onPartial, onFinal }: {
 
             {speech && !speech.ready && speech.missing.length === 0 &&
               speech.models.map((m) => (
-                <button
+                <Button menuItem
                   key={m.id}
                   onClick={() => void install(m.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg"
+                  
                 >
                   <Download size={13} strokeWidth={1.75} className="shrink-0" />
                   <span className="flex-1">{m.label}</span>
                   <span className="font-mono text-micro text-dim">{fmtSize(m.bytes)}</span>
-                </button>
+                </Button>
               ))}
           </div>
 

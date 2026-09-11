@@ -3,6 +3,7 @@ import { Check, Monitor, Plus, Terminal, Trash2 } from 'lucide-react'
 import { usePopover } from '@/lib/usePopover'
 import type { ExecutionInfo, SshConnection } from '@shared/protocol'
 import { useT } from '@/i18n'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Menu de contexto de execução.
@@ -34,19 +35,17 @@ export function ExecutionMenu({
   const { t } = useT()
   const ref = usePopover<HTMLDivElement>(onClose, true, trigger)
 
-  const item =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
   return (
     <div
       ref={ref}
       className="absolute bottom-full left-0 z-dropdown mb-2 w-[284px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
-      <button className={item} onClick={onLocal}>
+      <Button menuItem onClick={onLocal}>
         <Monitor size={14} strokeWidth={1.75} />
         <span className="flex-1">{t('exec.local')}</span>
         {execution.kind === 'local' && <Check size={14} strokeWidth={1.75} className="text-primarySoft" />}
-      </button>
+      </Button>
 
       {connections.length > 0 && (
         <>
@@ -57,7 +56,7 @@ export function ExecutionMenu({
             const active = execution.kind === 'ssh' && execution.target === c.host
             return (
               <div key={c.id} className="group/conn relative">
-                <button className={item + ' pr-7'} onClick={() => onConnect(c)}>
+                <Button menuItem className="pr-7" onClick={() => onConnect(c)}>
                   <Terminal size={14} strokeWidth={1.75} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{c.name}</span>
@@ -67,7 +66,7 @@ export function ExecutionMenu({
                     </span>
                   </span>
                   {active && <Check size={14} strokeWidth={1.75} className="shrink-0 text-primarySoft" />}
-                </button>
+                </Button>
                 <button
                   onClick={() => onRemove(c.id)}
                   title={t('exec.removeConn')}
@@ -83,10 +82,10 @@ export function ExecutionMenu({
       )}
 
       <div className="mt-1 border-t border-[var(--p-line)] pt-1">
-        <button className={item} onClick={onAdd}>
+        <Button menuItem onClick={onAdd}>
           <Plus size={14} strokeWidth={1.75} />
           {t('exec.addSsh')}
-        </button>
+        </Button>
       </div>
 
       <div className="px-2 pb-1 pt-1 text-micro leading-snug text-dim">

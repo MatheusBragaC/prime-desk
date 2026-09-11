@@ -134,44 +134,9 @@ export function Field({
 export const inputClass =
   'w-full rounded-lg border border-[var(--p-line)] bg-well px-3 py-2 text-sm text-fg outline-none transition-colors placeholder:text-dim focus:border-primary/50'
 
-export function Button({
-  variant = 'ghost',
-  icon,
-  className,
-  children,
-  ...rest
-}: {
-  variant?: 'primary' | 'ghost' | 'subtle' | 'danger'
-  /** Ícone à esquerda do rótulo, no espaçamento do primitivo. */
-  icon?: ReactNode
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const base =
-    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40'
-  const style =
-    variant === 'primary'
-      ? 'border border-primary/40 bg-primary/20 text-fg hover:bg-primary/30'
-      : variant === 'subtle'
-        ? 'border border-lineStrong text-muted hover:border-lineHover hover:text-fg'
-        : variant === 'danger'
-          ? 'border border-err/40 bg-err/15 text-err hover:bg-err/25'
-          : 'text-muted hover:bg-hover hover:text-fg'
-  /*
-    `className` externo entra DEPOIS da base, e não no lugar dela. Escrito antes
-    do spread, qualquer chamador que passasse uma classe apagava o primitivo
-    inteiro — e era assim que o botão de perigo e os botões com ícone vinham
-    sendo remontados à mão fora daqui.
-  */
-  const merged = [base, style, className].filter(Boolean).join(' ')
-  return (
-    <button className={merged} {...rest}>
-      {icon ? (
-        <span className="flex items-center gap-1.5">
-          {icon}
-          {children}
-        </span>
-      ) : (
-        children
-      )}
-    </button>
-  )
-}
+/*
+  O botão mudou de casa para `ui/Button.tsx`, junto do `InlineEdit`: ele não é
+  peça de diálogo, e morar aqui obrigava quem queria um botão a importar o
+  módulo de modal. Reexportado para os três importadores atuais não mudarem.
+*/
+export { Button } from './ui/Button'

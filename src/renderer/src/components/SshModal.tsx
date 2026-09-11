@@ -57,7 +57,7 @@ export function SshModal({
       footer={
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="primary" onClick={submit} disabled={!hostOk}>
+          <Button variant="accent" onClick={submit} disabled={!hostOk}>
             {t('ssh.add')}
           </Button>
         </>
@@ -113,7 +113,7 @@ export function SshModal({
       </Field>
 
       <div className="flex items-center gap-2.5">
-        <Button variant="subtle" onClick={() => void test()} disabled={!hostOk || testing}>
+        <Button variant="outline" onClick={() => void test()} disabled={!hostOk || testing}>
           {testing ? (
             <span className="flex items-center gap-1.5">
               <Loader2 size={14} strokeWidth={1.75} className="animate-spin" />

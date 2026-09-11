@@ -10,6 +10,7 @@ import {
 import type { Group } from '@/lib/grouping'
 import { usePopover } from '@/lib/usePopover'
 import { useT } from '@/i18n'
+import { Button } from '@/components/ui/Button'
 
 interface Props {
   session: SessionSummary
@@ -22,8 +23,6 @@ interface Props {
   trigger: RefObject<HTMLElement | null>
 }
 
-const item =
-  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hover hover:text-fg'
 
 export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRename, trigger }: Props) {
   const folders = useAgent((s) => s.folders)
@@ -132,27 +131,27 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
       ref={ref}
       className="absolute right-1 top-7 z-dropdown w-[218px] animate-fade-up rounded-lg border border-lineStrong bg-[var(--p-panel)] p-1 shadow-2xl shadow-drop"
     >
-      <button className={item} onClick={onOpen}>
+      <Button menuItem onClick={onOpen}>
         <ExternalLink size={14} strokeWidth={1.75} />
         {t('menu.open')}
-      </button>
+      </Button>
 
-      <button className={item} onClick={() => void togglePin()}>
+      <Button menuItem onClick={() => void togglePin()}>
         {pinned ? <PinOff size={14} strokeWidth={1.75} /> : <Pin size={14} strokeWidth={1.75} />}
         {pinned ? t('menu.unpin') : t('menu.pin')}
-      </button>
+      </Button>
 
-      <button className={item} onClick={onRename}>
+      <Button menuItem onClick={onRename}>
         <Pencil size={14} strokeWidth={1.75} />
         {t('menu.rename')}
-      </button>
+      </Button>
 
       {/*
         Gerar título fica ao lado do renomear porque é a mesma ação, feita por
         outro. O nome vai para o mesmo lugar, e continua editável e apagável.
       */}
-      <button
-        className={item + (titling ? ' pointer-events-none' : '')}
+      <Button menuItem
+        className={(titling ? ' pointer-events-none' : '')}
         onClick={() => void title()}
         title={session.named ? t('menu.retitleHint') : t('menu.titleHint')}
       >
@@ -162,55 +161,55 @@ export function SessionMenu({ session, groups, isActive, onClose, onOpen, onRena
           <WandSparkles size={14} strokeWidth={1.75} />
         )}
         {session.named ? t('menu.retitle') : t('menu.title')}
-      </button>
+      </Button>
 
-      <button
-        className={item + (isActive ? '' : ' pointer-events-none opacity-40')}
+      <Button menuItem
+        className={(isActive ? '' : ' pointer-events-none opacity-40')}
         onClick={() => void duplicate()}
         title={isActive ? t('menu.duplicateHint') : t('menu.duplicateOnlyActive')}
       >
         <Copy size={14} strokeWidth={1.75} />
         {t('menu.duplicate')}
-      </button>
+      </Button>
 
       <div className="my-1 border-t border-[var(--p-line)]" />
 
       <div className="relative">
-        <button className={item} onClick={() => setSubmenu((v) => !v)}>
+        <Button menuItem onClick={() => setSubmenu((v) => !v)}>
           <FolderInput size={14} strokeWidth={1.75} />
           <span className="flex-1">{t('menu.moveToFolder')}</span>
           <ChevronRight size={14} strokeWidth={1.75} className={submenu ? 'rotate-90' : ''} />
-        </button>
+        </Button>
         {submenu && (
           <div className="mt-0.5 pl-2">
             {folderGroups.length === 0 && (
               <div className="px-2 py-1 text-xs italic text-dim">{t('menu.noFolders')}</div>
             )}
             {folderGroups.map((g) => (
-              <button key={g.key} className={item} onClick={() => void moveTo(g.folderId!)}>
+              <Button menuItem key={g.key}  onClick={() => void moveTo(g.folderId!)}>
                 <FolderOpen size={14} strokeWidth={1.75} />
                 <span className="truncate">{g.label}</span>
-              </button>
+              </Button>
             ))}
-            <button className={item} onClick={() => void moveTo(null)}>
+            <Button menuItem onClick={() => void moveTo(null)}>
               <Trash2 size={14} strokeWidth={1.75} />
               {t('menu.removeFromFolder')}
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
-      <button className={item} onClick={() => void toggleArchive()}>
+      <Button menuItem onClick={() => void toggleArchive()}>
         {archived ? <ArchiveRestore size={14} strokeWidth={1.75} /> : <Archive size={14} strokeWidth={1.75} />}
         {archived ? t('menu.unarchive') : t('menu.archive')}
-      </button>
+      </Button>
 
       <div className="my-1 border-t border-[var(--p-line)]" />
 
-      <button className={item + ' text-err hover:text-err'} onClick={askRemove}>
+      <Button menuItem variant="danger" onClick={askRemove}>
         <Trash2 size={14} strokeWidth={1.75} />
         {t('menu.delete')}
-      </button>
+      </Button>
     </div>
   )
 }
