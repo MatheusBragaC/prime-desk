@@ -254,6 +254,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             disabled={offline}
             className="no-drag rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-fg disabled:opacity-40"
             title={t('sched.new')}
+            aria-label={t('sched.new')}
           >
             <Plus size={16} strokeWidth={1.75} />
           </button>
@@ -261,6 +262,7 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
             onClick={() => void data.reload()}
             className="no-drag rounded-md p-1 text-dim transition-colors hover:bg-elevated hover:text-muted"
             title={t('common.refresh')}
+            aria-label={t('common.refresh')}
           >
             <RefreshCw
               size={16} strokeWidth={1.75}
@@ -343,7 +345,8 @@ export function SchedulesPanel({ onClose }: { onClose: () => void }) {
                   <button
                     onClick={() => remove(job)}
                     title={t('sched.cancelRun')}
-                    className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover:opacity-100"
+                    aria-label={t('sched.cancelRun')}
+                    className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <Trash2 size={13} strokeWidth={1.75} />
                   </button>

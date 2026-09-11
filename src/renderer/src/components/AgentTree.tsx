@@ -92,8 +92,9 @@ function Node({ node, level }: { node: AgentNode; level: number }) {
             ) : (
               <button
                 onClick={() => void observeSession(node.activeSessionId, label)}
-                className="ml-auto shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-primarySoft group-hover:opacity-100"
+                className="ml-auto shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-primarySoft focus-visible:opacity-100 group-hover:opacity-100"
                 title={t('tree.watch')}
+                aria-label={t('tree.watch')}
               >
                 <Eye size={14} strokeWidth={1.75} />
               </button>
@@ -183,6 +184,7 @@ export function AgentTree({ onClose }: { onClose: () => void }) {
           onClick={() => void window.prime.refreshAgentTree()}
           className="no-drag text-dim transition-colors hover:text-muted"
           title={t('common.refresh')}
+          aria-label={t('common.refresh')}
         >
           <RefreshCw size={14} strokeWidth={1.75} />
         </button>

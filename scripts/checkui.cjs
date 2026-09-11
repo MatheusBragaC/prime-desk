@@ -25,8 +25,14 @@ const ROOT_NUL = 'src'
 const BASELINE = path.join('scripts', 'ui-baseline.json')
 const UPDATE = process.argv.includes('--update')
 
-/** Escala tipográfica do docs/REDESIGN.md 3.1, em px. Fora dela é ad hoc. */
-const SCALE = new Set([11.5, 13, 15, 18, 24, 30])
+/**
+ * Escala tipográfica do docs/REDESIGN.md 3.1, em px. Fora dela é ad hoc.
+ *
+ * 10.5 é o degrau `text-micro`, e estava de fora por acidente: a regex abaixo
+ * só enxerga `text-[Npx]` literal, então os 63 usos da classe nomeada nunca
+ * foram contados e ninguém notou a ausência. Preferir sempre `text-micro`.
+ */
+const SCALE = new Set([10.5, 11.5, 13, 15, 18, 24, 30])
 
 function collect(root) {
   const out = []
@@ -54,7 +60,25 @@ const found = {
   hardcoded: hits(
     /(?:>\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 ,.'!?—-]{2,})\s*<|\b(?:title|placeholder|aria-label|alt)="([^"{}]{3,})")/g,
     (m, file) => file.includes(`${path.sep}components${path.sep}`) && /[A-Za-zÀ-ÿ]{3}/.test(m[0])
-  )
+  ),
+  /*
+    Escondido até o ponteiro passar, e invisível para quem usa teclado.
+
+    O anel de foco global existe (`:focus-visible` no theme.css), mas `opacity: 0`
+    o desenha a zero por cento. São dois casos com correções diferentes: o
+    próprio controle escondido quer `focus-visible:opacity-100` (padrão já
+    comentado em TerminalPanel.tsx); ícone ou adorno escondido DENTRO de um
+    controle focável quer `group-focus-within:opacity-100`, porque ele mesmo
+    nunca recebe foco — é o caso do chevron que indica grupo aberto ou fechado.
+
+    `disabled:opacity-0` é outra coisa (controle desabilitado, que não recebe
+    foco) e sai da conta antes do teste.
+  */
+  ghostFocus: hits(/["'`][^"'`]*\bopacity-0\b[^"'`]*["'`]/g, (m) => {
+    const cls = m[0].replace(/disabled:opacity-0/g, '')
+    if (!/\bopacity-0\b/.test(cls)) return false
+    return !/(?:focus-visible|group-focus-within(?:\/[a-z]+)?):opacity-100/.test(cls)
+  })
 }
 
 function hits(re, keep, scope = files) {
@@ -100,6 +124,12 @@ const MEASURES = [
     label: 'string de UI hardcoded em componente',
     mode: 'ratchet',
     fix: 'passe pelo t() do i18n'
+  },
+  {
+    key: 'ghostFocus',
+    label: 'escondido por opacity-0 sem foco visivel',
+    mode: 'ratchet',
+    fix: 'controle: focus-visible:opacity-100; adorno dentro de controle: group-focus-within:opacity-100'
   }
 ]
 

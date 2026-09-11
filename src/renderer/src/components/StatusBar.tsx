@@ -258,6 +258,7 @@ export function StatusBar({
           onClick={onToggleSidebar}
           className="no-drag -ml-1 rounded-md p-1.5 text-dim transition-colors hover:bg-elevated hover:text-fg"
           title={t('sidebar.toggle')}
+          aria-label={t('sidebar.toggle')}
         >
           <PanelLeft size={16} strokeWidth={1.75} />
         </button>

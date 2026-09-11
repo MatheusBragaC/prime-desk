@@ -44,8 +44,9 @@ export function SidebarActions({
 
         <button
           onClick={onNewFolder}
-          className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted group-hover/act:opacity-100"
+          className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted focus-visible:opacity-100 group-hover/act:opacity-100"
           title={t('sidebar.newFolder')}
+          aria-label={t('sidebar.newFolder')}
         >
           <FolderPlus size={16} strokeWidth={1.75} />
         </button>
@@ -54,7 +55,7 @@ export function SidebarActions({
             onClick={onToggleArchived}
             className={
               'no-drag shrink-0 rounded-sm p-1.5 transition-all hover:bg-elevated hover:text-muted ' +
-              (showArchived ? 'text-muted opacity-100' : 'text-dim opacity-0 group-hover/act:opacity-100')
+              (showArchived ? 'text-muted opacity-100' : 'text-dim opacity-0 focus-visible:opacity-100 group-hover/act:opacity-100')
             }
             title={showArchived ? t('sidebar.hideArchived') : t('sidebar.showArchived')}
           >
@@ -74,9 +75,14 @@ export function SidebarActions({
               'no-drag shrink-0 rounded-sm p-1.5 transition-all hover:bg-elevated hover:text-muted ' +
               (titling
                 ? 'text-primary opacity-100'
-                : 'text-dim opacity-0 group-hover/act:opacity-100')
+                : 'text-dim opacity-0 focus-visible:opacity-100 group-hover/act:opacity-100')
             }
             title={
+              titling
+                ? t('sidebar.titlingProgress', { done: titling.done, total: titling.total })
+                : t('sidebar.titleAll', { n: untitledCount })
+            }
+            aria-label={
               titling
                 ? t('sidebar.titlingProgress', { done: titling.done, total: titling.total })
                 : t('sidebar.titleAll', { n: untitledCount })
@@ -91,8 +97,9 @@ export function SidebarActions({
 
         <button
           onClick={() => void refreshSessions()}
-          className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted group-hover/act:opacity-100"
+          className="no-drag shrink-0 rounded-sm p-1.5 text-dim opacity-0 transition-all hover:bg-elevated hover:text-muted focus-visible:opacity-100 group-hover/act:opacity-100"
           title={t('sidebar.reload')}
+          aria-label={t('sidebar.reload')}
         >
           <RefreshCw size={16} strokeWidth={1.75} />
         </button>

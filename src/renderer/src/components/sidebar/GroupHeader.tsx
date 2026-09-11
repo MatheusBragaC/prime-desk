@@ -60,7 +60,7 @@ export function GroupHeader({
         <ChevronRight
           size={14} strokeWidth={1.75}
           className={
-            'shrink-0 text-dim opacity-0 transition-all duration-200 group-hover/h:opacity-100 ' +
+            'shrink-0 text-dim opacity-0 transition-all duration-200 group-focus-within/h:opacity-100 group-hover/h:opacity-100 ' +
             (collapsed ? '' : 'rotate-90')
           }
         />
@@ -90,8 +90,9 @@ export function GroupHeader({
 
       <button
         onClick={() => void newHere()}
-        className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
+        className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/h:opacity-100"
         title={t('sidebar.newChat')}
+        aria-label={t('sidebar.newChat')}
       >
         <Plus size={14} strokeWidth={1.75} />
       </button>
@@ -100,15 +101,17 @@ export function GroupHeader({
         <>
           <button
             onClick={() => setRenaming(true)}
-            className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg group-hover/h:opacity-100"
+            className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-fg focus-visible:opacity-100 group-hover/h:opacity-100"
             title={t('menu.rename')}
+            aria-label={t('menu.rename')}
           >
             <Pencil size={14} strokeWidth={1.75} />
           </button>
           <button
             onClick={() => void removeFolder()}
-            className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err group-hover/h:opacity-100"
+            className="shrink-0 rounded p-0.5 text-dim opacity-0 transition-opacity hover:text-err focus-visible:opacity-100 group-hover/h:opacity-100"
             title={t('menu.delete')}
+            aria-label={t('menu.delete')}
           >
             <Trash2 size={14} strokeWidth={1.75} />
           </button>
