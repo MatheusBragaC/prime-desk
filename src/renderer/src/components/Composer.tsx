@@ -312,11 +312,17 @@ export function Composer({
             {queued > 0 ? t('composer.queued', { n: queued }) : t('queue.title')}
           </button>
 
+          {/*
+            `aria-pressed` porque é um segmentado: sem ele o leitor de tela
+            anuncia dois botões iguais e não diz qual está valendo — a seleção
+            existia só na cor de fundo.
+          */}
           <div className="flex gap-0.5 rounded-md bg-well p-0.5">
             {(['steer', 'followUp'] as DeliveryBehavior[]).map((b) => (
               <button
                 key={b}
                 onClick={() => chooseDelivery(b)}
+                aria-pressed={delivery === b}
                 title={b === 'steer' ? t('queue.steerHint') : t('queue.followUpHint')}
                 className={
                   'rounded px-1.5 py-0.5 text-micro transition-colors ' +
