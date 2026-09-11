@@ -14,7 +14,16 @@ import { join } from 'node:path'
 /** Transcript minimo, no formato de linha do prime-agent. */
 function transcript(id, { cwd = '/repo', depth = 0, msgs = [], model, sendToParent = false } = {}) {
   const lines = [JSON.stringify({ type: 'session', version: 3, id, cwd, rlmDepth: depth })]
-  if (model) lines.push(JSON.stringify({ type: 'model_change', provider: 'anthropic', id: model }))
+  /*
+    A linha real traz os DOIS campos: `id` e o hash do evento, `modelId` e o
+    modelo. O fixture escreve os dois para o caso conseguir provar qual deles o
+    parser lê — com só um, o teste passava lendo o errado.
+  */
+  if (model) {
+    lines.push(JSON.stringify({
+      type: 'model_change', provider: 'anthropic', id: 'fd2d437d', modelId: model
+    }))
+  }
   for (const m of msgs) {
     lines.push(JSON.stringify({
       type: 'message',
@@ -38,6 +47,16 @@ function transcript(id, { cwd = '/repo', depth = 0, msgs = [], model, sendToPare
   }
   return lines.join('\n') + '\n'
 }
+
+/** Linha `custom_message` como o agente escreve a encomenda do pai. */
+const tarefaDoPai = (texto) =>
+  JSON.stringify({ type: 'custom_message', customType: 'agent_message',
+    content: `[task from parent]\n\n${texto}` })
+
+/** Mensagem `toolResult`, que é de onde sai o nome da ferramenta. */
+const ferramenta = (nome) =>
+  JSON.stringify({ type: 'message', message: { role: 'toolResult', toolName: nome,
+    content: [{ type: 'text', text: 'saida' }] } })
 
 const uso = (input, output, cacheRead, total) => ({
   input, output, cacheRead, cacheWrite: 0, totalTokens: input + output + cacheRead,
@@ -175,6 +194,88 @@ export default function run({ readDiskTree, resetDiskTreeCache }) {
       depois?.firstMessage, 'primeira')
     ok('usage aparece so depois de existir',
       [antes?.usage, depois?.usage?.inputTokens], [undefined, 7])
+  })
+
+  caso('o nome do modelo vem de modelId, nao do hash do evento', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    writeFileSync(join(f.sessionsDir, 'raiz.jsonl'),
+      transcript('raiz', { model: 'claude-opus-5', msgs: [{ role: 'user', text: 'oi' }] }))
+    const t = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    // A linha tem `id: 'fd2d437d'` e `modelId: 'claude-opus-5'`. Lendo `id`, a
+    // raiz exibia o hash do evento no lugar do modelo.
+    ok('raiz mostra o modelo, nao fd2d437d', t?.modelName, 'claude-opus-5')
+  })
+
+  caso('a tarefa do subagente vem do prompt, nao da mensagem de usuario', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    writeFileSync(join(f.sessionsDir, 'raiz.jsonl'), transcript('raiz'))
+    const dir = join(f.artifactsDir, 'raiz', 'sub-aa')
+    mkdirSync(dir, { recursive: true })
+    const file = join(dir, 'filho.jsonl')
+    // Transcript real de subagente: SO assistant e toolResult, nenhum user.
+    writeFileSync(file, transcript('filho', { depth: 1 }) +
+      JSON.stringify({ type: 'message', message: { role: 'assistant',
+        content: [{ type: 'text', text: 'trabalhando' }] } }) + '\n')
+    writeFileSync(join(dir, 'rlm-subagent.json'), JSON.stringify({
+      type: 'rlm_subagent', childId: 'sub-aa', sessionName: 'auditar', sessionFile: file,
+      status: 'running', prompt: 'Confere a paridade das chaves de i18n.',
+      createdAt: 1787343779168, model: { modelId: 'claude-opus-5' }
+    }))
+    const t = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    const filho = t?.children[0]
+    ok('firstMessage traz a encomenda do pai',
+      filho?.firstMessage, 'Confere a paridade das chaves de i18n.')
+    ok('startedAt sai do createdAt em ISO',
+      filho?.startedAt, new Date(1787343779168).toISOString())
+  })
+
+  caso('sem prompt no metadado, a tarefa sai do [task from parent]', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    writeFileSync(join(f.sessionsDir, 'raiz.jsonl'), transcript('raiz'))
+    const dir = join(f.artifactsDir, 'raiz', 'sub-bb')
+    mkdirSync(dir, { recursive: true })
+    const file = join(dir, 'filho.jsonl')
+    writeFileSync(file, transcript('filho', { depth: 1 }) + tarefaDoPai('Roda o check de RPC.') + '\n')
+    writeFileSync(join(dir, 'rlm-subagent.json'), JSON.stringify({
+      type: 'rlm_subagent', childId: 'sub-bb', sessionName: 'rpc', sessionFile: file,
+      status: 'completed'
+    }))
+    const t = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    ok('o prefixo [task from parent] e removido',
+      t?.children[0]?.firstMessage, 'Roda o check de RPC.')
+  })
+
+  caso('a ultima ferramenta e as contagens saem do toolResult', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    writeFileSync(join(f.sessionsDir, 'raiz.jsonl'),
+      transcript('raiz') + ferramenta('ipython') + '\n' + ferramenta('bash') + '\n' + ferramenta('grep') + '\n')
+    const t = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    ok('lastTool e a ULTIMA, nao a primeira', t?.lastTool, 'grep')
+    ok('toolCount conta as tres', t?.toolCount, 3)
+  })
+
+  caso('arquivo reescrito com o MESMO tamanho e reprocessado', async () => {
+    const f = fixture()
+    resetDiskTreeCache()
+    const file = join(f.sessionsDir, 'raiz.jsonl')
+    writeFileSync(file, transcript('raiz') + ferramenta('ipython') + '\n')
+    const antes = await readDiskTree({ rootSessionId: 'raiz', ...f })
+
+    /*
+      Reescrita do mesmo tamanho, conteudo diferente. A condicao era
+      `size >= prev.size`, entao o digest ficava congelado no estado antigo e
+      nada na tela indicava isso. O `mtimeMs` e o que pega este caso.
+    */
+    const novo = transcript('raiz') + ferramenta('ipythan') + '\n'
+    writeFileSync(file, novo)
+    ok('o teste so vale se os dois tiverem o mesmo tamanho',
+      novo.length, (transcript('raiz') + ferramenta('ipython') + '\n').length)
+    const depois = await readDiskTree({ rootSessionId: 'raiz', ...f })
+    ok('o digest acompanha a reescrita', [antes?.lastTool, depois?.lastTool], ['ipython', 'ipythan'])
   })
 
   return (async () => {

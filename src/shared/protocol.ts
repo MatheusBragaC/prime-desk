@@ -306,6 +306,18 @@ export interface AgentNode {
   hasRunningChildren: boolean
   messageCount: number
   firstMessage: string
+  /**
+   * Quando o subagente foi criado, em ISO.
+   *
+   * Vem do `createdAt` do `rlm-subagent.json`, que existia no arquivo e nunca
+   * era lido — por isso não havia como mostrar duração, só "última atividade".
+   * Ausente no root e em nó vindo do daemon.
+   */
+  startedAt?: string
+  /** Nome da última ferramenta chamada. É o "o que está fazendo agora". */
+  lastTool?: string
+  /** Quantas ferramentas este nó rodou. */
+  toolCount?: number
   cwd: string
   modelName: string
   lastActivityAt: string
