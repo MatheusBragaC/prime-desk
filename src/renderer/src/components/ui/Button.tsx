@@ -13,7 +13,7 @@ import { Loader2 } from '@/icons'
  * `Modal.tsx` reexporta, então quem já importava de lá continua importando.
  */
 
-type Variant = 'primary' | 'accent' | 'ghost' | 'outline' | 'danger'
+type Variant = 'primary' | 'accent' | 'ghost' | 'outline' | 'danger' | 'warn'
 type Size = 'icon' | 'sm' | 'md'
 
 /*
@@ -27,7 +27,15 @@ const VARIANT: Record<Variant, string> = {
   accent: 'border border-primary/40 bg-primary/20 text-fg hover:bg-primary/30',
   ghost: 'text-muted hover:bg-hover hover:text-fg',
   outline: 'border border-lineStrong text-muted hover:border-lineHover hover:text-fg',
-  danger: 'border border-err/40 bg-err/15 text-err hover:bg-err/25'
+  danger: 'border border-err/40 bg-err/15 text-err hover:bg-err/25',
+  /*
+    For the action that sits INSIDE a warning surface, where `danger` would be
+    the wrong colour and `outline` disappears. The border is /60, not the /40
+    the other tonal variants use, because /40 measures 2.37:1 against a
+    `bg-warn/[0.06]` card — under the 3:1 WCAG 1.4.11 asks of a component
+    boundary. At /60 it is 3.81:1.
+  */
+  warn: 'border border-warn/60 bg-warn/15 text-warn hover:bg-warn/25'
 }
 
 const SIZE: Record<Size, string> = {
@@ -58,7 +66,8 @@ const MENU_TONE: Record<Variant, string> = {
   accent: 'text-primarySoft hover:bg-hover hover:text-primarySoft',
   ghost: 'text-muted hover:bg-hover hover:text-fg',
   outline: 'text-muted hover:bg-hover hover:text-fg',
-  danger: 'text-err hover:bg-hover hover:text-err'
+  danger: 'text-err hover:bg-hover hover:text-err',
+  warn: 'text-warn hover:bg-hover hover:text-warn'
 }
 
 /*

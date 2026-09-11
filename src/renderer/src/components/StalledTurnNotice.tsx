@@ -1,4 +1,5 @@
 import { Clock, Square, Bot } from '@/icons'
+import { Button } from '@/components/ui/Button'
 import { useAgent, abortTurn } from '@/store/agent'
 import { useTurnActivity } from '@/lib/useTurnActivity'
 import { summary } from '@/lib/toolSummary'
@@ -53,14 +54,23 @@ export function StalledTurnNotice() {
         )}
       </div>
 
-      <button
+      {/*
+        The whole point of this notice is to put interrupting within reach, and
+        the button was the faintest thing on it: 10.5px muted text inside a
+        border of white at 5.5%, which measures 1.14:1 against this card — a
+        boundary nobody can see. The label read fine (7.33:1); what was missing
+        was any sign that it could be clicked.
+      */}
+      <Button
+        variant="warn"
+        size="sm"
+        className="no-drag shrink-0"
         onClick={() => void abortTurn()}
-        className="no-drag flex shrink-0 items-center gap-1 rounded-md border border-[var(--p-line)] px-2 py-1 text-micro text-muted transition-colors hover:bg-elevated hover:text-fg"
         title={t('stall.abortHint')}
+        icon={<Square size={12} strokeWidth={2.5} />}
       >
-        <Square size={9} strokeWidth={2.5} className="shrink-0" />
         {t('composer.stop')}
-      </button>
+      </Button>
     </div>
   )
 }
