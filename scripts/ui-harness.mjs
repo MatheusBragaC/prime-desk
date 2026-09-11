@@ -376,8 +376,8 @@ const STUB_JS = `
     checkAppUpdate: async () => ({
       ok: true,
       update: new URLSearchParams(location.search).has('noappupdate')
-        ? { current: '0.2.6', latest: '0.2.6', available: false }
-        : { current: '0.2.5', latest: '0.2.6', available: true },
+        ? { current: '1.0.0', latest: '1.0.0', available: false }
+        : { current: '0.2.6', latest: '1.0.0', available: true },
       command: 'curl -fsSL https://raw.githubusercontent.com/MatheusBragaC/prime-desk/main/scripts/install.sh | sh'
     }),
     rescanAgent: async () => ({ ok: true, status: {
